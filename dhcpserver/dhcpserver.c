@@ -35,7 +35,7 @@
 #include "cyw43_config.h"
 #include "dhcpserver.h"
 #include "lwip/udp.h"
-#include "../debug_printf.h"
+#include "debug_printf.h"
 
 #define DHCPDISCOVER    (1)
 #define DHCPOFFER       (2)

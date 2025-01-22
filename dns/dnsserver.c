@@ -7,8 +7,8 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
-#include "../debug_printf.h"
-#include "../server_settings.h"
+#include "debug_printf.h"
+#include "server_settings.h"
 
 static struct
 {

@@ -14,45 +14,9 @@
 #include "dns/dnsserver.h"
 #include "server_settings.h"
 #include "httpserver.h"
-#include "../tools/SimpleFSBuilder/SimpleFS.h"
+#include "lwip/apps/httpd.h"
 
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
-
-struct SimpleFSContext
-{
-	GlobalFSHeader *header;
-	StoredFileEntry *entries;
-	char *names, *data;
-} s_SimpleFS;
-
-bool simplefs_init(struct SimpleFSContext *ctx, void *data)
-{
-	ctx->header = (GlobalFSHeader *)data;
-	if (ctx->header->Magic != kSimpleFSHeaderMagic)
-		return false;
-	ctx->entries = (StoredFileEntry *)(ctx->header + 1);
-	ctx->names = (char *)(ctx->entries + ctx->header->EntryCount);
-	ctx->data = (char *)(ctx->names + ctx->header->NameBlockSize);
-	return true;
-}
-
-static bool do_retrieve_file(http_connection conn, enum http_request_type type, char *path, void *context)
-{
-	for (int i = 0; i < s_SimpleFS.header->EntryCount; i++)
-	{
-		if (!strcmp(s_SimpleFS.names + s_SimpleFS.entries[i].NameOffset, path))
-		{
-			http_server_send_reply(conn, 
-				"200 OK", 
-				s_SimpleFS.names + s_SimpleFS.entries[i].ContentTypeOffset,
-				s_SimpleFS.data + s_SimpleFS.entries[i].DataOffset,
-				s_SimpleFS.entries[i].FileSize);
-			return true;
-		}
-	}
-	
-	return false;
-}
 
 static char *parse_server_settings(http_connection conn, pico_server_settings *settings)
 {
@@ -269,14 +233,8 @@ static void main_task(__unused void *params)
 		printf("failed to initialise\n");
 		return;
 	}
-	
-	extern void *_binary_www_fs_start;
-	if (!simplefs_init(&s_SimpleFS, &_binary_www_fs_start))
-	{
-		printf("missing/corrupt FS image");
-		return;
-	}
-	
+
+		
 	const pico_server_settings *settings = get_pico_server_settings();
 
 	cyw43_arch_enable_ap_mode(settings->network_name, settings->network_password, settings->network_password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
@@ -291,10 +249,11 @@ static void main_task(__unused void *params)
 	dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, settings->domain_name);
 	dns_server_init(netif->ip_addr.addr, settings->secondary_address, settings->hostname, settings->domain_name, settings->dns_ignores_network_suffix);
 	set_secondary_ip_address(settings->secondary_address);
-	http_server_instance server = http_server_create(settings->hostname, settings->domain_name, 4, 4096);
-	static http_zone zone1, zone2;
-	http_server_add_zone(server, &zone1, "", do_retrieve_file, NULL);
-	http_server_add_zone(server, &zone2, "/api", do_handle_api_call, NULL);
+	//http_server_instance server = http_server_create(settings->hostname, settings->domain_name, 4, 4096);
+	//static http_zone zone1, zone2;
+	//http_server_add_zone(server, &zone1, "", do_retrieve_file, NULL);	
+	//http_server_add_zone(server, &zone2, "/api", do_handle_api_call, NULL);
+	httpd_init();
 	vTaskDelete(NULL);
 }
 
@@ -313,7 +272,7 @@ void debug_printf(const char *format, ...)
 void debug_write(const void *data, int size)
 {
 	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
-	_write(1, data, size);
+	//_write(1, data, size);
 	xSemaphoreGive(s_PrintfSemaphore);
 }
 
