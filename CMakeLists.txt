@@ -3,7 +3,11 @@ cmake_minimum_required(VERSION 3.12)
 set(PICO_BOARD pico_w)
 
 # Include build functions from Pico SDK
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/pico_sdk_import.cmake)
+
+set(PICO_SDK_PATH ./pico-sdk)
+set(FREERTOS_KERNEL_PATH ../../FreeRTOS-Kernel)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/pico-sdk/pico_sdk_init.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FreeRTOS_Kernel_import.cmake)
 
 pico_sdk_init()
@@ -20,17 +24,11 @@ FetchContent_Declare(ArduinoJson
 )
 FetchContent_MakeAvailable(ArduinoJson)
 
-add_compile_definitions(ENC_DEBUG_ON=0 NO_SYS=0)
-
 add_custom_target(${name}-fs DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
-        
-add_library(patched_lwip STATIC
-    patched_lwip/ip4.c
-)
 
-target_include_directories(patched_lwip PUBLIC
-    ../pico-sdk/lib/lwip/src/include
-    inc
+add_custom_target(html_gen
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../html_gen/build/html_gen ${CMAKE_CURRENT_SOURCE_DIR}/fs -f:${CMAKE_CURRENT_SOURCE_DIR}/src/fsdata.c
+  COMMENT "Running html_gen"
 )
 
 add_executable(PicoHTTPServer
@@ -57,7 +55,6 @@ target_include_directories(PicoHTTPServer PRIVATE
         inc)
 
 target_link_libraries(PicoHTTPServer        
-        patched_lwip
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
         pico_lwip_iperf
@@ -71,6 +68,8 @@ if (TARGET Profiler)
 endif()
 
 pico_add_extra_outputs(PicoHTTPServer)
+
+add_dependencies(PicoHTTPServer html_gen)
 
 # disable usb output, disable uart output
 pico_enable_stdio_usb(PicoHTTPServer 1)

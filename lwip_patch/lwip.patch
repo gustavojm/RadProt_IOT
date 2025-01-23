@@ -1,6 +1,6 @@
 diff -urN lwip.orig/src/core/ipv4/ip4.c lwip/src/core/ipv4/ip4.c
---- lwip.orig/ip4.c	2022-09-05 12:52:54.621160700 -0700
-+++ lwip/ip4.c	2022-09-05 12:52:30.156428000 -0700
+--- lwip.orig/src/core/ipv4/ip4.c	2022-09-05 12:52:54.621160700 -0700
++++ lwip/src/core/ipv4/ip4.c	2022-09-05 12:52:30.156428000 -0700
 @@ -403,6 +403,8 @@
  }
  #endif /* IP_FORWARD */

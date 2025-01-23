@@ -146,6 +146,14 @@
 #define HTTP_DATA_TO_SEND_CONTINUE 1
 #define HTTP_NO_DATA_TO_SEND       0
 
+
+struct httpd_config_t {
+  const char *hostname;
+	const char *domain_name;
+} ;
+
+static struct httpd_config_t httpd_config;
+
 typedef struct {
   const char *name;
   u8_t shtml;
@@ -1961,6 +1969,23 @@ http_continue(void *connection)
 }
 #endif /* LWIP_HTTPD_FS_ASYNC_READ */
 
+
+static bool host_name_matches(char *host)
+{
+	int len = strlen(httpd_config.hostname);
+	if (strncasecmp(host, httpd_config.hostname, len))
+		return false;
+	
+	if (!host[len])
+		return true;	//Host name without domain
+	
+	if (host[len] == '.' && !strcasecmp(host + len + 1, httpd_config.domain_name))
+		return true;	//Host name with domain
+	
+	return false;
+}
+
+
 /**
  * When data has been received in the correct state, try to parse it
  * as a HTTP request.
@@ -2062,6 +2087,32 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
                                   data));
         return http_find_error_file(hs, 501);
       }
+      /* Get the host name */
+      char host[32];
+      char* host_start = lwip_strnstr(data, "Host: ", data_len) + 6;
+      char* host_end = lwip_strnstr(host_start + 6, CRLF, data_len);      
+      int host_len = host_end - host_start;
+
+      if (host_start) {
+          memcpy(host, host_start, host_len);
+      }      
+
+			host[host_end - host_start] = 0;    //null terminate   
+      printf("HOST BROWSER: %s", host);
+
+    if (!host_name_matches(host)) {
+      static char redir_header[128];
+      snprintf(redir_header, sizeof redir_header, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\n", httpd_config.hostname, httpd_config.domain_name);
+      printf("REDIR HEADER: %s", redir_header);
+
+      hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = redir_header;
+      /* Set up to send the first header string. */
+      hs->hdr_index = 0;
+      hs->hdr_pos = 0;      
+      return ERR_OK;
+    }
+    
+
       /* if we come here, method is OK, parse URI */
       left_len = (u16_t)(data_len - ((sp1 + 1) - data));
       sp2 = lwip_strnstr(sp1 + 1, " ", left_len);
@@ -2144,6 +2195,7 @@ badrequest:
     /* could not parse request */
     return http_find_error_file(hs, 400);
   }
+
 }
 
 #if LWIP_HTTPD_SSI && (LWIP_HTTPD_SSI_BY_FILE_EXTENSION == 1)
@@ -2680,8 +2732,10 @@ httpd_init_pcb(struct altcp_pcb *pcb, u16_t port)
  * Initialize the httpd: set up a listening PCB and bind it to the defined port
  */
 void
-httpd_init(void)
+httpd_init(const char *hostname, const char *domain_name)
 {
+  httpd_config.hostname = hostname;
+  httpd_config.domain_name = domain_name;
   struct altcp_pcb *pcb;
 
 #if HTTPD_USE_MEM_POOL

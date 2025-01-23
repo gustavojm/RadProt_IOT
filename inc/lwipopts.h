@@ -63,7 +63,7 @@
 #define DEFAULT_ACCEPTMBOX_SIZE TCPIP_MBOX_SIZE
 
 // not necessary, can be done either way
-#define LWIP_TCPIP_CORE_LOCKING_INPUT 0
+//#define LWIP_TCPIP_CORE_LOCKING_INPUT 0
 #endif
 
 /* Threading options */
@@ -113,5 +113,7 @@
 #define IP_REASSEMBLY   1       // for input packets
 #define IP_FRAG         1       // for output packets
 #define MEMP_NUM_TCPIP_MSG_INPKT    80
+
+#define LWIP_HTTPD_DYNAMIC_HEADERS 1
 
 #endif /* __LWIPOPTS_H__ */

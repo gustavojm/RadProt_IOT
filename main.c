@@ -13,203 +13,202 @@
 #include "dhcpserver/dhcpserver.h"
 #include "dns/dnsserver.h"
 #include "server_settings.h"
-#include "httpserver.h"
 #include "lwip/apps/httpd.h"
 
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 
-static char *parse_server_settings(http_connection conn, pico_server_settings *settings)
-{
-	bool has_password = false, use_domain = false, use_second_ip = false;
-	bool bad_password = false, bad_domain = false;
+// static char *parse_server_settings(http_connection conn, pico_server_settings *settings)
+// {
+// 	bool has_password = false, use_domain = false, use_second_ip = false;
+// 	bool bad_password = false, bad_domain = false;
 	
-	for (;;)
-	{
-		char *line = http_server_read_post_line(conn);
-		if (!line)
-			break;
+// 	for (;;)
+// 	{
+// 		char *line = http_server_read_post_line(conn);
+// 		if (!line)
+// 			break;
 				
-		char *p = strchr(line, '=');
-		if (!p)
-			continue;
-		*p++ = 0;
-		if (!strcasecmp(line, "has_password")) 
-			has_password = !strcasecmp(p, "true") || p[0] == '1';
-		else if (!strcasecmp(line, "use_domain")) 
-			use_domain = !strcasecmp(p, "true") || p[0] == '1';
-		else if (!strcasecmp(line, "use_second_ip")) 
-			use_second_ip = !strcasecmp(p, "true") || p[0] == '1';
-		else if (!strcasecmp(line, "dns_ignores_network_suffix")) 
-			settings->dns_ignores_network_suffix = !strcasecmp(p, "true") || p[0] == '1';
-		else if (!strcasecmp(line, "ssid")) 
-		{
-			if (strlen(p) >= sizeof(settings->network_name))
-				return "SSID too long";
-			if (!p[0])
-				return "missing SSID";
-			strcpy(settings->network_name, p);
-		}
-		else if (!strcasecmp(line, "password")) 
-		{
-			if (strlen(p) >= sizeof(settings->network_password))
-				bad_password = true;
-			else
-				strcpy(settings->network_password, p);
-		}
-		else if (!strcasecmp(line, "hostname")) 
-		{
-			if (strlen(p) >= sizeof(settings->hostname))
-				return "hostname too long";
-			if (!p[0])
-				return "missing hostname";
-			strcpy(settings->hostname, p);
-		}
-		else if (!strcasecmp(line, "domain")) 
-		{
-			if (strlen(p) >= sizeof(settings->domain_name))
-				bad_domain = true;
-			else
-				strcpy(settings->domain_name, p);
-		}
-		else if (!strcasecmp(line, "ipaddr")) 
-		{
-			settings->ip_address = ipaddr_addr(p);
-			if (!settings->ip_address || settings->ip_address == -1)
-				return "invalid IP address";
-		}
-		else if (!strcasecmp(line, "netmask")) 
-		{
-			settings->network_mask = ipaddr_addr(p);
-			if (!settings->network_mask || settings->network_mask == -1)
-				return "invalid network mask";
-		}
-		else if (!strcasecmp(line, "ipaddr2")) 
-		{
-			settings->secondary_address = ipaddr_addr(p);
-		}
-	}
+// 		char *p = strchr(line, '=');
+// 		if (!p)
+// 			continue;
+// 		*p++ = 0;
+// 		if (!strcasecmp(line, "has_password")) 
+// 			has_password = !strcasecmp(p, "true") || p[0] == '1';
+// 		else if (!strcasecmp(line, "use_domain")) 
+// 			use_domain = !strcasecmp(p, "true") || p[0] == '1';
+// 		else if (!strcasecmp(line, "use_second_ip")) 
+// 			use_second_ip = !strcasecmp(p, "true") || p[0] == '1';
+// 		else if (!strcasecmp(line, "dns_ignores_network_suffix")) 
+// 			settings->dns_ignores_network_suffix = !strcasecmp(p, "true") || p[0] == '1';
+// 		else if (!strcasecmp(line, "ssid")) 
+// 		{
+// 			if (strlen(p) >= sizeof(settings->network_name))
+// 				return "SSID too long";
+// 			if (!p[0])
+// 				return "missing SSID";
+// 			strcpy(settings->network_name, p);
+// 		}
+// 		else if (!strcasecmp(line, "password")) 
+// 		{
+// 			if (strlen(p) >= sizeof(settings->network_password))
+// 				bad_password = true;
+// 			else
+// 				strcpy(settings->network_password, p);
+// 		}
+// 		else if (!strcasecmp(line, "hostname")) 
+// 		{
+// 			if (strlen(p) >= sizeof(settings->hostname))
+// 				return "hostname too long";
+// 			if (!p[0])
+// 				return "missing hostname";
+// 			strcpy(settings->hostname, p);
+// 		}
+// 		else if (!strcasecmp(line, "domain")) 
+// 		{
+// 			if (strlen(p) >= sizeof(settings->domain_name))
+// 				bad_domain = true;
+// 			else
+// 				strcpy(settings->domain_name, p);
+// 		}
+// 		else if (!strcasecmp(line, "ipaddr")) 
+// 		{
+// 			settings->ip_address = ipaddr_addr(p);
+// 			if (!settings->ip_address || settings->ip_address == -1)
+// 				return "invalid IP address";
+// 		}
+// 		else if (!strcasecmp(line, "netmask")) 
+// 		{
+// 			settings->network_mask = ipaddr_addr(p);
+// 			if (!settings->network_mask || settings->network_mask == -1)
+// 				return "invalid network mask";
+// 		}
+// 		else if (!strcasecmp(line, "ipaddr2")) 
+// 		{
+// 			settings->secondary_address = ipaddr_addr(p);
+// 		}
+// 	}
 	
-	if (!has_password)
-		memset(settings->network_password, 0, sizeof(settings->network_password));
-	else if (bad_password)
-		return "password too long";
+// 	if (!has_password)
+// 		memset(settings->network_password, 0, sizeof(settings->network_password));
+// 	else if (bad_password)
+// 		return "password too long";
 	
-	if (!use_domain)
-		memset(settings->domain_name, 0, sizeof(settings->domain_name));
-	else if (bad_domain)
-		return "domain too long";
+// 	if (!use_domain)
+// 		memset(settings->domain_name, 0, sizeof(settings->domain_name));
+// 	else if (bad_domain)
+// 		return "domain too long";
 	
-	if (!use_second_ip)
-		settings->secondary_address = 0;
-	else if (!settings->secondary_address || settings->secondary_address == -1)
-		return "invalid secondary IP address";
+// 	if (!use_second_ip)
+// 		settings->secondary_address = 0;
+// 	else if (!settings->secondary_address || settings->secondary_address == -1)
+// 		return "invalid secondary IP address";
 	
-	return NULL;
-}
+// 	return NULL;
+// }
 
-static bool do_handle_api_call(http_connection conn, enum http_request_type type, char *path, void *context)
-{
-	static int s_InitializedMask = 0;
+// static bool do_handle_api_call(http_connection conn, enum http_request_type type, char *path, void *context)
+// {
+// 	static int s_InitializedMask = 0;
 	
-	if (!strcmp(path, "readpins"))
-	{
-		http_write_handle reply = http_server_begin_write_reply(conn, "200 OK", "text/json");
-		http_server_write_reply(reply, "{\"led0v\": \"%d\"", cyw43_arch_gpio_get(0));
+// 	if (!strcmp(path, "readpins"))
+// 	{
+// 		http_write_handle reply = http_server_begin_write_reply(conn, "200 OK", "text/json");
+// 		http_server_write_reply(reply, "{\"led0v\": \"%d\"", cyw43_arch_gpio_get(0));
 		
-		int values = gpio_get_all();
+// 		int values = gpio_get_all();
 		
-		for (int i = 0; i < 29; i++)
-		{
-			if (i > 22 && i < 26)
-				continue;
+// 		for (int i = 0; i < 29; i++)
+// 		{
+// 			if (i > 22 && i < 26)
+// 				continue;
 			
-			if (s_InitializedMask & (1 << i))
-				http_server_write_reply(reply, ",\"gpio%dd\": \"%s\",\"gpio%dv\": \"%d\"", i, gpio_get_dir(i) ? "OUT" : "IN", i, (values >> i) & 1);
-		}
+// 			if (s_InitializedMask & (1 << i))
+// 				http_server_write_reply(reply, ",\"gpio%dd\": \"%s\",\"gpio%dv\": \"%d\"", i, gpio_get_dir(i) ? "OUT" : "IN", i, (values >> i) & 1);
+// 		}
 		
-		http_server_end_write_reply(reply, "}");
-		return true;
-	}
-	else if (!memcmp(path, "writepin/", 9))
-	{
-		//e.g. 'writepin/led0?v=1'
-		char *port = path + 9;
-		char *arg = strchr(port, '?');
-		if (arg)
-		{
-			*arg++ = 0;
-			char *value = strchr(arg, '=');
-			*value++ = 0;
+// 		http_server_end_write_reply(reply, "}");
+// 		return true;
+// 	}
+// 	else if (!memcmp(path, "writepin/", 9))
+// 	{
+// 		//e.g. 'writepin/led0?v=1'
+// 		char *port = path + 9;
+// 		char *arg = strchr(port, '?');
+// 		if (arg)
+// 		{
+// 			*arg++ = 0;
+// 			char *value = strchr(arg, '=');
+// 			*value++ = 0;
 		
-			if (!strcmp(port, "led0"))
-				cyw43_arch_gpio_put(0, value[0] == '1');
-			else if (!memcmp(port, "gpio", 4))
-			{
-				int gpio = atoi(port + 4);
-				if (!(s_InitializedMask & (1 << gpio)))
-				{
-					gpio_init(gpio);
-					s_InitializedMask |= (1 << gpio);
-				}
+// 			if (!strcmp(port, "led0"))
+// 				cyw43_arch_gpio_put(0, value[0] == '1');
+// 			else if (!memcmp(port, "gpio", 4))
+// 			{
+// 				int gpio = atoi(port + 4);
+// 				if (!(s_InitializedMask & (1 << gpio)))
+// 				{
+// 					gpio_init(gpio);
+// 					s_InitializedMask |= (1 << gpio);
+// 				}
 
-				if (arg[0] == 'd' && value[0] == 'I')
-				{
-					gpio_set_pulls(gpio, true, false);
-					gpio_set_dir(gpio, GPIO_IN);
-				}
-				else
-				{
-					gpio_set_pulls(gpio, false, false);
-					gpio_set_dir(gpio, GPIO_OUT);
+// 				if (arg[0] == 'd' && value[0] == 'I')
+// 				{
+// 					gpio_set_pulls(gpio, true, false);
+// 					gpio_set_dir(gpio, GPIO_IN);
+// 				}
+// 				else
+// 				{
+// 					gpio_set_pulls(gpio, false, false);
+// 					gpio_set_dir(gpio, GPIO_OUT);
 
-					if (arg[0] == 'v')
-						gpio_put(gpio, value[0] == '1');
-				}
-			}
+// 					if (arg[0] == 'v')
+// 						gpio_put(gpio, value[0] == '1');
+// 				}
+// 			}
 			
-			return true;
-		}
-	}
-	else if (!strcmp(path, "settings"))
-	{
-		if (type == HTTP_POST)
-		{
-			static pico_server_settings settings;
-			settings = *get_pico_server_settings();
+// 			return true;
+// 		}
+// 	}
+// 	else if (!strcmp(path, "settings"))
+// 	{
+// 		if (type == HTTP_POST)
+// 		{
+// 			static pico_server_settings settings;
+// 			settings = *get_pico_server_settings();
 
-			char *err = parse_server_settings(conn, &settings);
-			if (err)
-			{
-				http_server_send_reply(conn, "200 OK", "text/plain", err, -1);
-				return true;
-			}
+// 			char *err = parse_server_settings(conn, &settings);
+// 			if (err)
+// 			{
+// 				http_server_send_reply(conn, "200 OK", "text/plain", err, -1);
+// 				return true;
+// 			}
 			
-			write_pico_server_settings(&settings);
-			http_server_send_reply(conn, "200 OK", "text/plain", "OK", -1);
-			watchdog_reboot(0, SRAM_END, 500);			
-			return true;
-		}
-		else
-		{
-			const pico_server_settings *settings = get_pico_server_settings();
-			http_write_handle reply = http_server_begin_write_reply(conn, "200 OK", "text/json");
-			http_server_write_reply(reply, "{\"ssid\": \"%s\"", settings->network_name);
-			http_server_write_reply(reply, ",\"has_password\": %d, \"password\" : \"%s\"", settings->network_password[0] != 0, settings->network_password);
-			http_server_write_reply(reply, ",\"hostname\" : \"%s\"", settings->hostname);
-			http_server_write_reply(reply, ",\"use_domain\": %d, \"domain\" : \"%s\"", settings->domain_name[0] != 0, settings->domain_name);
-			http_server_write_reply(reply, ",\"ipaddr\" : \"%d.%d.%d.%d\"", (settings->ip_address >> 0) & 0xFF, (settings->ip_address >> 8) & 0xFF, (settings->ip_address >> 16) & 0xFF, (settings->ip_address >> 24) & 0xFF);
-			http_server_write_reply(reply, ",\"netmask\" : \"%d.%d.%d.%d\"", (settings->network_mask >> 0) & 0xFF, (settings->network_mask >> 8) & 0xFF, (settings->network_mask >> 16) & 0xFF, (settings->network_mask >> 24) & 0xFF);
-			http_server_write_reply(reply, ",\"use_second_ip\": %d", settings->secondary_address != 0);
-			http_server_write_reply(reply, ",\"ipaddr2\" : \"%d.%d.%d.%d\"", (settings->secondary_address >> 0) & 0xFF, (settings->secondary_address >> 8) & 0xFF, (settings->secondary_address >> 16) & 0xFF, (settings->secondary_address >> 24) & 0xFF);
-			http_server_write_reply(reply, ",\"dns_ignores_network_suffix\" : %d", !!settings->dns_ignores_network_suffix);
+// 			write_pico_server_settings(&settings);
+// 			http_server_send_reply(conn, "200 OK", "text/plain", "OK", -1);
+// 			watchdog_reboot(0, SRAM_END, 500);			
+// 			return true;
+// 		}
+// 		else
+// 		{
+// 			const pico_server_settings *settings = get_pico_server_settings();
+// 			http_write_handle reply = http_server_begin_write_reply(conn, "200 OK", "text/json");
+// 			http_server_write_reply(reply, "{\"ssid\": \"%s\"", settings->network_name);
+// 			http_server_write_reply(reply, ",\"has_password\": %d, \"password\" : \"%s\"", settings->network_password[0] != 0, settings->network_password);
+// 			http_server_write_reply(reply, ",\"hostname\" : \"%s\"", settings->hostname);
+// 			http_server_write_reply(reply, ",\"use_domain\": %d, \"domain\" : \"%s\"", settings->domain_name[0] != 0, settings->domain_name);
+// 			http_server_write_reply(reply, ",\"ipaddr\" : \"%d.%d.%d.%d\"", (settings->ip_address >> 0) & 0xFF, (settings->ip_address >> 8) & 0xFF, (settings->ip_address >> 16) & 0xFF, (settings->ip_address >> 24) & 0xFF);
+// 			http_server_write_reply(reply, ",\"netmask\" : \"%d.%d.%d.%d\"", (settings->network_mask >> 0) & 0xFF, (settings->network_mask >> 8) & 0xFF, (settings->network_mask >> 16) & 0xFF, (settings->network_mask >> 24) & 0xFF);
+// 			http_server_write_reply(reply, ",\"use_second_ip\": %d", settings->secondary_address != 0);
+// 			http_server_write_reply(reply, ",\"ipaddr2\" : \"%d.%d.%d.%d\"", (settings->secondary_address >> 0) & 0xFF, (settings->secondary_address >> 8) & 0xFF, (settings->secondary_address >> 16) & 0xFF, (settings->secondary_address >> 24) & 0xFF);
+// 			http_server_write_reply(reply, ",\"dns_ignores_network_suffix\" : %d", !!settings->dns_ignores_network_suffix);
 
-			http_server_end_write_reply(reply, "}");
-			return true;
-		}
-	}
+// 			http_server_end_write_reply(reply, "}");
+// 			return true;
+// 		}
+// 	}
 	
-	return false;
-}
+// 	return false;
+// }
 
 
 static void set_secondary_ip_address(int address)
@@ -253,7 +252,8 @@ static void main_task(__unused void *params)
 	//static http_zone zone1, zone2;
 	//http_server_add_zone(server, &zone1, "", do_retrieve_file, NULL);	
 	//http_server_add_zone(server, &zone2, "/api", do_handle_api_call, NULL);
-	httpd_init();
+
+    httpd_init(settings->hostname, settings->domain_name);
 	vTaskDelete(NULL);
 }
 
