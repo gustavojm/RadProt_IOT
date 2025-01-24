@@ -2102,9 +2102,11 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
       debug_printf("HTTP: %s\n", host);
 
       if (!host_name_matches(host)) {
-        snprintf(hs->hdr_redirect, sizeof hs->hdr_redirect, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\nConnection: Close\r\n\r\n", s_HTTPServerSettings.hostname, s_HTTPServerSettings.domain_name);
+        snprintf(hs->hdr_redirect, sizeof hs->hdr_redirect, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\n", s_HTTPServerSettings.hostname, s_HTTPServerSettings.domain_name);
 
         hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = hs->hdr_redirect;
+        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONN_CLOSE];
+        
         /* Set up to send the first header string. */
         hs->hdr_index = 0;
         hs->hdr_pos = 0;      
