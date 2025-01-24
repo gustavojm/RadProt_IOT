@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <sys/types.h>
 
 typedef struct
@@ -27,3 +32,7 @@ const pico_server_settings *get_pico_server_settings();
 void write_pico_server_settings(const pico_server_settings *new_settings);
 
 const char *get_next_domain_name_component(const char *domain_name, int *position, int *length);
+
+#ifdef __cplusplus
+}
+#endif

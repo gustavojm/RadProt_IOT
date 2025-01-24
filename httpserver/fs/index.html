@@ -1,456 +1,50 @@
 <html>
+
 <head>
-<title>Raspberry Pi Pico W Demo</title>
-<style type="text/css">
-body {
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
-}
+    <title>Radioprotección</title>
+    <style type="text/css">
 
-.main {
-    display: grid;
-    place-items: center;
-}
+    </style>
+    <script language="JavaScript">
 
-.header {
-    display: grid;
-    place-items: center;
-}
-
-.pinout {
-    width: 100%;
-    max-width: 960px;
-    min-width: 650px;
-    display: grid;
-    grid-template-columns: auto 1fr auto
-}
-
-.header * {
-    margin: 5px 0px;
-}
-
-.pico_image {
-    width: 100%;
-    grid-column: 2;
-}
-
-.pins {
-    position: relative;
-    top: 3.8%;
-    height: 96%;
-    color: white;
-}
-
-#left_pins {
-    margin: 0 10px 0 0;
-}
-
-#right_pins {
-    margin: 0 0 0 10px;
-}
-
-.pins tr td div {
-    width: 100%;
-    text-align: center;
-    padding-top: 5px;
-    padding-bottom: 5px;
-}
-
-.pins tr td {
-    padding: 0 7px;
-}
-
-#left_pins tr td:nth-last-child(1) div, #right_pins tr td:nth-child(1) div {
-    background: #cccccc;
-    color: black;
-    padding-left: 4px;
-    padding-right: 4px;
-}
-
-#left_pins tr td:nth-last-child(2) div, #right_pins tr td:nth-child(2) div {
-    padding-left: 4px;
-    padding-right: 4px;
-}
-
-.gpio_pin {
-    background: #7AC943;
-}
-
-.gnd_pin {
-    background: #000000;
-}
-
-.pwr_pin {
-    background: #E83131;
-}
-
-.dynamic_selector {
-    display: block;
-    border: 1px solid black;
-    margin: -1px 0px;
-}
-
-.pinmode span {
-    padding: 5px 5px;
-    margin: 0px -1px;
-}
-
-.pinvalue span {
-    padding: 5px 10px;
-    margin: 0px -1px;
-}
-
-.selected_value {
-    color: white;
-    background: blue;
-}
-
-.deselected_value {
-    color: black;
-    cursor: pointer;
-}
-
-@media screen and (max-width: 980px) {
-    .pins {
-        font-size: 11px;
-    }
-}
-
-@media screen and (max-width: 850px) {
-    .pins {
-        font-size: 11px;
-    }
-}
-
-@media screen and (max-width: 800px) {
-    .pins {
-        font-size: 8px;
-    }
-}
-
-.settings_link {
-    margin: 3px 0px 0px 0px;
-    display: inline-block;
-    vertical-align: top;
-}
-
-.modal_background {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgb(0,0,0);
-    background-color: rgba(0,0,0,0.4);
-}
-    
-.modal_popup {
-    display: none;
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    box-shadow: 0 5px 10px 0 rgba(0,0,0,0.5),0 10px 20px 0 rgba(0,0,0,0.1);
-}
-
-.settings_popup {
-    width: 500px;
-}
-
-.error_popup {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    background: red;
-    padding: 30px 30px;
-    color: white;
-}
-
-.reboot_popup {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    background: green;
-    padding: 30px 30px;
-    color: white;
-}
-
-.settings_field {
-    width: 200px;
-}
-
-.modal_popup table {
-    margin: 0px auto;
-}
-
-.modal_popup h2 {
-    text-align: center;
-}
-
-.modal_popup div:nth-last-child(1) {
-    text-align: right;
-    margin-top: 20px;
-}
-
-.modal_popup button {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  width: 100px;
-  padding: 10px 0;
-  text-align: center;
-  display: inline-block;
-  font-size: 16px;
-  margin: 4px 2px;
-  cursor: pointer;
-}
-
-</style>
-<script language="JavaScript">
-
-function updateSelector(id, mode) {
-    for (const span of document.getElementById(id).children) {
-        if (span.dataset.option == mode)
-        {
-            span.classList.add("selected_value");
-            span.classList.remove("deselected_value");
+        function updateSelector(id, mode) {
         }
-        else
-        {
-            span.classList.add("deselected_value");
-            span.classList.remove("selected_value");
-        }
-    }
-}
-
-function configurePin(id, mode, value) {
-    let xhr = new XMLHttpRequest();
-      
-    xhr.open("GET", `/api/writepin/${id}?${mode}=${value}`, true);
-    xhr.send();
-    updateSelector(id + mode, value);
-}
-
-function setlinks() {
-    for (const line of [["pinmode", ["IN", "OUT"], "d"], ["pinvalue", ["0", "1"], "v"]]) {
-        for (const div of document.getElementsByClassName(line[0])) {
-            div.classList.add("dynamic_selector");
-            for (const option of line[1]) {
-                const span = document.createElement("span");
-                span.appendChild(document.createTextNode(option));
-                span.classList.add("deselected_value");
-                span.dataset.id = div.id.substring(0, div.id.length - 1);
-                span.dataset.mode = line[2];
-                span.dataset.option = option;
-                span.id = div.id + "_" + option;
-                span.onclick = function(event) { configurePin(event.target.dataset.id, event.target.dataset.mode, event.target.dataset.option); };
-                div.appendChild(span);
-            }
-        }
-    }
-}
-
-var last_update_time = Date.now();
-var unrecoverable_error = null;
-
-function show_unrecoverable_error(text) {
-    unrecoverable_error = text;
-    document.getElementById("error_popup").style.display = "block";
-    document.getElementById("error_popup_text").innerHTML = text;
-}
-
-
-function refresh_values() {
-    if (unrecoverable_error)
-        return;
-
-    if ((Date.now() - last_update_time) > 5000) {
-        show_unrecoverable_error("The Raspberry Pi is not responding. Please try restarting it and refresh this page.");
-    }
-
-    let xhr = new XMLHttpRequest();
-    xhr.open("GET", '/api/readpins', true);
-    xhr.send();
-    xhr.onloadend = function () {
-        let data = JSON.parse(this.responseText);
-        for (const k of Object.keys(data)) {
-            updateSelector(k, data[k]);
-        }
-        
-        last_update_time = Date.now();
-  };  
-}
-
-function init_page() {
-    setlinks();
-    setInterval(refresh_values, 500);
-    
-    window.onclick = function(event) {
-      if (event.target && event.target.classList.contains("modal_background")) {
-          for (const el of document.getElementsByClassName("modal_popup"))
-              el.style.display = "none";
-            document.getElementById("popup_root").style.display = "none";
-      }
-    }
-}
-
-function show_settings_popup(show) {
-    update_field_visibility();
-    document.getElementById("popup_root").style.display = show ? "block" : "none";
-    document.getElementById("settings_popup").style.display = show ? "block" : "none";
-}
-
-function update_field_visibility() {
-    for (const el of document.getElementsByClassName("dynamic_row"))
-        el.style.display = document.getElementById(el.dataset.condition).checked ? "table-row" : "none";
-}
-
-function edit_settings() {
-    let xhr = new XMLHttpRequest();
-    xhr.open("GET", '/api/settings', true);
-    xhr.send();
-    xhr.onloadend = function () {
-        try {
-            let data = JSON.parse(this.responseText);
-            for (const k of Object.keys(data)) {
-                const el = document.getElementById(k);
-                if (el.getAttribute('type') == 'checkbox')
-                    el.checked = data[k];
-                else
-                    el.value = data[k];
-            }
-            
-            show_settings_popup(true);
-        }
-        catch(err) {
-            show_unrecoverable_error(err.message);
-        }
-  };  
-}
-
-function apply_settings() {
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", '/api/settings', true);
-    xhr.setRequestHeader("Content-Type", "text/plain");
-    let text = "";
-    for (const el of document.getElementsByClassName("settings_checkbox"))
-        text += `${el.id}=${el.checked}\r\n`;
-    for (const el of document.getElementsByClassName("settings_field"))
-        text += `${el.id}=${el.value}\r\n`;
-    xhr.send(text);
-    xhr.onloadend = function () {
-        if (this.responseText == "OK")
-        {
-            show_settings_popup(false);
-            document.getElementById("reboot_popup").style.display = "block";
-            unrecoverable_error = "rebooting";
-        }
-        else
-            alert(this.responseText);
-    };  
-}
-
-</script>
-
+    </script>
 </head>
+<html>
 
-<body onload="init_page()">
-<div class="main">
-<div class="header">
-<h1>Raspberry Pi Pico W Demo <a href="javascript:edit_settings()" class="settings_link"><img style="width: 32px; height: 32px; margin: 0px;" src="img/configure.png"></a></h1>
-<p>Use the selectors below to change the modes and values of GPIO pins:</p>
-</div>
-<div class="pinout">
-    <table id="left_pins" class="pins">
-        <tr><td><div id="gpio0v" class="pinvalue"></div></td><td><div id="gpio0d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO0</div></td><td><div>1</div></td></tr>
-        <tr><td><div id="gpio1v" class="pinvalue"></div></td><td><div id="gpio1d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO1</div></td><td><div>2</div></td></tr>
-        <tr><td></td><td></td><td><div class="gnd_pin">GND</div></td><td><div>3</div></td></tr>
-        <tr><td><div id="gpio2v" class="pinvalue"></div></td><td><div id="gpio2d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO2</div></td><td><div>4</div></td></tr>
-        <tr><td><div id="gpio3v" class="pinvalue"></div></td><td><div id="gpio3d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO3</div></td><td><div>5</div></td></tr>
-        <tr><td><div id="gpio4v" class="pinvalue"></div></td><td><div id="gpio4d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO4</div></td><td><div>6</div></td></tr>
-        <tr><td><div id="gpio5v" class="pinvalue"></div></td><td><div id="gpio5d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO5</div></td><td><div>7</div></td></tr>
-        <tr><td></td><td></td><td><div class="gnd_pin">GND</div></td><td><div>8</div></td></tr>
-        <tr><td><div id="gpio6v" class="pinvalue"></div></td><td><div id="gpio6d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO6</div></td><td><div>9</div></td></tr>
-        <tr><td><div id="gpio7v" class="pinvalue"></div></td><td><div id="gpio7d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO7</div></td><td><div>10</div></td></tr>
-        <tr><td><div id="gpio8v" class="pinvalue"></div></td><td><div id="gpio8d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO8</div></td><td><div>11</div></td></tr>
-        <tr><td><div id="gpio9v" class="pinvalue"></div></td><td><div id="gpio9d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO9</div></td><td><div>12</div></td></tr>
-        <tr><td></td><td></td><td><div class="gnd_pin">GND</div></td><td><div>13</div></td></tr>
-        <tr><td><div id="gpio10v" class="pinvalue"></div></td><td><div id="gpio10d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO10</div></td><td><div>14</div></td></tr>
-        <tr><td><div id="gpio11v" class="pinvalue"></div></td><td><div id="gpio11d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO11</div></td><td><div>15</div></td></tr>
-        <tr><td><div id="gpio12v" class="pinvalue"></div></td><td><div id="gpio12d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO12</div></td><td><div>16</div></td></tr>
-        <tr><td><div id="gpio13v" class="pinvalue"></div></td><td><div id="gpio13d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO13</div></td><td><div>17</div></td></tr>
-        <tr><td></td><td></td><td><div class="gnd_pin">GND</div></td><td><div>18</div></td></tr>
-        <tr><td><div id="gpio14v" class="pinvalue"></div></td><td><div id="gpio14d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO14</div></td><td><div>19</div></td></tr>
-        <tr><td><div id="gpio15v" class="pinvalue"></div></td><td><div id="gpio15d" class="pinmode"></div></td><td><div class="gpio_pin">GPIO15</div></td><td><div>20</div></td></tr>
-    </table>
-    
-    <img src="pinout.svg" class="pico_image"/>
-    
-    <table id="right_pins" class="pins">
-        <tr><td><div>40</div></td><td><div class="pwr_pin">VBUS</div></td><td></td><td></td></tr>
-        <tr><td><div>39</div></td><td><div class="pwr_pin">VSYS</div></td><td></td><td></td></tr>
-        <tr><td><div>38</div></td><td><div class="gnd_pin">GND</div></td><td></td><td></td></tr>
-        <tr><td><div>37</div></td><td><div class="pwr_pin">3V3_EN</div></td><td></td><td></td></tr>
-        <tr><td><div>36</div></td><td><div class="pwr_pin">3V3_OUT</div></td><td></td><td></td></tr>
-        <tr><td><div>35</div></td><td><div class="pwr_pin">ADC_VREF</div></td><td></td><td></td></tr>
-        <tr><td><div>34</div></td><td><div class="gpio_pin">GPIO28</div></td><td><div id="gpio28d" class="pinmode"></div></td><td><div id="gpio28v" class="pinvalue"></div></td></tr>
-        <tr><td><div>33</div></td><td><div class="gnd_pin">GND</div></td><td></td><td></td></tr>
-        <tr><td><div>32</div></td><td><div class="gpio_pin">GPIO27</div></td><td><div id="gpio27d" class="pinmode"></div></td><td><div id="gpio27v" class="pinvalue"></div></td></tr>
-        <tr><td><div>31</div></td><td><div class="gpio_pin">GPIO26</div></td><td><div id="gpio26d" class="pinmode"></div></td><td><div id="gpio26v" class="pinvalue"></div></td></tr>
-        <tr><td><div>30</div></td><td><div class="pwr_pin">RUN</div></td><td></td><td></td></tr>
-        <tr><td><div>29</div></td><td><div class="gpio_pin">GPIO22</div></td><td><div id="gpio22d" class="pinmode"></div></td><td><div id="gpio22v" class="pinvalue"></div></td></tr>
-        <tr><td><div>28</div></td><td><div class="gnd_pin">GND</div></td><td></td><td></td></tr>
-        <tr><td><div>27</div></td><td><div class="gpio_pin">GPIO21</div></td><td><div id="gpio21d" class="pinmode"></div></td><td><div id="gpio21v" class="pinvalue"></div></td></tr>
-        <tr><td><div>26</div></td><td><div class="gpio_pin">GPIO20</div></td><td><div id="gpio20d" class="pinmode"></div></td><td><div id="gpio20v" class="pinvalue"></div></td></tr>
-        <tr><td><div>25</div></td><td><div class="gpio_pin">GPIO19</div></td><td><div id="gpio19d" class="pinmode"></div></td><td><div id="gpio19v" class="pinvalue"></div></td></tr>
-        <tr><td><div>24</div></td><td><div class="gpio_pin">GPIO18</div></td><td><div id="gpio18d" class="pinmode"></div></td><td><div id="gpio18v" class="pinvalue"></div></td></tr>
-        <tr><td><div>23</div></td><td><div class="gnd_pin">GND</div></td><td></td><td></td></tr>
-        <tr><td><div>22</div></td><td><div class="gpio_pin">GPIO17</div></td><td><div id="gpio17d" class="pinmode"></div></td><td><div id="gpio17v" class="pinvalue"></div></td></tr>
-        <tr><td><div>21</div></td><td><div class="gpio_pin">GPIO16</div></td><td><div id="gpio16d" class="pinmode"></div></td><td><div id="gpio16v" class="pinvalue"></div></td></tr>
-    </table>
-</div>
-<div class="header">
-<table>
-<tr><td>Built-in LED state:</td>
-<td><div id="led0v" class="pinvalue" style="padding: 5px 0px;"></div></td></tr>
-</table>
-</div>
-
-<div class="modal_background" id="popup_root">
-    <div id="settings_popup" class="settings_popup modal_popup">
-        <h2>Demo HTTP server settings</h2>
+<body>
+    <div>
         <table>
-            <tr><td>Wi-Fi Network name (SSID):</td><td><input id="ssid" class="settings_field"></td></tr>
-            <tr><td colspan="2"><input id="has_password" type="checkbox" onchange="update_field_visibility()" class="settings_checkbox">Require Wi-Fi password for connecting</td></tr>
-            <tr class="dynamic_row" data-condition="has_password"><td>Wi-Fi Password:</td><td><input id="password" class="settings_field"></td></tr>
-            <tr><td>Host name:</td><td><input id="hostname" class="settings_field"></td></tr>
-            <tr><td colspan="2"><input id="use_domain" type="checkbox" onchange="update_field_visibility()" class="settings_checkbox">Use a connection DNS suffix</td></tr>
-            <tr class="dynamic_row" data-condition="use_domain"><td>DNS suffix:</td><td><input id="domain" class="settings_field"></td></tr>
-            <tr><td colspan="2"><input id="dns_ignores_network_suffix" type="checkbox" class="settings_checkbox">Ignore domain if host name matches</td></tr>
-
-            <tr><td>IP address:</td><td><input id="ipaddr" class="settings_field"></td></tr>
-            <tr><td>Network mask:</td><td><input id="netmask" class="settings_field"></td></tr>
-    
-            <tr><td colspan="2"><input id="use_second_ip" type="checkbox" onchange="update_field_visibility()" class="settings_checkbox">Show 'sign into the network' message</td></tr>
-            <tr class="dynamic_row" data-condition="use_second_ip"><td>Secondary IP address:</td><td><input id="ipaddr2" class="settings_field"></td></tr>
+            <thead>
+                <tr>
+                    <td>Setting</td>
+                    <td>Value</td>
+                </tr>
+            </thead>
+            <tr>
+                <td>Nombre de Red:</td>
+                <td>Radioproteccion</td>
+            </tr>
+            <tr>
+                <td>Seguridad:</td>
+                <td>
+                    <select id="wifi_seq">
+                        <option value="OPEN" title="No authorisation required (open)">Open</option>
+                        <option value="WPA_TKIP_PSK" title="WPA authorisation">WPA TKIP PSK</option>
+                        <option value="WPA2_AES_PSK" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
+                        <option value="WPA2_MIXED_PSK" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED PSK</option>
+                        <option value="WPA3_SAE_AES_PSK" title="WPA3 AES authorisation">WPA3 AES</option>
+                        <option value="WPA3_WPA2_AES_PSK" title="WPA3 AES authorisation">WPA2/WPA3</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Contrase&ntilde;a:</td>
+                <td>*</td>
+            </tr>
         </table>
-        <div>
-            <button onclick="apply_settings()">OK</button>
-            <button onclick="show_settings_popup(false)">Cancel</button>
-        </div>
     </div>
-</div>
-
-<div id="error_popup" class="error_popup modal_popup">
-    <p id="error_popup_text"></p>
-</div>
-
-<div id="reboot_popup" class="reboot_popup modal_popup">
-    <p>The settings have been updated and the device is restarting.<br/>Please disconnect from the Wi-Fi network, reconnect to it and proceed to the network login page.</p>
-</div>
-
-</div>
 </body>
+
 </html>

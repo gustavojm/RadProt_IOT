@@ -15,6 +15,12 @@
         "future": "cpp",
         "ostream": "cpp",
         "sys.h": "c",
-        "*.inc": "c"
+        "*.inc": "c",
+        "tinydir.h": "c",
+        "libgen.h": "c",
+        "dirent.h": "c",
+        "algorithm": "cpp",
+        "stdio.h": "c",
+        "debug_printf.h": "c"
     },
 }

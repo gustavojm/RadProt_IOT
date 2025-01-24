@@ -15,6 +15,12 @@
 #include "server_settings.h"
 #include "lwip/apps/httpd.h"
 
+#include "hardware/vreg.h"
+#include "hardware/clocks.h"
+#include "etl/string.h"
+#include "etl/map.h"
+
+
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 
 // static char *parse_server_settings(http_connection conn, pico_server_settings *settings)
@@ -224,6 +230,41 @@ static void set_secondary_ip_address(int address)
 	ip4_secondary_ip_address = address;
 }
 
+static etl::map<etl::string<128>, uint8_t[6], 50> wifi_networks;
+
+static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
+    if (result) {
+        printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n",
+            result->ssid, result->rssi, result->channel,
+            result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5],
+            result->auth_mode);
+    }
+
+// Define the map with string as key and array as value
+    constexpr size_t MAX_MAP_SIZE = 10;
+    
+	
+	using KeyType = etl::string<20>; // Maximum key size of 20 characters
+    using ValueType = etl::array<uint8_t, 6>; // Fixed-size array
+    etl::map<KeyType, ValueType, MAX_MAP_SIZE> myMap;
+
+    // Create a key and a value
+    KeyType key = "example";
+    ValueType value = {1, 2, 3, 4, 5, 6};
+
+    // Insert into the map
+    auto result_ins = myMap.insert({key, value});
+    if (result_ins.second) {
+        printf("Inserted successfully!\n");
+    } else {
+        printf("Failed to insert. Key might already exist.\n");
+    }
+
+
+//	wifi_networks.insert(etl::string<128>(result->ssid), result->bssid);
+    return 0;
+}
+
 static void main_task(__unused void *params)
 {
 	
@@ -233,7 +274,22 @@ static void main_task(__unused void *params)
 		return;
 	}
 
-		
+
+    cyw43_arch_enable_sta_mode();
+	
+	cyw43_wifi_scan_options_t scan_options = {0};
+	int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+	if (err == 0) {
+		printf("\nPerforming wifi scan\n");
+	} else {
+		printf("Failed to start scan: %d\n", err);
+	}
+	while (cyw43_wifi_scan_active(&cyw43_state)) {
+		vTaskDelay(1000);
+	}		
+
+	printf("WIFI Scan finished\n");
+
 	const pico_server_settings *settings = get_pico_server_settings();
 
 	cyw43_arch_enable_ap_mode(settings->network_name, settings->network_password, settings->network_password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
@@ -259,7 +315,7 @@ static void main_task(__unused void *params)
 
 xSemaphoreHandle s_PrintfSemaphore;
 
-void debug_printf(const char *format, ...)
+extern "C" void debug_printf(const char *format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -269,7 +325,7 @@ void debug_printf(const char *format, ...)
 	xSemaphoreGive(s_PrintfSemaphore);
 }
 
-void debug_write(const void *data, int size)
+extern "C" void debug_write(const void *data, int size)
 {
 	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
 	for (int i = 0; i < size; i++) {
