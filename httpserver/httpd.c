@@ -111,6 +111,7 @@
 #include <string.h> /* memset */
 #include <stdlib.h> /* atoi */
 #include <stdio.h>
+#include "debug_printf.h"
 
 #if LWIP_TCP && LWIP_CALLBACK_API
 
@@ -147,12 +148,10 @@
 #define HTTP_NO_DATA_TO_SEND       0
 
 
-struct httpd_config_t {
+static struct {
   const char *hostname;
 	const char *domain_name;
-} ;
-
-static struct httpd_config_t httpd_config;
+} s_HTTPServerSettings;
 
 typedef struct {
   const char *name;
@@ -281,6 +280,7 @@ struct http_state {
   u16_t hdr_pos;     /* The position of the first unsent header byte in the
                         current string */
   u16_t hdr_index;   /* The index of the hdr string currently being sent. */
+  char hdr_redirect[128];    // 302 Redirect header for Captive Portal
 #endif /* LWIP_HTTPD_DYNAMIC_HEADERS */
 #if LWIP_HTTPD_TIMING
   u32_t time_started;
@@ -1972,14 +1972,14 @@ http_continue(void *connection)
 
 static bool host_name_matches(char *host)
 {
-	int len = strlen(httpd_config.hostname);
-	if (strncasecmp(host, httpd_config.hostname, len))
+	int len = strlen(s_HTTPServerSettings.hostname);
+	if (strncasecmp(host, s_HTTPServerSettings.hostname, len))
 		return false;
 	
 	if (!host[len])
 		return true;	//Host name without domain
 	
-	if (host[len] == '.' && !strcasecmp(host + len + 1, httpd_config.domain_name))
+	if (host[len] == '.' && !strcasecmp(host + len + 1, s_HTTPServerSettings.domain_name))
 		return true;	//Host name with domain
 	
 	return false;
@@ -2098,20 +2098,18 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
       }      
 
 			host[host_end - host_start] = 0;    //null terminate   
-      printf("HOST BROWSER: %s", host);
+      
+      debug_printf("HTTP: %s\n", host);
 
-    if (!host_name_matches(host)) {
-      static char redir_header[128];
-      snprintf(redir_header, sizeof redir_header, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\nConnection: Close\r\n\r\n", httpd_config.hostname, httpd_config.domain_name);
-      printf("REDIR HEADER: %s", redir_header);
+      if (!host_name_matches(host)) {
+        snprintf(hs->hdr_redirect, sizeof hs->hdr_redirect, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\nConnection: Close\r\n\r\n", s_HTTPServerSettings.hostname, s_HTTPServerSettings.domain_name);
 
-      hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = redir_header;
-      /* Set up to send the first header string. */
-      hs->hdr_index = 0;
-      hs->hdr_pos = 0;      
-      return ERR_OK;
-    }
-    
+        hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = hs->hdr_redirect;
+        /* Set up to send the first header string. */
+        hs->hdr_index = 0;
+        hs->hdr_pos = 0;      
+        return ERR_OK;
+      }  
 
       /* if we come here, method is OK, parse URI */
       left_len = (u16_t)(data_len - ((sp1 + 1) - data));
@@ -2734,8 +2732,8 @@ httpd_init_pcb(struct altcp_pcb *pcb, u16_t port)
 void
 httpd_init(const char *hostname, const char *domain_name)
 {
-  httpd_config.hostname = hostname;
-  httpd_config.domain_name = domain_name;
+  s_HTTPServerSettings.hostname = hostname;
+  s_HTTPServerSettings.domain_name = domain_name;
   struct altcp_pcb *pcb;
 
 #if HTTPD_USE_MEM_POOL

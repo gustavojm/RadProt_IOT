@@ -27,7 +27,7 @@ FetchContent_MakeAvailable(ArduinoJson)
 add_custom_target(${name}-fs DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
 
 add_custom_target(html_gen
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../html_gen/build/html_gen ${CMAKE_CURRENT_SOURCE_DIR}/fs -f:${CMAKE_CURRENT_SOURCE_DIR}/src/fsdata.c
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../html_gen/build/html_gen ${CMAKE_CURRENT_SOURCE_DIR}/httpserver/fs -f:${CMAKE_CURRENT_SOURCE_DIR}/httpserver/fsdata.c
   COMMENT "Running html_gen"
 )
 
@@ -35,12 +35,11 @@ add_executable(PicoHTTPServer
         main.c
         dhcpserver/dhcpserver.c
         dns/dnsserver.c
-        #httpserver.c
+        httpserver/httpd.c
+        httpserver/fs.c
         src/server_settings.c
         src/tcp_server.cpp
         src/tcp_server_command.cpp
-        src/httpd.c
-        src/fs.c
         src/hooks.c
         )
 

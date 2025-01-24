@@ -269,21 +269,8 @@ void debug_printf(const char *format, ...)
 	xSemaphoreGive(s_PrintfSemaphore);
 }
 
-int _write(int fd, const char *buf, int count) {
-    for (int i = 0; i < count; i++) {
-        putchar(buf[i]); // Send each character to the default UART
-    }
-    return count;
-}
-
 void debug_write(const void *data, int size)
 {
-	//xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);	
-	// int i;
-	// for (i=0, i<size ; i++;) {
-	// 	putchar(((char*) data)[i]);
-	// }
-	// xSemaphoreGive(s_PrintfSemaphore);
 	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
 	for (int i = 0; i < size; i++) {
         putchar(((char *)data)[i]); // Send each character to the default UART
