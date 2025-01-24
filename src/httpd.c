@@ -2102,7 +2102,7 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
 
     if (!host_name_matches(host)) {
       static char redir_header[128];
-      snprintf(redir_header, sizeof redir_header, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\n", httpd_config.hostname, httpd_config.domain_name);
+      snprintf(redir_header, sizeof redir_header, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\nConnection: Close\r\n\r\n", httpd_config.hostname, httpd_config.domain_name);
       printf("REDIR HEADER: %s", redir_header);
 
       hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = redir_header;
