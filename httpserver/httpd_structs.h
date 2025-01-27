@@ -1,7 +1,7 @@
 #ifndef LWIP_HTTPD_STRUCTS_H
 #define LWIP_HTTPD_STRUCTS_H
 
-#include "lwip/apps/httpd.h"
+#include "httpd.h"
 
 #if LWIP_HTTPD_DYNAMIC_HEADERS
 /** This struct is used for a list of HTTP header strings for various
@@ -33,27 +33,27 @@ typedef struct {
 /** A list of strings used in HTTP headers (see RFC 1945 HTTP/1.0 and
  * RFC 2616 HTTP/1.1 for header field definitions) */
 static const char *const g_psHTTPHeaderStrings[] = {
-  [HTTP_HDR_OK] "HTTP/1.0 200 OK\r\n",
-  [HTTP_HDR_NOT_FOUND] "HTTP/1.0 404 File not found\r\n",
-  [HTTP_HDR_BAD_REQUEST] "HTTP/1.0 400 Bad Request\r\n",
-  [HTTP_HDR_NOT_IMPL] "HTTP/1.0 501 Not Implemented\r\n",
-  [HTTP_HDR_OK_11] "HTTP/1.1 200 OK\r\n",
-  [HTTP_HDR_NOT_FOUND_11] "HTTP/1.1 404 File not found\r\n",
-  [HTTP_HDR_BAD_REQUEST_11] "HTTP/1.1 400 Bad Request\r\n",
-  [HTTP_HDR_NOT_IMPL_11] "HTTP/1.1 501 Not Implemented\r\n",
-  [HTTP_HDR_CONTENT_LENGTH] "Content-Length: ",
-  [HTTP_HDR_CONN_CLOSE] "Connection: Close\r\n\r\n",
-  [HTTP_HDR_CONN_KEEPALIVE] "Connection: keep-alive\r\n",
-  [HTTP_HDR_KEEPALIVE_LEN] "Connection: keep-alive\r\nContent-Length: ",
-  [HTTP_HDR_SERVER] "Server: "HTTPD_SERVER_AGENT"\r\n",
-  [DEFAULT_404_HTML] "\r\n<html><body><h2>404: The requested file cannot be found.</h2></body></html>\r\n"
+  [HTTP_HDR_OK] = "HTTP/1.0 200 OK\r\n",
+  [HTTP_HDR_NOT_FOUND] = "HTTP/1.0 404 File not found\r\n",
+  [HTTP_HDR_BAD_REQUEST] = "HTTP/1.0 400 Bad Request\r\n",
+  [HTTP_HDR_NOT_IMPL] = "HTTP/1.0 501 Not Implemented\r\n",
+  [HTTP_HDR_OK_11] = "HTTP/1.1 200 OK\r\n",
+  [HTTP_HDR_NOT_FOUND_11] = "HTTP/1.1 404 File not found\r\n",
+  [HTTP_HDR_BAD_REQUEST_11] = "HTTP/1.1 400 Bad Request\r\n",
+  [HTTP_HDR_NOT_IMPL_11] = "HTTP/1.1 501 Not Implemented\r\n",
+  [HTTP_HDR_CONTENT_LENGTH] = "Content-Length: ",
+  [HTTP_HDR_CONN_CLOSE] = "Connection: Close\r\n\r\n",
+  [HTTP_HDR_CONN_KEEPALIVE] = "Connection: keep-alive\r\n",
+  [HTTP_HDR_KEEPALIVE_LEN] = "Connection: keep-alive\r\nContent-Length: ",
+  [HTTP_HDR_SERVER] = "Server: " HTTPD_SERVER_AGENT "\r\n",
+  [DEFAULT_404_HTML] = "\r\n<html><body><h2>404: The requested file cannot be found.</h2></body></html>\r\n"
 #if LWIP_HTTPD_SUPPORT_11_KEEPALIVE
-  , [DEFAULT_404_HTML_PERSISTENT] "Connection: keep-alive\r\nContent-Length: 77\r\n\r\n<html><body><h2>404: The requested file cannot be found.</h2></body></html>\r\n"
+  , [DEFAULT_404_HTML_PERSISTENT] = "Connection: keep-alive\r\nContent-Length: 77\r\n\r\n<html><body><h2>404: The requested file cannot be found.</h2></body></html>\r\n"
 #endif
 };
 
-#define HTTP_CONTENT_TYPE(contenttype) "Content-Type: "contenttype"\r\n\r\n"
-#define HTTP_CONTENT_TYPE_ENCODING(contenttype, encoding) "Content-Type: "contenttype"\r\nContent-Encoding: "encoding"\r\n\r\n"
+#define HTTP_CONTENT_TYPE(contenttype) "Content-Type: " contenttype "\r\n\r\n"
+#define HTTP_CONTENT_TYPE_ENCODING(contenttype, encoding) "Content-Type: " contenttype "\r\nContent-Encoding: " encoding "\r\n\r\n"
 
 #define HTTP_HDR_HTML           HTTP_CONTENT_TYPE("text/html")
 #define HTTP_HDR_SSI            HTTP_CONTENT_TYPE("text/html\r\nExpires: Fri, 10 Apr 2008 14:00:00 GMT\r\nPragma: no-cache")

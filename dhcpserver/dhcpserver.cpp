@@ -185,7 +185,10 @@ static void opt_write_u32(uint8_t **opt, uint8_t cmd, uint32_t val) {
 }
 
 static void dhcp_server_process(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *src_addr, u16_t src_port) {
-    dhcp_server_t *d = arg;
+    uint8_t *opt = nullptr;
+    size_t len = 0;
+    dhcp_server_t *d = static_cast<dhcp_server_t *>(arg);
+
     (void)upcb;
     (void)src_addr;
     (void)src_port;
@@ -198,7 +201,7 @@ static void dhcp_server_process(void *arg, struct udp_pcb *upcb, struct pbuf *p,
         goto ignore_request;
     }
 
-    size_t len = pbuf_copy_partial(p, &dhcp_msg, sizeof(dhcp_msg), 0);
+    len = pbuf_copy_partial(p, &dhcp_msg, sizeof(dhcp_msg), 0);
     if (len < DHCP_MIN_SIZE) {
         goto ignore_request;
     }
@@ -206,7 +209,7 @@ static void dhcp_server_process(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     dhcp_msg.op = DHCPOFFER;
     memcpy(&dhcp_msg.yiaddr, &d->ip.addr, 4);
 
-    uint8_t *opt = (uint8_t *)&dhcp_msg.options;
+    opt = (uint8_t *)&dhcp_msg.options;
     opt += 4; // assume magic cookie: 99, 130, 83, 99
 
     switch (opt[2]) {

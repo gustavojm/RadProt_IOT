@@ -21,6 +21,12 @@
         "dirent.h": "c",
         "algorithm": "cpp",
         "stdio.h": "c",
-        "debug_printf.h": "c"
+        "debug_printf.h": "c",
+        "stdlib.h": "c",
+        "fs.h": "c",
+        "altcp.h": "c",
+        "err.h": "c",
+        "httpd.h": "c",
+        "complex": "cpp"
     },
 }

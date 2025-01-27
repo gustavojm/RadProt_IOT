@@ -174,7 +174,7 @@ static void dns_server_thread(void *unused)
 				.DataLength = htons(4),
 			};
 			
-			rec.Data = get_address_for_encoded_domain((char *)&packet.header, sizeof(packet.header), done);
+			rec.Data = get_address_for_encoded_domain((uint8_t *)&packet.header, sizeof(packet.header), done);
 			
 			memcpy(packet.payload + ptr, &rec, sizeof(rec));
 			ptr += sizeof(rec);

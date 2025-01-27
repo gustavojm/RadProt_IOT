@@ -13,12 +13,13 @@
 #include "dhcpserver/dhcpserver.h"
 #include "dns/dnsserver.h"
 #include "server_settings.h"
-#include "lwip/apps/httpd.h"
+#include "httpd.h"
 
 #include "hardware/vreg.h"
 #include "hardware/clocks.h"
-#include "etl/string.h"
-#include "etl/map.h"
+// #include "etl/string.h"
+// #include "etl/map.h"
+#include "debug_printf.h"
 
 
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
@@ -230,7 +231,7 @@ static void set_secondary_ip_address(int address)
 	ip4_secondary_ip_address = address;
 }
 
-static etl::map<etl::string<128>, uint8_t[6], 50> wifi_networks;
+//static etl::map<etl::string<128>, uint8_t[6], 50> wifi_networks;
 
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     if (result) {
@@ -241,24 +242,24 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     }
 
 // Define the map with string as key and array as value
-    constexpr size_t MAX_MAP_SIZE = 10;
+    // constexpr size_t MAX_MAP_SIZE = 10;
     
 	
-	using KeyType = etl::string<20>; // Maximum key size of 20 characters
-    using ValueType = etl::array<uint8_t, 6>; // Fixed-size array
-    etl::map<KeyType, ValueType, MAX_MAP_SIZE> myMap;
+	// using KeyType = etl::string<20>; // Maximum key size of 20 characters
+    // using ValueType = etl::array<uint8_t, 6>; // Fixed-size array
+    // etl::map<KeyType, ValueType, MAX_MAP_SIZE> myMap;
 
-    // Create a key and a value
-    KeyType key = "example";
-    ValueType value = {1, 2, 3, 4, 5, 6};
+    // // Create a key and a value
+    // KeyType key = "example";
+    // ValueType value = {1, 2, 3, 4, 5, 6};
 
-    // Insert into the map
-    auto result_ins = myMap.insert({key, value});
-    if (result_ins.second) {
-        printf("Inserted successfully!\n");
-    } else {
-        printf("Failed to insert. Key might already exist.\n");
-    }
+    // // Insert into the map
+    // auto result_ins = myMap.insert({key, value});
+    // if (result_ins.second) {
+    //     printf("Inserted successfully!\n");
+    // } else {
+    //     printf("Failed to insert. Key might already exist.\n");
+    // }
 
 
 //	wifi_networks.insert(etl::string<128>(result->ssid), result->bssid);
@@ -311,28 +312,6 @@ static void main_task(__unused void *params)
 
     httpd_init(settings->hostname, settings->domain_name);
 	vTaskDelete(NULL);
-}
-
-xSemaphoreHandle s_PrintfSemaphore;
-
-extern "C" void debug_printf(const char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
-	vprintf(format, args);
-	va_end(args);
-	xSemaphoreGive(s_PrintfSemaphore);
-}
-
-extern "C" void debug_write(const void *data, int size)
-{
-	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
-	for (int i = 0; i < size; i++) {
-        putchar(((char *)data)[i]); // Send each character to the default UART
-    }
-	xSemaphoreGive(s_PrintfSemaphore);	
-
 }
 
 int main(void)

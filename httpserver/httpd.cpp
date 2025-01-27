@@ -89,12 +89,14 @@
  * the 'g_psHTTPHeaders' list.
  */
 #include "lwip/init.h"
-#include "lwip/apps/httpd.h"
 #include "lwip/debug.h"
 #include "lwip/stats.h"
-#include "lwip/apps/fs.h"
 #include "httpd_structs.h"
 #include "lwip/def.h"
+
+#include "httpd.h"
+#include "fs.h"
+
 
 #include "lwip/altcp.h"
 #include "lwip/altcp_tcp.h"
@@ -111,7 +113,6 @@
 #include <string.h> /* memset */
 #include <stdlib.h> /* atoi */
 #include <stdio.h>
-#include "debug_printf.h"
 
 #if LWIP_TCP && LWIP_CALLBACK_API
 
@@ -2024,7 +2025,7 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
 
 #if LWIP_HTTPD_SUPPORT_REQUESTLIST
 
-  LWIP_DEBUGF(HTTPD_DEBUG, ("Received %"U16_F" bytes\n", p->tot_len));
+  LWIP_DEBUGF(HTTPD_DEBUG, ("Received %" U16_F " bytes\n", p->tot_len));
 
   /* first check allowed characters in this pbuf? */
 
@@ -2090,7 +2091,7 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
       /* Get the host name */
       char host[32];
       char* host_start = lwip_strnstr(data, "Host: ", data_len) + 6;
-      char* host_end = lwip_strnstr(host_start + 6, CRLF, data_len);      
+      char* host_end = lwip_strnstr(host_start, CRLF, data_len);      
       int host_len = host_end - host_start;
 
       if (host_start) {
@@ -2099,7 +2100,7 @@ http_parse_request(struct pbuf *inp, struct http_state *hs, struct altcp_pcb *pc
 
 			host[host_end - host_start] = 0;    //null terminate   
       
-      debug_printf("HTTP: %s\n", host);
+      LWIP_DEBUGF(HTTPD_DEBUG, ("httpd: host %s\n", host));
 
       if (!host_name_matches(host)) {
         snprintf(hs->hdr_redirect, sizeof hs->hdr_redirect, "HTTP/1.0 302 Found\r\nLocation: http://%s.%s\r\n", s_HTTPServerSettings.hostname, s_HTTPServerSettings.domain_name);
@@ -2654,7 +2655,7 @@ http_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
         if (hs->post_content_len_left == 0)
 #endif /* LWIP_HTTPD_SUPPORT_POST */
         {
-          LWIP_DEBUGF(HTTPD_DEBUG | LWIP_DBG_TRACE, ("http_recv: data %p len %"S32_F"\n", (const void *)hs->file, hs->left));
+          LWIP_DEBUGF(HTTPD_DEBUG | LWIP_DBG_TRACE, ("http_recv: data %p len %" S32_F "\n", (const void *)hs->file, hs->left));
           http_send(pcb, hs);
         }
       } else if (parsed == ERR_ARG) {

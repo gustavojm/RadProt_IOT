@@ -102,7 +102,7 @@ static int deflate_level; /* default compression level, can be changed via comma
 #define LWIP_HTTPD_SSI             1
 #include "lwip/init.h"
 #include "../httpd_structs.h"
-#include "lwip/apps/fs.h"
+#include "fs.h"
 
 #include "../core/inet_chksum.c"
 #include "../core/def.c"
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-  fprintf(data_file, "#include \"lwip/apps/fs.h\"" NEWLINE);
+  fprintf(data_file, "#include \"fs.h\"" NEWLINE);
   fprintf(data_file, "#include \"lwip/def.h\"" NEWLINE NEWLINE NEWLINE);
 
   fprintf(data_file, "#define file_NULL (struct fsdata_file *) NULL" NEWLINE NEWLINE NEWLINE);

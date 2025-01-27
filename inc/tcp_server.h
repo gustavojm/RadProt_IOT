@@ -5,7 +5,6 @@
 #include "semphr.h"
 #include "task.h"
 
-#include "lwip/apps/lwiperf.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
 

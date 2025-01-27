@@ -13,6 +13,7 @@ add_executable(makefsdata
 
 target_include_directories(makefsdata PRIVATE        
         ${CMAKE_CURRENT_LIST_DIR}/makefsdata
+        ../
         ../../inc
         ../../pico-sdk/lib/lwip/src/include
         ../../pico-sdk/lib/lwip/contrib/ports/unix/port/include        

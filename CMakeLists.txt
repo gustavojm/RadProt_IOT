@@ -17,6 +17,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(PicoHTTPServer C CXX ASM)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-volatile")
+
+#list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
+
 include(FetchContent)
 
 FetchContent_Declare(ArduinoJson
@@ -26,13 +30,13 @@ FetchContent_Declare(ArduinoJson
 FetchContent_MakeAvailable(ArduinoJson)
 
 
-FetchContent_Declare(
-  etl
-  GIT_REPOSITORY https://github.com/ETLCPP/etl.git
-  GIT_TAG master  # You can replace 'master' with a specific version tag
-)
+# FetchContent_Declare(
+#   etl
+#   GIT_REPOSITORY https://github.com/ETLCPP/etl.git
+#   GIT_TAG master  # You can replace 'master' with a specific version tag
+# )
 
-FetchContent_MakeAvailable(etl)
+# FetchContent_MakeAvailable(etl)
 
 add_custom_target(${name}-fs DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
 
@@ -43,14 +47,14 @@ add_custom_target(makefsdata
 
 add_executable(${PROJECT_NAME}
         main.cpp
-        dhcpserver/dhcpserver.c
-        dns/dnsserver.c
-        httpserver/httpd.c
-        httpserver/fs.c
-        src/server_settings.c
+        dhcpserver/dhcpserver.cpp
+        dns/dnsserver.cpp
+        httpserver/httpd.cpp
+        httpserver/fs.cpp
+        src/server_settings.cpp
         src/tcp_server.cpp
         src/tcp_server_command.cpp
-        src/hooks.c
+        src/hooks.cpp
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -63,13 +67,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}
         inc
-        ${etl_SOURCE_DIR}/include
+        httpserver
+        #${etl_SOURCE_DIR}/include
         )
 
 target_link_libraries(${PROJECT_NAME}        
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
-        pico_lwip_iperf
         FreeRTOS-Kernel-Heap4
         ArduinoJson        
         )
