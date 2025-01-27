@@ -15,6 +15,14 @@
 
 <body>
     <div>
+        <h1><!--#MACAddr--></h1>
+
+        <h2>
+            <select id="wifi_networks">
+                 "<!--#MultPart-->"
+            </select>
+        </h2>
+
         <table>
             <thead>
                 <tr>

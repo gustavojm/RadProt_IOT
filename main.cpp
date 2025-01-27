@@ -17,8 +17,12 @@
 
 #include "hardware/vreg.h"
 #include "hardware/clocks.h"
-// #include "etl/string.h"
-// #include "etl/map.h"
+#include "etl/string.h"
+#include "etl/set.h"
+#include "etl/iterator.h"
+#include <cstring> // For memcmp
+#include "ssi.h"
+
 #include "debug_printf.h"
 
 
@@ -231,39 +235,19 @@ static void set_secondary_ip_address(int address)
 	ip4_secondary_ip_address = address;
 }
 
-//static etl::map<etl::string<128>, uint8_t[6], 50> wifi_networks;
+struct wifi_net_t {
+	etl::array<uint8_t, 6> bssid;
+	etl::string<32> ssid; 			// Maximum ssid size of 32 characters SSID
+	uint16_t channel;
+	uint16_t rssi;
+	uint8_t auth_mode;
+};
 
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     if (result) {
-        printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n",
-            result->ssid, result->rssi, result->channel,
-            result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5],
-            result->auth_mode);
-    }
-
-// Define the map with string as key and array as value
-    // constexpr size_t MAX_MAP_SIZE = 10;
-    
-	
-	// using KeyType = etl::string<20>; // Maximum key size of 20 characters
-    // using ValueType = etl::array<uint8_t, 6>; // Fixed-size array
-    // etl::map<KeyType, ValueType, MAX_MAP_SIZE> myMap;
-
-    // // Create a key and a value
-    // KeyType key = "example";
-    // ValueType value = {1, 2, 3, 4, 5, 6};
-
-    // // Insert into the map
-    // auto result_ins = myMap.insert({key, value});
-    // if (result_ins.second) {
-    //     printf("Inserted successfully!\n");
-    // } else {
-    //     printf("Failed to insert. Key might already exist.\n");
-    // }
-
-
-//	wifi_networks.insert(etl::string<128>(result->ssid), result->bssid);
-    return 0;
+		auto result_ins = wifi_networks.insert(*result);
+	}
+	return 0;
 }
 
 static void main_task(__unused void *params)
@@ -291,6 +275,22 @@ static void main_task(__unused void *params)
 
 	printf("WIFI Scan finished\n");
 
+	printf("Detected WIFI Networks: \n");
+
+	for (auto wifi_net: wifi_networks) {		
+		printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
+		for (int i = 0; i < 6; i++) {
+			printf("%02x", wifi_net.bssid[i]);
+			if (i < 5) {
+				printf(":");
+			}
+		}
+		printf("\n");		
+	}
+	
+	// printf("MY MAC ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\n",
+	// itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);
+
 	const pico_server_settings *settings = get_pico_server_settings();
 
 	cyw43_arch_enable_ap_mode(settings->network_name, settings->network_password, settings->network_password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
@@ -311,6 +311,8 @@ static void main_task(__unused void *params)
 	//http_server_add_zone(server, &zone2, "/api", do_handle_api_call, NULL);
 
     httpd_init(settings->hostname, settings->domain_name);
+	ssi_init();
+
 	vTaskDelete(NULL);
 }
 
