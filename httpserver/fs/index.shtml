@@ -7,7 +7,32 @@
     </style>
     <script language="JavaScript">
 
-        function updateSelector(id, mode) {
+        function apply_settings() {
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", '/settings.cgi', true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            let text = "{";
+            // for (const el of document.getElementsByClassName("settings_checkbox"))
+            //     text += `${el.id}=${el.checked}\r\n`;
+            // for (const el of document.getElementsByClassName("settings_field"))
+            //     text += `"${el.id}":"${el.value},"`;
+            // text.substring(0, text.length - 1);     // remove last comma
+            // text += "}"
+
+            text = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
+            alert(text);
+
+            xhr.send(text);
+            xhr.onloadend = function () {
+                if (this.responseText == "OK")
+                {
+                    show_settings_popup(false);
+                    document.getElementById("reboot_popup").style.display = "block";
+                    unrecoverable_error = "rebooting";
+                }
+                else
+                    alert(this.responseText);
+            };  
         }
     </script>
 </head>
@@ -23,6 +48,7 @@
             </select>
         </h2>
 
+        <form id="settings_form">
         <table>
             <thead>
                 <tr>
@@ -32,12 +58,20 @@
             </thead>
             <tr>
                 <td>Nombre de Red:</td>
-                <td>Radioproteccion</td>
+                <td><input type="text" name="ssid"></td>
+            </tr>
+            <tr>
+                <td>Usuario:</td>
+                <td><input type="text" name="wifi_user"></td>
+            </tr>
+            <tr>
+                <td>Contraseña:</td>
+                <td><input type="text" name="wifi_pass"></td>
             </tr>
             <tr>
                 <td>Seguridad:</td>
                 <td>
-                    <select id="wifi_seq">
+                    <select name="wifi_seq">
                         <option value="OPEN" title="No authorisation required (open)">Open</option>
                         <option value="WPA_TKIP_PSK" title="WPA authorisation">WPA TKIP PSK</option>
                         <option value="WPA2_AES_PSK" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
@@ -51,7 +85,15 @@
                 <td>Contrase&ntilde;a:</td>
                 <td>*</td>
             </tr>
+            <tr>
+                <td>
+                    <input type="button" onclick="apply_settings()">OK</button>
+                    <!-- <button onclick="show_settings_popup(false)">Cancel</button> -->
+                </td>
+            </tr>
         </table>
+        </form>
+        
     </div>
 </body>
 

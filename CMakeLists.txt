@@ -55,6 +55,7 @@ add_executable(${PROJECT_NAME}
         src/tcp_server_command.cpp
         src/hooks.cpp
         src/ssi.cpp
+        src/post.cpp
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

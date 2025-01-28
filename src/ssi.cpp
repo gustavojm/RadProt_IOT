@@ -73,13 +73,6 @@ u16_t ssi_handler(
                              )
 {
   size_t printed;
-  etl::string<1024> wifi_networks_str;
-  etl::string_stream response(wifi_networks_str);
-  for (auto wifi_net: wifi_networks) {		
-    response << "<option value=" << etl::string<32>(reinterpret_cast<char*>(wifi_net.ssid)) << ">" <<
-    etl::string<32>(reinterpret_cast<char*>(wifi_net.ssid))  << "</option>\n";
-  }
-
 
 #if LWIP_HTTPD_SSI_RAW
   /* a real application could use if(!strcmp) blocks here, but we want to keep
@@ -113,7 +106,7 @@ u16_t ssi_handler(
 #if LWIP_HTTPD_SSI_MULTIPART
     switch (current_tag_part) {
     case 0:
-      printed = snprintf(pcInsert, iInsertLen, wifi_networks_str.c_str());
+      printed = snprintf(pcInsert, iInsertLen, "part0");
       *next_tag_part = 1;
       break;
     case 1:
