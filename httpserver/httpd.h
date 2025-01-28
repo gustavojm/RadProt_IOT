@@ -38,16 +38,210 @@
  * capability.
  */
 
-#ifndef LWIP_HDR_APPS_HTTPD_H
-#define LWIP_HDR_APPS_HTTPD_H
+#pragma once
 
-#include "httpd_opts.h"
+#include "lwip/init.h"
+#include "lwip/debug.h"
+#include "lwip/stats.h"
 #include "lwip/err.h"
 #include "lwip/pbuf.h"
+#include "lwip/def.h"
+#include "httpd_opts.h"
+
+#include "lwip/altcp.h"
+#include "lwip/altcp_tcp.h"
+#if HTTPD_ENABLE_HTTPS
+#include "lwip/altcp_tls.h"
+#endif
+
+#include "fs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+inline struct {
+  const char *hostname;
+	const char *domain_name;
+} s_HTTPServerSettings;
+
+typedef struct {
+  const char *name;
+  u8_t shtml;
+} default_filename;
+
+inline const default_filename httpd_default_filenames[] = {
+  {"/index.shtml", 1 },
+  {"/index.ssi",   1 },
+  {"/index.shtm",  1 },
+  {"/index.html",  0 },
+  {"/index.htm",   0 }
+};
+
+#define NUM_DEFAULT_FILENAMES LWIP_ARRAYSIZE(httpd_default_filenames)
+
+#if LWIP_TCP && LWIP_CALLBACK_API
+
+/** Minimum length for a valid HTTP/0.9 request: "GET /\r\n" -> 7 bytes */
+#define MIN_REQ_LEN   7
+
+#define CRLF "\r\n"
+#if LWIP_HTTPD_SUPPORT_11_KEEPALIVE
+#define HTTP11_CONNECTIONKEEPALIVE  "Connection: keep-alive"
+#define HTTP11_CONNECTIONKEEPALIVE2 "Connection: Keep-Alive"
+#endif
+
+#if LWIP_HTTPD_DYNAMIC_FILE_READ
+#define HTTP_IS_DYNAMIC_FILE(hs) ((hs)->buf != NULL)
+#else
+#define HTTP_IS_DYNAMIC_FILE(hs) 0
+#endif
+
+/* This defines checks whether tcp_write has to copy data or not */
+
+#ifndef HTTP_IS_DATA_VOLATILE
+/** tcp_write does not have to copy data when sent from rom-file-system directly */
+#define HTTP_IS_DATA_VOLATILE(hs)       (HTTP_IS_DYNAMIC_FILE(hs) ? TCP_WRITE_FLAG_COPY : 0)
+#endif
+/** Default: dynamic headers are sent from ROM (non-dynamic headers are handled like file data) */
+#ifndef HTTP_IS_HDR_VOLATILE
+#define HTTP_IS_HDR_VOLATILE(hs, ptr)   0
+#endif
+
+/* Return values for http_send_*() */
+#define HTTP_DATA_TO_SEND_FREED    3
+#define HTTP_DATA_TO_SEND_BREAK    2
+#define HTTP_DATA_TO_SEND_CONTINUE 1
+#define HTTP_NO_DATA_TO_SEND       0
+
+#define NUM_DEFAULT_FILENAMES LWIP_ARRAYSIZE(httpd_default_filenames)
+
+#if LWIP_HTTPD_SUPPORT_REQUESTLIST
+/** HTTP request is copied here from pbufs for simple parsing */
+static char httpd_req_buf[LWIP_HTTPD_MAX_REQ_LENGTH + 1];
+#endif /* LWIP_HTTPD_SUPPORT_REQUESTLIST */
+
+#if LWIP_HTTPD_SUPPORT_POST
+#if LWIP_HTTPD_POST_MAX_RESPONSE_URI_LEN > LWIP_HTTPD_MAX_REQUEST_URI_LEN
+#define LWIP_HTTPD_URI_BUF_LEN LWIP_HTTPD_POST_MAX_RESPONSE_URI_LEN
+#endif
+#endif
+#ifndef LWIP_HTTPD_URI_BUF_LEN
+#define LWIP_HTTPD_URI_BUF_LEN LWIP_HTTPD_MAX_REQUEST_URI_LEN
+#endif
+#if LWIP_HTTPD_URI_BUF_LEN
+/* Filename for response file to send when POST is finished or
+ * search for default files when a directory is requested. */
+static char http_uri_buf[LWIP_HTTPD_URI_BUF_LEN + 1];
+#endif
+
+#if LWIP_HTTPD_DYNAMIC_HEADERS
+/* The number of individual strings that comprise the headers sent before each
+ * requested file.
+ */
+#define NUM_FILE_HDR_STRINGS 5
+#define HDR_STRINGS_IDX_HTTP_STATUS           0 /* e.g. "HTTP/1.0 200 OK\r\n" */
+#define HDR_STRINGS_IDX_SERVER_NAME           1 /* e.g. "Server: "HTTPD_SERVER_AGENT"\r\n" */
+#define HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE 2 /* e.g. "Content-Length: xy\r\n" and/or "Connection: keep-alive\r\n" */
+#define HDR_STRINGS_IDX_CONTENT_LEN_NR        3 /* the byte count, when content-length is used */
+#define HDR_STRINGS_IDX_CONTENT_TYPE          4 /* the content type (or default answer content type including default document) */
+
+/* The dynamically generated Content-Length buffer needs space for CRLF + NULL */
+#define LWIP_HTTPD_MAX_CONTENT_LEN_OFFSET 3
+#ifndef LWIP_HTTPD_MAX_CONTENT_LEN_SIZE
+/* The dynamically generated Content-Length buffer shall be able to work with
+   ~953 MB (9 digits) */
+#define LWIP_HTTPD_MAX_CONTENT_LEN_SIZE   (9 + LWIP_HTTPD_MAX_CONTENT_LEN_OFFSET)
+#endif
+#endif /* LWIP_HTTPD_DYNAMIC_HEADERS */
+
+#if LWIP_HTTPD_SSI
+
+#define HTTPD_LAST_TAG_PART 0xFFFF
+
+enum tag_check_state {
+  TAG_NONE,       /* Not processing an SSI tag */
+  TAG_LEADIN,     /* Tag lead in "<!--#" being processed */
+  TAG_FOUND,      /* Tag name being read, looking for lead-out start */
+  TAG_LEADOUT,    /* Tag lead out "-->" being processed */
+  TAG_SENDING     /* Sending tag replacement string */
+};
+
+struct http_ssi_state {
+  const char *parsed;     /* Pointer to the first unparsed byte in buf. */
+#if !LWIP_HTTPD_SSI_INCLUDE_TAG
+  const char *tag_started;/* Pointer to the first opening '<' of the tag. */
+#endif /* !LWIP_HTTPD_SSI_INCLUDE_TAG */
+  const char *tag_end;    /* Pointer to char after the closing '>' of the tag. */
+  u32_t parse_left; /* Number of unparsed bytes in buf. */
+  u16_t tag_index;   /* Counter used by tag parsing state machine */
+  u16_t tag_insert_len; /* Length of insert in string tag_insert */
+#if LWIP_HTTPD_SSI_MULTIPART
+  u16_t tag_part; /* Counter passed to and changed by tag insertion function to insert multiple times */
+#endif /* LWIP_HTTPD_SSI_MULTIPART */
+  u8_t tag_type; /* index into http_ssi_tag_desc array */
+  u8_t tag_name_len; /* Length of the tag name in string tag_name */
+  char tag_name[LWIP_HTTPD_MAX_TAG_NAME_LEN + 1]; /* Last tag name extracted */
+  char tag_insert[LWIP_HTTPD_MAX_TAG_INSERT_LEN + 1]; /* Insert string for tag_name */
+  enum tag_check_state tag_state; /* State of the tag processor */
+};
+
+struct http_ssi_tag_description {
+  const char *lead_in;
+  const char *lead_out;
+};
+
+#endif /* LWIP_HTTPD_SSI */
+
+struct http_state {
+#if LWIP_HTTPD_KILL_OLD_ON_CONNECTIONS_EXCEEDED
+  struct http_state *next;
+#endif /* LWIP_HTTPD_KILL_OLD_ON_CONNECTIONS_EXCEEDED */
+  struct fs_file file_handle;
+  struct fs_file *handle;
+  const char *file;       /* Pointer to first unsent byte in buf. */
+
+  struct altcp_pcb *pcb;
+#if LWIP_HTTPD_SUPPORT_REQUESTLIST
+  struct pbuf *req;
+#endif /* LWIP_HTTPD_SUPPORT_REQUESTLIST */
+
+#if LWIP_HTTPD_DYNAMIC_FILE_READ
+  char *buf;        /* File read buffer. */
+  int buf_len;      /* Size of file read buffer, buf. */
+#endif /* LWIP_HTTPD_DYNAMIC_FILE_READ */
+  u32_t left;       /* Number of unsent bytes in buf. */
+  u8_t retries;
+#if LWIP_HTTPD_SUPPORT_11_KEEPALIVE
+  u8_t keepalive;
+#endif /* LWIP_HTTPD_SUPPORT_11_KEEPALIVE */
+#if LWIP_HTTPD_SSI
+  struct http_ssi_state *ssi;
+#endif /* LWIP_HTTPD_SSI */
+#if LWIP_HTTPD_CGI
+  char *params[LWIP_HTTPD_MAX_CGI_PARAMETERS]; /* Params extracted from the request URI */
+  char *param_vals[LWIP_HTTPD_MAX_CGI_PARAMETERS]; /* Values for each extracted param */
+#endif /* LWIP_HTTPD_CGI */
+#if LWIP_HTTPD_DYNAMIC_HEADERS
+  const char *hdrs[NUM_FILE_HDR_STRINGS]; /* HTTP headers to be sent. */
+  char hdr_content_len[LWIP_HTTPD_MAX_CONTENT_LEN_SIZE];
+  u16_t hdr_pos;     /* The position of the first unsent header byte in the
+                        current string */
+  u16_t hdr_index;   /* The index of the hdr string currently being sent. */
+  char hdr_redirect[128];    // 302 Redirect header for Captive Portal
+#endif /* LWIP_HTTPD_DYNAMIC_HEADERS */
+#if LWIP_HTTPD_TIMING
+  u32_t time_started;
+#endif /* LWIP_HTTPD_TIMING */
+#if LWIP_HTTPD_SUPPORT_POST
+  u32_t post_content_len_left;
+#if LWIP_HTTPD_POST_MANUAL_WND
+  u32_t unrecved_bytes;
+  u8_t no_auto_wnd;
+  u8_t post_finished;
+#endif /* LWIP_HTTPD_POST_MANUAL_WND */
+#endif /* LWIP_HTTPD_SUPPORT_POST*/
+};
 
 #if LWIP_HTTPD_CGI
 
@@ -207,7 +401,7 @@ void http_set_ssi_handler(tSSIHandler pfnSSIHandler,
  * @return ERR_OK: Accept the POST request, data may be passed in
  *         another err_t: Deny the POST request, send back 'bad request'.
  */
-err_t httpd_post_begin(void *connection, const char *uri, const char *http_request,
+err_t httpd_post_begin(struct http_state *hs, const char *uri, const char *http_request,
                        u16_t http_request_len, int content_len, char *response_uri,
                        u16_t response_uri_len, u8_t *post_auto_wnd);
 
@@ -221,20 +415,17 @@ err_t httpd_post_begin(void *connection, const char *uri, const char *http_reque
  * @return ERR_OK: Data accepted.
  *         another err_t: Data denied, http_post_get_response_uri will be called.
  */
-err_t httpd_post_receive_data(void *connection, struct pbuf *p);
+err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri);
 
 /**
  * @ingroup httpd
  * Called when all data is received or when the connection is closed.
- * The application must return the filename/URI of a file to send in response
- * to this POST request. If the response_uri buffer is untouched, a 404
- * response is returned.
  *
  * @param connection Unique connection identifier.
  * @param response_uri Filename of response file, to be filled when denying the request
  * @param response_uri_len Size of the 'response_uri' buffer.
  */
-void httpd_post_finished(void *connection, char *response_uri, u16_t response_uri_len);
+void httpd_post_finished(struct http_state *hs, char *response_uri, u16_t response_uri_len);
 
 #if LWIP_HTTPD_POST_MANUAL_WND
 void httpd_post_data_recved(void *connection, u16_t recved_len);
@@ -253,4 +444,4 @@ void httpd_inits(struct altcp_tls_config *conf);
 }
 #endif
 
-#endif /* LWIP_HDR_APPS_HTTPD_H */
+#endif /* LWIP_TCP && LWIP_CALLBACK_API */

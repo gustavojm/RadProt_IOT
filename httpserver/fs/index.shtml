@@ -20,8 +20,6 @@
             // text += "}"
 
             text = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
-            alert(text);
-
             xhr.send(text);
             xhr.onloadend = function () {
                 if (this.responseText == "OK")
