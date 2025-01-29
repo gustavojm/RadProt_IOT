@@ -139,12 +139,13 @@ static char http_uri_buf[LWIP_HTTPD_URI_BUF_LEN + 1];
 /* The number of individual strings that comprise the headers sent before each
  * requested file.
  */
-#define NUM_FILE_HDR_STRINGS 5
+#define NUM_FILE_HDR_STRINGS 6
 #define HDR_STRINGS_IDX_HTTP_STATUS           0 /* e.g. "HTTP/1.0 200 OK\r\n" */
 #define HDR_STRINGS_IDX_SERVER_NAME           1 /* e.g. "Server: "HTTPD_SERVER_AGENT"\r\n" */
 #define HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE 2 /* e.g. "Content-Length: xy\r\n" and/or "Connection: keep-alive\r\n" */
 #define HDR_STRINGS_IDX_CONTENT_LEN_NR        3 /* the byte count, when content-length is used */
-#define HDR_STRINGS_IDX_CONTENT_TYPE          4 /* the content type (or default answer content type including default document) */
+#define HDR_STRINGS_IDX_CONTENT_TYPE          4 /* e.g. "Something as response */
+#define HDR_STRINGS_IDX_CUSTOM_CONTENT        5 /* the content type (or default answer content type including default document) */
 
 /* The dynamically generated Content-Length buffer needs space for CRLF + NULL */
 #define LWIP_HTTPD_MAX_CONTENT_LEN_OFFSET 3
@@ -228,7 +229,7 @@ struct http_state {
   u16_t hdr_pos;     /* The position of the first unsent header byte in the
                         current string */
   u16_t hdr_index;   /* The index of the hdr string currently being sent. */
-  char hdr_redirect[128];    // 302 Redirect header for Captive Portal
+  char hdr_custom[128];
 #endif /* LWIP_HTTPD_DYNAMIC_HEADERS */
 #if LWIP_HTTPD_TIMING
   u32_t time_started;
