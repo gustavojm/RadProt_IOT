@@ -701,18 +701,9 @@ static void get_http_headers(struct http_state *hs, const char *uri) {
         ext = tmp + 1;
         tmp = strchr(ext, '.');
     }
-    if (ext != NULL) {
-        /* Now determine the content type and add the relevant header for that. */
-        for (content_type = 0; content_type < NUM_HTTP_HEADERS; content_type++) {
-            /* Have we found a matching extension? */
-            if (!lwip_stricmp(g_psHTTPHeaders[content_type].extension, ext)) {
-                break;
-            }
-        }
-    } else {
-        content_type = NUM_HTTP_HEADERS;
-    }
 
+    content_type = get_content_type_from_extension(ext);
+    
     /* Reinstate the parameter marker if there was one in the original URI. */
     if (vars) {
         *vars = '?';
@@ -1511,7 +1502,9 @@ static err_t http_handle_post_finished(struct http_state *hs) {
     /* application error or POST finished */
     /* NULL-terminate the buffer */
     http_uri_buf[0] = 0;
-    httpd_post_finished(hs, http_uri_buf, LWIP_HTTPD_URI_BUF_LEN);
+    if (hs->file) {     // file was used to pass the BODY of a POST response
+        free((void *)hs->file);
+    }
     return ERR_OK;
     // return http_find_file(hs, http_uri_buf, 0);
 }
@@ -2568,5 +2561,70 @@ void http_set_cgi_handlers(const tCGI *cgis, int num_handlers) {
     httpd_num_cgis = num_handlers;
 }
 #endif /* LWIP_HTTPD_CGI */
+
+struct http_state *current_connection;
+
+err_t httpd_post_begin(
+    struct http_state *hs,
+    const char *uri,
+    const char *http_request,
+    u16_t http_request_len,
+    int content_len,
+    char *response_uri,
+    u16_t response_uri_len,
+    u8_t *post_auto_wnd) {
+    LWIP_UNUSED_ARG(http_request);
+    LWIP_UNUSED_ARG(http_request_len);
+    LWIP_UNUSED_ARG(content_len);
+    LWIP_UNUSED_ARG(post_auto_wnd);
+
+    current_connection = hs;
+    return ERR_OK;  // return ERR_OK to parse received data
+                    // return something else and set the response_uri and response_uri_len to return a file
+}
+
+void httpd_post_finished(struct http_state *hs, char *response_uri, u16_t response_uri_len) {
+  /* default page is "login failed" */
+  snprintf(response_uri, response_uri_len, "/404.html");
+}
+
+void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, const char *extension) {
+  
+    int content_type = get_content_type_from_extension(extension);
+    if (hs == current_connection) {
+        hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = g_psHTTPHeaderStrings[HTTP_HDR_OK];
+        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONTENT_LENGTH];
+        hs->hdrs[HDR_STRINGS_IDX_CONTENT_TYPE] = g_psHTTPHeaders[content_type].content_type;
+        
+        hs->file = body;
+        hs->left = body_len;
+
+        size_t len;
+        lwip_itoa(hs->hdr_content_len, (size_t)LWIP_HTTPD_MAX_CONTENT_LEN_SIZE, hs->left);
+        len = strlen(hs->hdr_content_len);
+        if (len <= LWIP_HTTPD_MAX_CONTENT_LEN_SIZE - LWIP_HTTPD_MAX_CONTENT_LEN_OFFSET) {
+            SMEMCPY(&hs->hdr_content_len[len], CRLF, 3);
+            hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_NR] = hs->hdr_content_len;
+        }
+    #if LWIP_HTTPD_SUPPORT_11_KEEPALIVE
+        if (add_content_len) {
+            hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_KEEPALIVE_LEN];
+        } else {
+            hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONN_CLOSE];
+            hs->keepalive = 0;
+        }
+    #else  /* LWIP_HTTPD_SUPPORT_11_KEEPALIVE */
+        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONTENT_LENGTH];
+    #endif /* LWIP_HTTPD_SUPPORT_11_KEEPALIVE */
+
+    } else {
+        hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = g_psHTTPHeaderStrings[HTTP_HDR_BAD_REQUEST];
+        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONN_CLOSE];
+    }
+    /* Set up to send the first header string. */
+    hs->hdr_index = 0;
+    hs->hdr_pos = 0;
+
+}
 
 #endif /* LWIP_TCP && LWIP_CALLBACK_API */

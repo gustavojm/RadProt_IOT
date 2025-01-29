@@ -42,29 +42,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define USER_PASS_BUFSIZE 16
-
-struct http_state *current_connection;
-
-err_t httpd_post_begin(
-    struct http_state *hs,
-    const char *uri,
-    const char *http_request,
-    u16_t http_request_len,
-    int content_len,
-    char *response_uri,
-    u16_t response_uri_len,
-    u8_t *post_auto_wnd) {
-    LWIP_UNUSED_ARG(http_request);
-    LWIP_UNUSED_ARG(http_request_len);
-    LWIP_UNUSED_ARG(content_len);
-    LWIP_UNUSED_ARG(post_auto_wnd);
-
-    current_connection = hs;
-    return ERR_OK;  // return ERR_OK to parse received data
-                    // return something else and set the response_uri and response_uri_len to return a file
-}
-
 err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri) {
     err_t ret;
 
@@ -89,52 +66,28 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         if (error) {
             printf("Error json parse. %s", error.c_str());
         } else {
+            /* Extracting data from form */
             char const *ssid = post_data["ssid"];
-            printf("SSID: %s", ssid);
         }
         ret = ERR_OK;
+
+        auto body_JSON = json::JsonDocument();
+
+        body_JSON["algunakey"] = "algunvalor";
+        char* body = nullptr;
+        int body_len = 0;
+        body_len = json::measureJson(body_JSON); /* returns 0 on fail */        
+        body = new char[body_len];
+        if (!(*body)) {
+            printf("Out Of Memory");
+            body_len = 0;
+        } else {
+            json::serializeJson(body_JSON, body, body_len);
+        }
+        httpd_post_response(hs, body, body_len, "json");     // indicate JSON IMPROVE THIS
     }
     /* this function must ALWAYS free the pbuf it is passed or it will leak memory */
     pbuf_free(unique_pbuf);
 
     return ret;
-}
-
-void httpd_post_finished(struct http_state *hs, char *response_uri, u16_t response_uri_len) {
-  static char body[]="{\"message\": \"Hello, world!\"}";
-  
-    if (hs == current_connection) {
-        hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = g_psHTTPHeaderStrings[HTTP_HDR_OK];
-        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONTENT_LENGTH];
-        hs->hdrs[HDR_STRINGS_IDX_CONTENT_TYPE] = HTTP_HDR_JSON;
-        
-        hs->file = body;
-        hs->left = sizeof body;
-
-        size_t len;
-        lwip_itoa(hs->hdr_content_len, (size_t)LWIP_HTTPD_MAX_CONTENT_LEN_SIZE, hs->left);
-        len = strlen(hs->hdr_content_len);
-        if (len <= LWIP_HTTPD_MAX_CONTENT_LEN_SIZE - LWIP_HTTPD_MAX_CONTENT_LEN_OFFSET) {
-            SMEMCPY(&hs->hdr_content_len[len], CRLF, 3);
-            hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_NR] = hs->hdr_content_len;
-        }
-    #if LWIP_HTTPD_SUPPORT_11_KEEPALIVE
-        if (add_content_len) {
-            hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_KEEPALIVE_LEN];
-        } else {
-            hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONN_CLOSE];
-            hs->keepalive = 0;
-        }
-    #else  /* LWIP_HTTPD_SUPPORT_11_KEEPALIVE */
-        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONTENT_LENGTH];
-    #endif /* LWIP_HTTPD_SUPPORT_11_KEEPALIVE */
-
-    } else {
-        hs->hdrs[HDR_STRINGS_IDX_HTTP_STATUS] = g_psHTTPHeaderStrings[HTTP_HDR_BAD_REQUEST];
-        hs->hdrs[HDR_STRINGS_IDX_CONTENT_LEN_KEEPALIVE] = g_psHTTPHeaderStrings[HTTP_HDR_CONN_CLOSE];
-    }
-    /* Set up to send the first header string. */
-    hs->hdr_index = 0;
-    hs->hdr_pos = 0;
-
 }

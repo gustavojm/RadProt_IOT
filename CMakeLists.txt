@@ -56,6 +56,7 @@ add_executable(${PROJECT_NAME}
         src/hooks.cpp
         src/ssi.cpp
         src/post.cpp
+        hal/src/serial.cpp
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -69,6 +70,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}
         inc
+        hal/inc
         httpserver
         ${etl_SOURCE_DIR}/include
         )
@@ -76,6 +78,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME}        
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
+        hardware_uart
         FreeRTOS-Kernel-Heap4
         ArduinoJson
         etl::etl

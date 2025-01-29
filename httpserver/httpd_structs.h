@@ -130,4 +130,21 @@ static const char *const g_pcSSIExtensions[] = { LWIP_HTTPD_SSI_EXTENSIONS };
 #define NUM_SHTML_EXTENSIONS LWIP_ARRAYSIZE(g_pcSSIExtensions)
 #endif /* LWIP_HTTPD_SSI && LWIP_HTTPD_SSI_BY_FILE_EXTENSION */
 
+inline int get_content_type_from_extension(const char *ext) {
+    int content_type;
+    if (ext != NULL) {
+        /* Now determine the content type and add the relevant header for that. */
+        for (content_type = 0; content_type < NUM_HTTP_HEADERS; content_type++) {
+            /* Have we found a matching extension? */
+            if (!lwip_stricmp(g_psHTTPHeaders[content_type].extension, ext)) {
+                break;
+            }
+        }
+    } else {
+        content_type = NUM_HTTP_HEADERS;
+    }
+    return content_type;
+}
+
+
 #endif /* LWIP_HTTPD_STRUCTS_H */

@@ -17,11 +17,13 @@
 
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
+#include "serial.h"
 #include "ssi.h"
 
 #include "debug_printf.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
+TaskHandle_t readTaskHandle = NULL;
 
 static void set_secondary_ip_address(int address) {
     /************************************ !!! WARNING !!! ************************************
@@ -41,6 +43,8 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     }
     return 0;
 }
+
+Serial my_uart(uart0, 1, 2, 9600);
 
 static void main_task(__unused void *params) {
 
@@ -109,10 +113,50 @@ static void main_task(__unused void *params) {
     vTaskDelete(NULL);
 }
 
+void readStringTask(void *params) {
+    my_uart.init();
+    my_uart.enable_irq(uart0, []() { my_uart.on_uart_rx(); });
+    char buffer[128];
+    uint32_t ulNotificationValue;
+
+    while (1) {
+
+        if (xTaskNotifyWait(0, 0, &ulNotificationValue, portMAX_DELAY) == pdTRUE) {
+            /* Process the notification */
+            my_uart.readString(buffer, sizeof(buffer), pdMS_TO_TICKS(50));
+            if (buffer[0] != '\0') { // If we received something
+                printf("Received string: %s\n", buffer);
+            } else {
+                printf("Read timed out with no data\n");
+            }
+        }
+    }
+}
+
+void writeStringTask(void *params) {
+    // Set the TX and RX pins by using the function select on the GPIO
+    // Set datasheet for more information on function select
+    gpio_set_function(4, GPIO_FUNC_UART);
+    gpio_set_function(5, GPIO_FUNC_UART);
+    while (1) {
+
+        uart_init(uart1, 9600);
+
+        // Send out a string, with CR/LF conversions
+        uart_puts(uart1, " Hello, UART!\n");
+        vTaskDelay(1000);
+    }
+
+}
+
 int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
     xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);
+
+    xTaskCreate(readStringTask, "ReadStringTask", 256, NULL, 1, &readTaskHandle);
+    xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, 1, NULL);
+
     vTaskStartScheduler();
 }

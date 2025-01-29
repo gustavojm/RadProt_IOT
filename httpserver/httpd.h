@@ -406,6 +406,8 @@ err_t httpd_post_begin(struct http_state *hs, const char *uri, const char *http_
                        u16_t http_request_len, int content_len, char *response_uri,
                        u16_t response_uri_len, u8_t *post_auto_wnd);
 
+void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, const char *extension);
+
 /**
  * @ingroup httpd
  * Called for each pbuf of data that has been received for a POST.
@@ -416,6 +418,7 @@ err_t httpd_post_begin(struct http_state *hs, const char *uri, const char *http_
  * @return ERR_OK: Data accepted.
  *         another err_t: Data denied, http_post_get_response_uri will be called.
  */
+
 err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri);
 
 /**
