@@ -23,7 +23,6 @@
 #include "debug_printf.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
-TaskHandle_t readTaskHandle = NULL;
 
 static void set_secondary_ip_address(int address) {
     /************************************ !!! WARNING !!! ************************************
@@ -44,7 +43,7 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     return 0;
 }
 
-Serial my_uart(uart0, 1, 2, 9600);
+Serial my_uart(uart0, 1, 2, 9600, 256);
 
 static void main_task(__unused void *params) {
 
@@ -115,20 +114,16 @@ static void main_task(__unused void *params) {
 
 void readStringTask(void *params) {
     my_uart.init();
-    my_uart.enable_irq(uart0, []() { my_uart.on_uart_rx(); });
+    my_uart.set_irq_handler(my_uart.uart_id, []() { my_uart.on_uart_rx(); });
     char buffer[128];
-    uint32_t ulNotificationValue;
 
     while (1) {
-
-        if (xTaskNotifyWait(0, 0, &ulNotificationValue, portMAX_DELAY) == pdTRUE) {
-            /* Process the notification */
-            my_uart.readString(buffer, sizeof(buffer), pdMS_TO_TICKS(50));
-            if (buffer[0] != '\0') { // If we received something
-                printf("Received string: %s\n", buffer);
-            } else {
-                printf("Read timed out with no data\n");
-            }
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        int bytes_received = my_uart.readString(buffer, sizeof(buffer), pdMS_TO_TICKS(100));
+        if (bytes_received) { // If we received something
+            printf("Received string: %.*s\n", bytes_received, buffer);            
+        } else {
+            printf("Read TIMED OUT");
         }
     }
 }
@@ -145,6 +140,10 @@ void writeStringTask(void *params) {
         // Send out a string, with CR/LF conversions
         uart_puts(uart1, " Hello, UART!\n");
         vTaskDelay(1000);
+        uart_puts(uart1, " Message 2 from serial port!\n");
+        vTaskDelay(1000);
+        uart_puts(uart1, " Estaba la pajara pinta sentada en el verde limon\n");
+        vTaskDelay(1000);
     }
 
 }
@@ -153,9 +152,9 @@ int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
-    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);
 
-    xTaskCreate(readStringTask, "ReadStringTask", 256, NULL, 1, &readTaskHandle);
+    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);
+    xTaskCreate(readStringTask, "ReadStringTask", 256, NULL, 1, NULL);
     xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, 1, NULL);
 
     vTaskStartScheduler();
