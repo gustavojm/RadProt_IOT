@@ -13,12 +13,14 @@ public:
     ~Serial();
 
     void init();
-    int readString(char *buffer, size_t buffer_size, TickType_t timeout_ticks);
+    int read_string(char *buffer, size_t buffer_size);
     void on_uart_rx();
     bool task_notified = false;
 
-    static void set_irq_handler(uart_inst_t *uart_id, irq_handler_t handler);
-    bool string_finished();
+    static void set_irq_handler(uart_inst_t *uart_id, irq_handler_t handler);    
+    void set_timeout(TickType_t timeout);
+    void set_delimiter(char delimiter);
+
     int read_from_receive_buffer(char *buffer, size_t buffer_size);
     uart_inst_t *uart_id;
     
@@ -33,4 +35,6 @@ private:
     size_t uart_buffer_size;
     volatile size_t index;
     volatile bool string_finished_ = false;
+    TickType_t timeout_ticks = pdMS_TO_TICKS(1000); 
+    char terminationChar = '\n';
 };

@@ -4,10 +4,10 @@
 
 // Function to handle UART IRQ
 void Serial::on_uart_rx() {
-    const char terminationChar = '\n';
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     while (uart_is_readable(uart_id)) {
+        // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline        
         vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
@@ -15,6 +15,7 @@ void Serial::on_uart_rx() {
         if (c == terminationChar || index == (uart_buffer_size - 2)) { // if we are about to overflow the buffer
             uart_buffer[index++] = '\0';                                 // Null-terminate the string
             string_finished_ = true;
+            // Notification for read_string to indicate that a whole string was read or that the buffer is full
             vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         } else if (index < uart_buffer_size - 1) {
@@ -41,7 +42,6 @@ void Serial::init() {
     // Turn off FIFO's - we want to do this character by character
     uart_set_fifo_enabled(uart_id, false);
 
-
     receiving_task_handle = xTaskGetCurrentTaskHandle();
 }
 
@@ -63,8 +63,16 @@ int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) {
     return bytes;
 }
 
+void Serial::set_timeout(TickType_t timeout) {
+    timeout_ticks = timeout;
+}
+
+void Serial::set_delimiter(char delimiter) {
+    terminationChar = delimiter;
+}
+
 // Function to read a string with a timeout
-int Serial::readString(char *buffer, size_t buffer_size, TickType_t timeout_ticks) {
+int Serial::read_string(char *buffer, size_t buffer_size) {
 
     TimeOut_t xTimeOut;
     TickType_t xTicksToWait = timeout_ticks;

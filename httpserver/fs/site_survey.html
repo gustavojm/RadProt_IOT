@@ -1,0 +1,17 @@
+
+<html>
+    <head>
+        <title>Radioprotección</title>
+        <style type="text/css">
+    
+        </style>
+        <script language="JavaScript">
+            networks_string = '{"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:61"},{"ssid":"CNE_Dosimetria","rssi":-50,"chann":11,"bssid":"00:6b:f1:c0:94:62"},{"ssid":"CNE_Telefonia","rssi":-53,"chann":11,"bssid":"00:6b:f1:c0:94:63"},{"ssid":"CNE_CDP","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:66"},{"ssid":"CNE_Radioproteccion","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:68"},{"ssid":"CNE_Internet","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:6b"},{"ssid":"C14017750 7261","rssi":-39,"chann":6,"bssid":"c6:03:a8:e6:d6:33"}]}'            
+            networks_json = JSON.parse(networks_string);
+            networks_json.WIFI_NETS.forEach((item, index) => {
+                console.log(index, item);                
+            });
+        </script>
+    </head>
+</html>
+

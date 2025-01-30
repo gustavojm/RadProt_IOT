@@ -64,6 +64,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         WIFI_PASSWORD="picopico"
         NO_SYS=0
         ETL_NO_STL
+        ETL_NO_INITIALIZER_LIST
         )
         
 target_include_directories(${PROJECT_NAME} PRIVATE

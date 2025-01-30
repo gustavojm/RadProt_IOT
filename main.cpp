@@ -114,12 +114,14 @@ static void main_task(__unused void *params) {
 
 void readStringTask(void *params) {
     my_uart.init();
-    my_uart.set_irq_handler(my_uart.uart_id, []() { my_uart.on_uart_rx(); });
+    my_uart.set_timeout(pdMS_TO_TICKS(100));
+    my_uart.set_delimiter('\n');
+    my_uart.set_irq_handler(my_uart.uart_id, []() { my_uart.on_uart_rx(); });    
     char buffer[128];
 
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        int bytes_received = my_uart.readString(buffer, sizeof(buffer), pdMS_TO_TICKS(100));
+        int bytes_received = my_uart.read_string(buffer, sizeof(buffer));
         if (bytes_received) { // If we received something
             printf("Received string: %.*s\n", bytes_received, buffer);            
         } else {
