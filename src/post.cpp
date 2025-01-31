@@ -42,6 +42,7 @@
 #include <ssi.h>
 #include <stdio.h>
 #include <string.h>
+#include <settings.h>
 
 namespace json = ArduinoJson;
 
@@ -98,6 +99,7 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
             wifi_net_entry["ssid"] = wifi_net.ssid;
             wifi_net_entry["rssi"] = wifi_net.rssi;
             wifi_net_entry["chann"] = wifi_net.channel;
+            wifi_net_entry["auth_mode"] = wifi_net.auth_mode;
 
             char bssid[18];
             snprintf(bssid, sizeof bssid,
@@ -109,9 +111,28 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
                 wifi_net.bssid[4],
                 wifi_net.bssid[5]);
             wifi_net_entry["bssid"] = bssid;
+            
 
             wifi_nets_array.add(wifi_net_entry);
         }
+        
+        //body_JSON["config"] = get_client_settings_json();
+
+        char *body = nullptr;
+        int body_len = 0;
+        body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+        body = new char[body_len];
+        if (!(*body)) {
+            printf("Out Of Memory");
+            body_len = 0;
+        } else {
+            json::serializeJson(body_JSON, body, body_len);
+        }
+        httpd_post_response(hs, body, body_len, "json"); //
+    }
+
+    if (uri && !memcmp(uri, "/config_get.cgi", 16)) {
+        auto body_JSON = get_client_settings_json();
 
         char *body = nullptr;
         int body_len = 0;

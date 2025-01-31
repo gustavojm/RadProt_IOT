@@ -13,7 +13,7 @@
 #include "dhcpserver/dhcpserver.h"
 #include "dns/dnsserver.h"
 #include "httpd.h"
-#include "server_settings.h"
+#include "settings.h"
 
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
@@ -83,7 +83,7 @@ static void main_task(__unused void *params) {
     // printf("MY MAC ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\n",
     // itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);
 
-    const pico_server_settings *settings = get_pico_server_settings();
+    const config_server_settings *settings = get_config_server_settings();
 
     cyw43_arch_enable_ap_mode(
         settings->network_name,

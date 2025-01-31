@@ -53,7 +53,7 @@
                 <td>Seguridad:</td>
                 <td>
                     <select name="wifi_seq">
-                        <option value="OPEN" title="No authorisation required (open)">Open</option>
+                        <option value="OPEN" title="No authorisation required (open)">OPEN</option>
                         <option value="WPA_TKIP_PSK" title="WPA authorisation">WPA TKIP PSK</option>
                         <option value="WPA2_AES_PSK" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
                         <option value="WPA2_MIXED_PSK" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED PSK</option>

@@ -24,7 +24,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-volatile")
 include(FetchContent)
 
 FetchContent_Declare(ArduinoJson
-    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    #GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    SOURCE_DIR ../deps/arduinojson-src
     GIT_TAG        v7.0.4
 )
 FetchContent_MakeAvailable(ArduinoJson)
@@ -32,7 +33,8 @@ FetchContent_MakeAvailable(ArduinoJson)
 
 FetchContent_Declare(
     etl
-    GIT_REPOSITORY https://github.com/ETLCPP/etl.git
+    #GIT_REPOSITORY https://github.com/ETLCPP/etl.git
+    SOURCE_DIR ../deps/etl-src
     GIT_TAG master  # You can replace 'master' with a specific version tag
 )
 FetchContent_MakeAvailable(etl)
@@ -50,7 +52,7 @@ add_executable(${PROJECT_NAME}
         dns/dnsserver.cpp
         httpserver/httpd.cpp
         httpserver/fs.cpp
-        src/server_settings.cpp
+        src/settings.cpp
         src/tcp_server.cpp
         src/tcp_server_command.cpp
         src/hooks.cpp
@@ -65,6 +67,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         NO_SYS=0
         ETL_NO_STL
         ETL_NO_INITIALIZER_LIST
+        ARDUINOJSON_ENABLE_STD_STREAM=0
         )
         
 target_include_directories(${PROJECT_NAME} PRIVATE

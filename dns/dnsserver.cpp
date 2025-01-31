@@ -1,6 +1,8 @@
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 
+#include <ArduinoJson.h>
+
 #include <lwip/ip4_addr.h>
 #include <lwip/netif.h>
 #include <lwip/sockets.h>
@@ -8,7 +10,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include "debug_printf.h"
-#include "server_settings.h"
+#include "settings.h"
 
 static struct
 {

@@ -1,17 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
 
-<html>
-    <head>
-        <title>Radioprotección</title>
-        <style type="text/css">
-    
-        </style>
-        <script language="JavaScript">
-            networks_string = '{"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:61"},{"ssid":"CNE_Dosimetria","rssi":-50,"chann":11,"bssid":"00:6b:f1:c0:94:62"},{"ssid":"CNE_Telefonia","rssi":-53,"chann":11,"bssid":"00:6b:f1:c0:94:63"},{"ssid":"CNE_CDP","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:66"},{"ssid":"CNE_Radioproteccion","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:68"},{"ssid":"CNE_Internet","rssi":-51,"chann":11,"bssid":"00:6b:f1:c0:94:6b"},{"ssid":"C14017750 7261","rssi":-39,"chann":6,"bssid":"c6:03:a8:e6:d6:33"}]}'            
-            networks_json = JSON.parse(networks_string);
-            networks_json.WIFI_NETS.forEach((item, index) => {
-                console.log(index, item);                
-            });
-        </script>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Networks</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Available WiFi Networks</h2>
+    <table id="wifiTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>SSID</th>
+                <th>RSSI</th>
+                <th>Channel</th>
+                <th>BSSID</th>
+                <th>Security</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+
+        function getWifiSignalBars(rssi) {
+            if (rssi >= -30) {
+                return "▆ ▆ ▆ ▆ ▆";
+            } else if (rssi >= -50) {
+                return "▆ ▆ ▆ ▆";
+            } else if (rssi >= -60) {
+                return "▆ ▆ ▆";
+            } else if (rssi >= -70) {
+                return "▆ ▆";
+            } else {
+                return "▆";
+            }
+        }
+
+        function getAuthModeText(mode) {
+            switch (mode) {           
+                case 0:
+                    return "OPEN"
+                    break;
+
+                case 1:
+                    return "WPA TKIP PSK"
+                    break;
+                    
+                case 2:
+                    return "WPA AES PSK"
+                    break;
+
+                case 3:
+                    return "WPA2/WPA MIXED PSK"
+                    break;
+                    
+                case 4:
+                    return "WPA3 AES"
+                    break;
+
+                case 5:
+                    return "WPA2/WPA3"
+                    break;
+
+
+                default:
+                    break;
+            }
+
+        }
+
+        const networks_string = '\
+        {"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
+        {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
+        {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
+        {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:66"},\
+        {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:68"},\
+        {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode":3, "bssid":"00:6b:f1:c0:94:6b"},\
+        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode":3, "bssid":"c6:03:a8:e6:d6:33"}]}';
+
+        const networks_json = JSON.parse(networks_string);
+        const tableBody = document.querySelector("#wifiTable tbody");
+
+        networks_json.WIFI_NETS.forEach((item, index) => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><a href="#">${item.ssid}</a></td>
+                <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
+                <td>${item.chann}</td>
+                <td>${item.bssid}</td>
+                <td>${getAuthModeText(item.auth_mode)}</td>
+            `;
+
+            tableBody.appendChild(row);
+        });
+    </script>
+
+</body>
+
 </html>
-
