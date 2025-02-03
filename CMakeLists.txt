@@ -52,6 +52,7 @@ add_executable(${PROJECT_NAME}
         dns/dnsserver.cpp
         httpserver/httpd.cpp
         httpserver/fs.cpp
+        src/cpp_config.cpp
         src/settings.cpp
         src/tcp_server.cpp
         src/tcp_server_command.cpp
@@ -68,6 +69,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         ETL_NO_STL
         ETL_NO_INITIALIZER_LIST
         ARDUINOJSON_ENABLE_STD_STREAM=0
+        PICO_CXX_DISABLE_ALLOCATION_OVERRIDES=1
         )
         
 target_include_directories(${PROJECT_NAME} PRIVATE

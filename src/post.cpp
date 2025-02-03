@@ -144,6 +144,8 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         } else {
             json::serializeJson(body_JSON, body, body_len);
         }
+
+        body_len = strlen(body); // meassureJson is returning more bytes than needed
         httpd_post_response(hs, body, body_len, "json"); //
     }
 

@@ -107,7 +107,7 @@
 
             row.innerHTML = `
                 <td>${index + 1}</td>
-                <td><a href="#">${item.ssid}</a></td>
+                <td><a href='javascript:selssid(\""  +  ${item.ssid}  + "\")'>"${item.ssid}</a></td>
                 <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
                 <td>${item.chann}</td>
                 <td>${item.bssid}</td>

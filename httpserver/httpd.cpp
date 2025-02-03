@@ -1503,7 +1503,7 @@ static err_t http_handle_post_finished(struct http_state *hs) {
     /* NULL-terminate the buffer */
     http_uri_buf[0] = 0;
     if (hs->file) {     // file was used to pass the BODY of a POST response
-        free((void *)hs->file);
+        delete[] hs->file;
     }
     return ERR_OK;
     // return http_find_file(hs, http_uri_buf, 0);
