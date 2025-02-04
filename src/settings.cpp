@@ -8,12 +8,12 @@ const union {
     char padding[FLASH_SECTOR_SIZE];
 } __attribute__((aligned(FLASH_SECTOR_SIZE)))
 s_Settings = { .settings = {
-                   .ip_address = 0x017BA8C0,
-                   .network_mask = 0x00FFFFFF,
+                   .ip = 0x017BA8C0,
+                   .net_mask = 0x00FFFFFF,
                    .secondary_address =
                        0x006433c6, // TEST-NET-2. See the comment before 'secondary_address' definition for details.
-                   .network_name = WIFI_SSID,
-                   .network_password = WIFI_PASSWORD,
+                   .ssid = WIFI_SSID,
+                   .password = WIFI_PASSWORD,
                    .hostname = "config",
                    .domain_name = "rad-prot.local",
                    .dns_ignores_network_suffix = true,
@@ -51,27 +51,38 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 const union {
     client_settings settings;
     char padding[FLASH_SECTOR_SIZE];
-} __attribute__((aligned(FLASH_SECTOR_SIZE))) s_Client_Settings = {
-    .settings = { .ip_address = 0x017BA8C0,
-                  .network_mask = 0x00FFFFFF,
-                  .gw = 0x00FFFFFF,
-                  .wifi_name = "CNE_Radioproteccion",
-                  .wifi_password = "",
-                  .mqtt_ip_address = 0x017BA8C0,
-                  .mqtt_password = "",
-                  .detector_settings = { {.baudrate = 9600,
+} __attribute__((aligned(FLASH_SECTOR_SIZE))) 
+s_Client_Settings = {.settings = { 
+                .wifi = {.ssid = "CNE_Radioproteccion",
+                           .password = "secret",
+                           .ip = 0x017BA8C0,
+                           .net_mask = 0x00FFFFFF,
+                           .gw = 0x00FFFFFF,
+                          },
+
+                .mqtt = {.broker_address = "broker_address",
+                         .password = "broker_pass"
+                        },
+
+                .sensor_settings = { {.baudrate = 9600,
                                             .publish_settings = { { .enabled = true,
-                                                                    .start = 5,
-                                                                    .end = 8,
-                                                                    .is_number = true,
-                                                                    .scale_factor = 10,
+                                                                    .name = "H3",
+                                                                    .start = 3,
+                                                                    .end = 9,
+                                                                    .is_num = true,
+                                                                    .scale = 10,
+                                                                    .avg_cnt = 0,
                                                                     .topic = "12345" },
-                                                                  { .enabled = true,
-                                                                    .start = 5,
-                                                                    .end = 8,
-                                                                    .is_number = true,
-                                                                    .scale_factor = 10,
-                                                                    .topic = "r/12345" } } 																
+                                                                   { .enabled = true,
+                                                                    .name = "H3AVG",
+                                                                    .start = 3,
+                                                                    .end = 3,
+                                                                    .is_num = true,
+                                                                    .scale = 10,
+                                                                    .avg_cnt = 64,
+                                                                    .topic = "r/12345" }
+                                                                },
+                                                                
 										 } 
 										} 
 				}
@@ -90,5 +101,5 @@ void write_client_settings(const client_settings *new_settings) {
 }
 
 ArduinoJson::JsonDocument get_client_settings_json() {
-	return s_Client_Settings.settings.to_json();
+    return s_Client_Settings.settings.to_json();
 };

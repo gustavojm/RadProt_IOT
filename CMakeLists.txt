@@ -60,6 +60,9 @@ add_executable(${PROJECT_NAME}
         src/ssi.cpp
         src/post.cpp
         hal/src/serial.cpp
+        src/sensor.cpp
+        pico-sdk/lib/lwip/src/apps/mqtt/mqtt.c
+        src/mqtt.cpp
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

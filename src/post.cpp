@@ -81,7 +81,7 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         int body_len = 0;
         body_len = json::measureJson(body_JSON); /* returns 0 on fail */
         body = new char[body_len];
-        if (!(*body)) {
+        if (!(body)) {
             printf("Out Of Memory");
             body_len = 0;
         } else {
@@ -94,7 +94,7 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         auto body_JSON = json::JsonDocument();
         auto wifi_nets_array = body_JSON["WIFI_NETS"].to<json::JsonArray>();
 
-        for (auto wifi_net : wifi_networks) {
+        for (auto &wifi_net : wifi_networks) {
             auto wifi_net_entry = json::JsonDocument();
             wifi_net_entry["ssid"] = wifi_net.ssid;
             wifi_net_entry["rssi"] = wifi_net.rssi;
@@ -122,7 +122,7 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         int body_len = 0;
         body_len = json::measureJson(body_JSON); /* returns 0 on fail */
         body = new char[body_len];
-        if (!(*body)) {
+        if (!(body)) {
             printf("Out Of Memory");
             body_len = 0;
         } else {
@@ -137,15 +137,17 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         char *body = nullptr;
         int body_len = 0;
         body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+        body_len++;         // place for null terminator
         body = new char[body_len];
-        if (!(*body)) {
+        if (!body) {
             printf("Out Of Memory");
             body_len = 0;
         } else {
             json::serializeJson(body_JSON, body, body_len);
+            body[body_len] = '\0';
         }
 
-        body_len = strlen(body); // meassureJson is returning more bytes than needed
+        //body_len = strlen(body); // meassureJson is returning more bytes than needed
         httpd_post_response(hs, body, body_len, "json"); //
     }
 

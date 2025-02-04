@@ -3,48 +3,71 @@
 <head>
     <title>Radioprotección</title>
     <style type="text/css">
-
-    </style>
-    <script language="JavaScript">
-
-        function apply_settings() {
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", '/settings.cgi', true);
-            xhr.setRequestHeader("Content-Type", "application/json");
-            json = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
-            xhr.send(json);
-            xhr.onloadend = function () {
-                if (this.responseText == "OK") {
-                    document.getElementById("reboot_popup").style.display = "block";
-                    unrecoverable_error = "rebooting";
-                } else {
-                    alert(this.responseText);
-                }
-            };  
+        html,
+        body {
+            height: 100%;
         }
-    </script>
+
+        html {
+            display: table;
+            margin: auto;
+        }
+
+        body {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
-    <a href="admin.html"  class="btn btn--s">&lt;</a>&nbsp;&nbsp;<strong>Network Configuration</strong>
+    <a href="admin.html" class="btn btn--s">&lt;</a>&nbsp;&nbsp;<strong>Network Configuration</strong>
     <hr>
+    <h2>MAC Address: <!--#MACAddr--></h2>
+
     Connect to Router with these settings:<br>
-    <form action="" method="get">
-    <table border="0"  cellspacing="0" cellpadding="3" style="width:310px" >
-    <tr><td align="right">SSID:</td><td><input type="text" id="ssid" name="ssid" value=""></td></tr>
-    <tr><td align="right">Password:</td><td><input type="text" id="password" name="password" value=""></td></tr>
-    <tr><td align="right">DHCP:</td><td><input type="checkbox" id="dhcp" name="dhcp"></td></tr>
-    <tr><td align="right">IP:     </td><td><input type="text" id="ip_0" name="ip_0" size="3">.<input type="text" id="ip_1" name="ip_1" size="3">.<input type="text" id="ip_2" name="ip_2" size="3">.<input type="text" id="ip_3" name="ip_3" value="" size="3"></td></tr>
-    <tr><td align="right">Netmask:</td><td><input type="text" id="nm_0" name="nm_0" size="3">.<input type="text" id="nm_1" name="nm_1" size="3">.<input type="text" id="nm_2" name="nm_2" size="3">.<input type="text" id="nm_3" name="nm_3" size="3"></td></tr>
-    <tr><td align="right">Gateway:</td><td><input type="text" id="gw_0" name="gw_0" size="3">.<input type="text" id="gw_1" name="gw_1" size="3">.<input type="text" id="gw_2" name="gw_2" size="3">.<input type="text" id="gw_3" name="gw_3" size="3"></td></tr>
-    <tr><td colspan="2" align="center"><input disabled id="save" type="submit" style="width:150px" class="btn btn--m btn--blue" value="Save"></td></tr>
-    </table>
+    <form action="" method="get" id="wifi_form" style="display: flex; justify-content: center;">
+        <table border="0" cellspacing="0" cellpadding="3">
+            <tr>
+                <td align="right">SSID:</td>
+                <td><input type="text" name="ssid" value=""></td>
+            </tr>
+            <tr>
+                <td align="right">Password:</td>
+                <td><input type="text" name="password" value=""></td>
+            </tr>
+            <tr>
+                <td align="right">DHCP:</td>
+                <td><input type="checkbox" name="dhcp"></td>
+            </tr>
+            <tr>
+                <td align="right">IP: </td>
+                <td><input type="text" name="ip_0" size="3">.<input type="text" name="ip_1" size="3">.<input type="text"
+                        name="ip_2" size="3">.<input type="text" name="ip_3" value="" size="3"></td>
+            </tr>
+            <tr>
+                <td align="right">Netmask:</td>
+                <td><input type="text" name="nm_0" size="3">.<input type="text" name="nm_1" size="3">.<input type="text"
+                        name="nm_2" size="3">.<input type="text" name="nm_3" size="3"></td>
+            </tr>
+            <tr>
+                <td align="right">Gateway:</td>
+                <td><input type="text" name="gw_0" size="3">.<input type="text" name="gw_1" size="3">.<input type="text"
+                        name="gw_2" size="3">.<input type="text" name="gw_3" size="3"></td>
+            </tr>
+            <tr>
+                <td colspan="2" align="center"><input id="save" type="submit" style="width:150px"
+                        class="btn btn--m btn--blue" value="Save"></td>
+            </tr>
+        </table>
     </form>
     <hr>
-    <strong>Connection State:</strong><div id="connectionstate">N/A</div>
+    <strong>Connection State:</strong>
+    <div id="connectionstate">N/A</div>
     <hr>
     <strong>Networks:</strong><br>
-    <table id="wifiTable">
+    <table id="wifiTable" style="width: 100%;">
         <thead>
             <tr>
                 <th>#</th>
@@ -57,160 +80,293 @@
         </thead>
         <tbody></tbody>
     </table>
+    <hr>
+    <strong>MQTT Settings:</strong>
+    <form action="" method="get" id="mqtt_form" style="display: flex; justify-content: center;">
+        <table border="0" cellspacing="0" cellpadding="3" style="width:310px">
+            <tr>
+                <td align="right">Broker:</td>
+                <td><input type="text" id="broker" name="broker" value=""></td>
+            </tr>
+            <tr>
+                <td align="right">Port:</td>
+                <td><input type="text" id="port" name="port" size="3" value=""></td>
+            </tr>
+            <tr>
+                <td align="right">User Name:</td>
+                <td><input type="text" id="user_name" name="user_name" value=""></td>
+            </tr>
+            <td align="right">Password:</td>
+            <td><input type="password" id="password" name="password" value=""></td>
+        </table>
+    </form>
+    <hr>
+    <strong>Serial Interfaces:</strong>
 
-    <script>
-
-        function getWifiSignalBars(rssi) {
-            if (rssi >= -30) {
-                return "▆ ▆ ▆ ▆ ▆";
-            } else if (rssi >= -50) {
-                return "▆ ▆ ▆ ▆";
-            } else if (rssi >= -60) {
-                return "▆ ▆ ▆";
-            } else if (rssi >= -70) {
-                return "▆ ▆";
-            } else {
-                return "▆";
-            }
-        }
-
-        function getAuthModeText(mode) {
-            switch (mode) {           
-                case 0:
-                    return "OPEN"
-                    break;
-
-                case 1:
-                    return "WPA TKIP PSK"
-                    break;
-                    
-                case 2:
-                    return "WPA AES PSK"
-                    break;
-
-                case 3:
-                    return "WPA2/WPA MIXED PSK"
-                    break;
-                    
-                case 4:
-                    return "WPA3 AES"
-                    break;
-
-                case 5:
-                    return "WPA2/WPA3"
-                    break;
-
-
-                default:
-                    break;
-            }
-
-        }
-
-        const networks_string = '\
-        {"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
-        {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
-        {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
-        {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:66"},\
-        {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:68"},\
-        {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode":3, "bssid":"00:6b:f1:c0:94:6b"},\
-        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode":3, "bssid":"c6:03:a8:e6:d6:33"}]}';
-
-        const networks_json = JSON.parse(networks_string);
-        const tableBody = document.querySelector("#wifiTable tbody");
-
-        networks_json.WIFI_NETS.forEach((item, index) => {
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-                <td>${index + 1}</td>
-                <td><a href='javascript:selssid("${item.ssid}")'>${item.ssid}</a></td>
-                <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
-                <td>${item.chann}</td>
-                <td>${item.bssid}</td>
-                <td>${getAuthModeText(item.auth_mode)}</td>
-            `;
-
-            tableBody.appendChild(row);
-        });
-    </script>
-    </table>
-    
-    <script>
-    
-    function selssid(value){
-        document.getElementById("ssid").value = value; 
-      }
-    
-    window.onload = function () {
-      
-        load("style.css","css", function() {
-            load("microajax.js","js", function() {
-            setValues("/admin/values");
-          document.getElementById("save").disabled = false; 
-                setTimeout(GetState,3000);
-              });
-          });
-      }
-      
-    function load(e,t,n){
-      if("js"==t){
-          var a=document.createElement("script");
-          a.src=e,a.type="text/javascript",a.async=!1,a.onload=function(){n()},document.getElementsByTagName("head")[0].appendChild(a)
-          }
-       else if("css"==t){
-        var a=document.createElement("link");
-        a.href=e,a.rel="stylesheet",a.type="text/css",a.async=!1,a.onload=function(){n()},document.getElementsByTagName("head")[0].appendChild(a)
-        }
-      }
-    </script>
+    <div id="sensors_div"></div>
 
     <div>
-        <h1><!--#MACAddr--></h1>
-
+        <!-- 
         <form id="settings_form">
-        <table>
-            <thead>
+            <table>
+                <thead>
+                    <tr>
+                        <td>Setting</td>
+                        <td>Value</td>
+                    </tr>
+                </thead>
                 <tr>
-                    <td>Setting</td>
-                    <td>Value</td>
+                    <td>Nombre de Red:</td>
+                    <td><input type="text" name="ssid"></td>
                 </tr>
-            </thead>
-            <tr>
-                <td>Nombre de Red:</td>
-                <td><input type="text" name="ssid"></td>
-            </tr>
-            <tr>
-                <td>Usuario:</td>
-                <td><input type="text" name="wifi_user"></td>
-            </tr>
-            <tr>
-                <td>Contrase&ntilde;a:</td>
-                <td><input type="text" name="wifi_pass"></td>
-            </tr>
-            <tr>
-                <td>Seguridad:</td>
-                <td>
-                    <select name="wifi_seq">
-                        <option value="OPEN" title="No authorisation required (open)">OPEN</option>
-                        <option value="WPA_TKIP_PSK" title="WPA authorisation">WPA TKIP PSK</option>
-                        <option value="WPA2_AES_PSK" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
-                        <option value="WPA2_MIXED_PSK" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED PSK</option>
-                        <option value="WPA3_SAE_AES_PSK" title="WPA3 AES authorisation">WPA3 AES</option>
-                        <option value="WPA3_WPA2_AES_PSK" title="WPA3 AES authorisation">WPA2/WPA3</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <input type="button" onclick="apply_settings()" value="Guardar Config">
-                    <!-- <button onclick="show_settings_popup(false)">Cancel</button> -->
-                </td>
-            </tr>
-        </table>
+                <tr>
+                    <td>Usuario:</td>
+                    <td><input type="text" name="wifi_user"></td>
+                </tr>
+                <tr>
+                    <td>Contrase&ntilde;a:</td>
+                    <td><input type="text" name="wifi_pass"></td>
+                </tr>
+                <tr>
+                    <td>Seguridad:</td>
+                    <td>
+                        <select name="wifi_seq">
+                            <option value="OPEN" title="No authorisation required (open)">OPEN</option>
+                            <option value="WPA_TKIP_PSK" title="WPA authorisation">WPA TKIP PSK</option>
+                            <option value="WPA2_AES_PSK" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
+                            <option value="WPA2_MIXED_PSK" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED
+                                PSK</option>
+                            <option value="WPA3_SAE_AES_PSK" title="WPA3 AES authorisation">WPA3 AES</option>
+                            <option value="WPA3_WPA2_AES_PSK" title="WPA3 AES authorisation">WPA2/WPA3</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="button" onclick="apply_settings()" value="Guardar Config">
+                        <button onclick="show_settings_popup(false)">Cancel</button>
+                    </td>
+                </tr>
+            </table>
         </form>
-        
+    -->
     </div>
 </body>
+
+<script>
+    function getWifiSignalBars(rssi) {
+        if (rssi >= -30) {
+            return "▆ ▆ ▆ ▆ ▆";
+        } else if (rssi >= -50) {
+            return "▆ ▆ ▆ ▆";
+        } else if (rssi >= -60) {
+            return "▆ ▆ ▆";
+        } else if (rssi >= -70) {
+            return "▆ ▆";
+        } else {
+            return "▆";
+        }
+    }
+
+    function getAuthModeText(mode) {
+        switch (mode) {
+            case 0:
+                return "OPEN"
+                break;
+
+            case 1:
+                return "WPA TKIP PSK"
+                break;
+
+            case 2:
+                return "WPA AES PSK"
+                break;
+
+            case 3:
+                return "WPA2/WPA MIXED PSK"
+                break;
+
+            case 4:
+                return "WPA3 AES"
+                break;
+
+            case 5:
+                return "WPA2/WPA3"
+                break;
+
+
+            default:
+                break;
+        }
+
+    }
+
+    const networks_string = '\
+    {"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
+    {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
+    {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
+    {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:66"},\
+    {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:68"},\
+    {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode":3, "bssid":"00:6b:f1:c0:94:6b"},\
+    {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode":3, "bssid":"c6:03:a8:e6:d6:33"}]}';
+
+    const networks_json = JSON.parse(networks_string);
+    const wifi_tableBody = document.querySelector("#wifiTable tbody");
+
+    networks_json.WIFI_NETS.forEach((item, index) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td><a href='javascript:select_ssid("${item.ssid}")'>${item.ssid}</a></td>
+            <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
+            <td>${item.chann}</td>
+            <td>${item.bssid}</td>
+            <td>${getAuthModeText(item.auth_mode)}</td>
+        `;
+
+        wifi_tableBody.appendChild(row);
+    });
+
+    function select_ssid(value) {
+        const wifi_form = document.getElementById('wifi_form');
+        wifi_form.elements["ssid"].value = value;
+    }
+
+    // window.onload = function () {
+
+    //     load("style.css", "css", function () {
+    //         load("microajax.js", "js", function () {
+    //             setValues("/admin/values");
+    //             document.getElementById("save").disabled = false;
+    //             setTimeout(GetState, 3000);
+    //         });
+    //     });
+    // }
+
+    // function load(e, t, n) {
+    //     if ("js" == t) {
+    //         var a = document.createElement("script");
+    //         a.src = e, a.type = "text/javascript", a.async = !1, a.onload = function () { n() }, document.getElementsByTagName("head")[0].appendChild(a)
+    //     }
+    //     else if ("css" == t) {
+    //         var a = document.createElement("link");
+    //         a.href = e, a.rel = "stylesheet", a.type = "text/css", a.async = !1, a.onload = function () { n() }, document.getElementsByTagName("head")[0].appendChild(a)
+    //     }
+    // }
+
+    function apply_settings() {
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", '/settings.cgi', true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        json = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
+        xhr.send(json);
+        xhr.onloadend = function () {
+            if (this.responseText == "OK") {
+                document.getElementById("reboot_popup").style.display = "block";
+                unrecoverable_error = "rebooting";
+            } else {
+                alert(this.responseText);
+            }
+        };
+    }
+
+    function uint32ToIp(uint32) {
+        return [
+            uint32 & 0xFF,
+            (uint32 >>> 8) & 0xFF,
+            (uint32 >>> 16) & 0xFF,
+            (uint32 >>> 24) & 0xFF
+        ];
+    }
+
+    function get_settings() {
+        const settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"net_mask":16777215,"gw":16777215},"mqtt":{"broker_address":"broker_address","broker_port":0,"username":"","password":"broker_pass"},"sensor_settings":[{"baudrate":9600,"publish_settings":[{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]}';
+        const settings_json = JSON.parse(settings_string);
+
+        const wifi_form = document.getElementById('wifi_form');
+        wifi_form.elements["ssid"].value = settings_json["wifi"]["ssid"];
+        wifi_form.elements["password"].value = settings_json["wifi"]["password"];
+        wifi_form.elements["dhcp"].value = settings_json["wifi"]["dhcp"];
+
+        ip = uint32ToIp(settings_json["wifi"]["ip"]);
+        wifi_form.elements["ip_0"].value = ip[0];
+        wifi_form.elements["ip_1"].value = ip[1];
+        wifi_form.elements["ip_2"].value = ip[2];
+        wifi_form.elements["ip_3"].value = ip[3];
+
+        net_mask = uint32ToIp(settings_json["wifi"]["net_mask"]);
+        wifi_form.elements["nm_0"].value = net_mask[0];
+        wifi_form.elements["nm_1"].value = net_mask[1];
+        wifi_form.elements["nm_2"].value = net_mask[2];
+        wifi_form.elements["nm_3"].value = net_mask[3];
+
+        gw = uint32ToIp(settings_json["wifi"]["gw"]);
+        wifi_form.elements["gw_0"].value = gw[0];
+        wifi_form.elements["gw_1"].value = gw[1];
+        wifi_form.elements["gw_2"].value = gw[2];
+        wifi_form.elements["gw_3"].value = gw[3];
+
+        const sensors_div = document.querySelector("#sensors_div");
+        settings_json.sensor_settings.forEach((item, index_sensor) => {
+            const sensor_div = document.createElement("div");
+
+            sensor_div.innerHTML = `
+                ${index_sensor + 1} 
+                Enabled:
+                <input name="sensor_settings[].enabled" type="checkbox" ${item.enabled ? "checked" : ""}>
+                Baud:
+                <input name="sensor_settings[].baud" size="6" value="${item.baudrate}">
+            `;
+
+
+            const publish_settings_table = document.createElement("table");
+            publish_settings_table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Enabled</th>
+                        <th>Name</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Numeric</th>
+                        <th>Scale</th>
+                        <th>Average</th>
+                        <th>Topic</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+
+            publish_settings_table.style.width = "100%";
+
+            settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
+                const detail_row = document.createElement("tr");
+
+                detail_row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><input name="sensor_settings[].publish_settings[].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
+                <td><input name="sensor_settings[].publish_settings[].name" size="6" value="${item.name}"></td>
+                <td><input name="sensor_settings[].publish_settings[].start" size="2" value="${item.start}"></td>
+                <td><input name="sensor_settings[].publish_settings[].end" size="2" value="${item.end}"></td>
+                <td><input name="sensor_settings[].publish_settings[].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
+                <td><input name="sensor_settings[].publish_settings[].scale" size="2" value="${item.scale}"></td>
+                <td><input name="sensor_settings[].publish_settings[].avg_cnt" size="2" value="${item.avg_cnt}"></td>
+                <td><input name="sensor_settings[].publish_settings[].topic" size="6" value="${item.topic}"></td>
+            `;
+
+                publish_settings_table.appendChild(detail_row);
+                sensor_div.appendChild(publish_settings_table);
+            });
+            sensors_div.appendChild(sensor_div);
+            sensors_div.appendChild(document.createElement("hr"));
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        get_settings();
+    });
+
+</script>
 
 </html>

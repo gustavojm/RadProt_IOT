@@ -19,6 +19,7 @@
 #include "hardware/vreg.h"
 #include "serial.h"
 #include "ssi.h"
+#include "mqtt.h"
 
 #include "debug_printf.h"
 
@@ -42,8 +43,6 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     }
     return 0;
 }
-
-Serial my_uart(uart0, 1, 2, 9600, 256);
 
 static void main_task(__unused void *params) {
 
@@ -86,12 +85,12 @@ static void main_task(__unused void *params) {
     const config_server_settings *settings = get_config_server_settings();
 
     cyw43_arch_enable_ap_mode(
-        settings->network_name,
-        settings->network_password,
-        settings->network_password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
+        settings->ssid,
+        settings->password,
+        settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
 
     struct netif *netif = netif_default;
-    ip4_addr_t addr = { .addr = settings->ip_address }, mask = { .addr = settings->network_mask };
+    ip4_addr_t addr = { .addr = settings->ip }, mask = { .addr = settings->net_mask };
 
     netif_set_addr(netif, &addr, &mask, &addr);
 
@@ -108,26 +107,9 @@ static void main_task(__unused void *params) {
 
     httpd_init(settings->hostname, settings->domain_name);
     ssi_init();
+    mqtt_init();
 
     vTaskDelete(NULL);
-}
-
-void readStringTask(void *params) {
-    my_uart.init();
-    my_uart.set_timeout(pdMS_TO_TICKS(100));
-    my_uart.set_delimiter('\n');
-    my_uart.set_irq_handler(my_uart.uart_id, []() { my_uart.on_uart_rx(); });    
-    char buffer[128];
-
-    while (1) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        int bytes_received = my_uart.read_string(buffer, sizeof(buffer));
-        if (bytes_received) { // If we received something
-            printf("Received string: %.*s\n", bytes_received, buffer);            
-        } else {
-            printf("Read TIMED OUT");
-        }
-    }
 }
 
 void writeStringTask(void *params) {
@@ -150,13 +132,12 @@ void writeStringTask(void *params) {
 
 }
 
-int main(void) {
+ int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
 
-    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);
-    xTaskCreate(readStringTask, "ReadStringTask", 256, NULL, 1, NULL);
+    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);    
     xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, 1, NULL);
 
     vTaskStartScheduler();
