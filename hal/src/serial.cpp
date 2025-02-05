@@ -6,8 +6,12 @@
 void Serial::on_uart_rx() {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+    if (!receiving_task_handle) {
+        return;
+    }
+    
     while (uart_is_readable(uart_id)) {
-        // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline        
+        // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline
         vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
@@ -33,24 +37,28 @@ Serial::~Serial() {
     delete[] uart_buffer;
 }
 
-void Serial::init() {
+void Serial::init(irq_handler_t handler) {
     // Initialize UART
     uart_init(uart_id, baud_rate);
     gpio_set_function(gpio_tx, GPIO_FUNC_UART);
     gpio_set_function(gpio_rx, GPIO_FUNC_UART);
 
     // Turn off FIFO's - we want to do this character by character
-    uart_set_fifo_enabled(uart_id, false);
+    uart_set_fifo_enabled(uart_id, false);    
 
+    irq_num_t IRQ = uart_id == uart0 ? UART0_IRQ : UART1_IRQ;
+    irq_set_enabled(IRQ, true);
+    uart_set_irq_enables(uart_id, true, false);
+    irq_set_exclusive_handler(IRQ, handler);
+
+}
+
+void Serial::set_receiving_task_handle() {
     receiving_task_handle = xTaskGetCurrentTaskHandle();
 }
 
-void Serial::set_irq_handler(uart_inst_t *uart_id, irq_handler_t handler) {
-    irq_num_t IRQ = uart_id == uart0 ? UART0_IRQ : UART1_IRQ;
-
-    irq_set_exclusive_handler(IRQ, handler);
-    irq_set_enabled(IRQ, true);
-    uart_set_irq_enables(uart_id, true, false);
+void Serial::set_receiving_task_handle(TaskHandle_t handle) {
+    receiving_task_handle = handle;
 }
 
 int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) {

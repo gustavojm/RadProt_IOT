@@ -3,8 +3,8 @@
 #include "cstring"
 
 #include "mqtt.h"
-#include "sensor.h"
 
+#include <pico/cyw43_arch.h>
 
 #define DEBUG_printf printf
 
@@ -27,11 +27,27 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection
     }
 }
 
+void sendToMqttQueue(const char* topic, const char* payload, size_t payload_length, uint8_t qos, bool retain) {
+    MqttPublishMessage msg;
+
+    // Copy topic and payload into the structure
+    snprintf(msg.topic, MAX_TOPIC_LENGTH, "%s", topic);
+    snprintf(msg.payload, MAX_PAYLOAD_LENGTH, "%s", payload);
+    msg.payload_length = payload_length;
+    msg.qos = qos;
+    msg.retain = retain;
+
+    // Send the message to the FreeRTOS queue
+    if (xQueueSend(mqttQueue, &msg, portMAX_DELAY) != pdPASS) {
+        // Handle error: failed to send to the queue
+    }
+}
+
 /*
  * Called when publish is complete either with success or failure
  */
-void mqtt_pub_request_cb(void *arg, err_t err) {
-    mqtt_client_t *client = static_cast<mqtt_client_t *>(arg);
+static void mqtt_pub_request_cb(void *arg, err_t err) {
+    // mqtt_client_t *client = static_cast<mqtt_client_t *>(arg);
     // printf("request publish ERROR %d \n", err);
 }
 
@@ -70,65 +86,51 @@ err_t mqtt_app_connect(mqtt_client_t *client, ip_addr_t broker_addr) {
     return err;
 }
 
-void perform_payload(char *p) {
-    time_t s = time(NULL);
-    struct tm *current_time = localtime(&s);
 
-    sprintf(p, "%02d:%02d:%02d", current_time->tm_hour, current_time->tm_min, current_time->tm_sec);
-}
-
-void mqtt_connection_task(void *pvParameters) {
+void mqtt_task(void *pvParameters) {
+    MqttPublishMessage msg;
     DEBUG_printf("Inicio mqtt_connection_task\n");
     ip_addr_t broker_addr;
     IP4_ADDR(&broker_addr, 192, 168, 137, 243);
+    //IP4_ADDR(&broker_addr, 10, 30, 113, 111);   // Windows Machine acting as ssh tunnel to mqtt server
 
     int counter = 0;
     mqtt_client_t mqtt_client{};
     // run_dns_lookup(mqtt_client);
+
+    vTaskDelay(10000);
 
     err_t error = mqtt_app_connect(&mqtt_client, broker_addr);
     if (error == ERR_OK) {
         DEBUG_printf("mqtt_app_connect() OK\n");
     } else {
         DEBUG_printf("mqtt_app_connect() ERROR=%d\n", error);
-    }
-
-    if (mqtt_client_is_connected(&mqtt_client)) {
-        static Serial my_uart0(uart0, 1, 2, 9600, 256);
-        my_uart0.init();
-        my_uart0.set_timeout(pdMS_TO_TICKS(100));
-        my_uart0.set_delimiter('\n');
-        my_uart0.set_irq_handler(my_uart0.uart_id, []() {my_uart0.on_uart_rx(); });
-
-
-        Sensor s1(my_uart0, mqtt_client);
-        s1.init();
-    }
+    }  
 
     while (true) {
-        if (mqtt_client_is_connected(&mqtt_client)) {
-            char payload[16];
-            perform_payload(payload);
-            error = mqtt_app_publish(&mqtt_client, payload);
-
-            if (error == ERR_OK) {
-                DEBUG_printf("%s publicacion: %d\n", payload, counter);
-                counter++;
-            }
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(MS_PUBLISH_PERIOD));
+        // if (!mqtt_client_is_connected(&mqtt_client)) {
+        //     mqtt_app_connect(&mqtt_client, broker_addr);
+        // }
+        // Wait for a message to arrive in the queue
+        if (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
+            // Publish the message using your MQTT client library
+            mqtt_publish(&mqtt_client, msg.topic, msg.payload, msg.payload_length, msg.qos, msg.retain, mqtt_pub_request_cb, NULL);
+        }    
     }
 }
 
 void mqtt_init() {
-    xTaskCreate(
-        mqtt_connection_task,          // Task to be run
-        "MQTTConnect",              // Name of the Task for debugging and managing its Task Handle
-        1024,                       // Stack depth to be allocated for use with task's stack (see docs)
-        nullptr,                    // Arguments needed by the Task (NULL because we don't have any)
-        (configMAX_PRIORITIES - 2), // Task Priority - Higher the number the more priority [max is (configMAX_PRIORITIES - 1)
-                                    // provided in FreeRTOSConfig.h]
-        NULL                        // Task Handle if available for managing the task
-    );
+    // Create a queue to hold MQTT publish messages
+    mqttQueue = xQueueCreate(10, sizeof(MqttPublishMessage)); // 10 is the queue size
+    if (mqttQueue != NULL) {    
+        xTaskCreate(
+            mqtt_task,                  // Task to be run
+            "MQTTTask",                 // Name of the Task for debugging and managing its Task Handle
+            1024,                       // Stack depth to be allocated for use with task's stack (see docs)
+            NULL,                    // Arguments needed by the Task (NULL because we don't have any)
+            (configMAX_PRIORITIES - 2), // Task Priority - Higher the number the more priority [max is (configMAX_PRIORITIES - 1)
+                                        // provided in FreeRTOSConfig.h]
+            NULL                        // Task Handle if available for managing the task
+        );
+    }
 }

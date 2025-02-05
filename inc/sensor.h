@@ -2,15 +2,18 @@
 
 #include "serial.h"
 #include "mqtt.h"
+#include "string.h"
+#include "settings.h"
 
 class Sensor {
     public:
 
-    Sensor(Serial uart, mqtt_client_t &mqtt_client) : uart(uart), mqtt_client(mqtt_client) {};
+    Sensor(Serial &uart, const sensor_settings_entry *settings) : uart(uart), settings(settings) {};
     void init();
 
-    void read_serial_task();
+    void read_task();
     
-    Serial uart;
-    mqtt_client_t &mqtt_client;
+    Serial &uart;    
+    const sensor_settings_entry *settings;
+    
 };

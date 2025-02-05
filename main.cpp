@@ -20,10 +20,38 @@
 #include "serial.h"
 #include "ssi.h"
 #include "mqtt.h"
+#include "sensor.h"
 
 #include "debug_printf.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
+#define RECONNECT_DELAY_MS 5000 // 5 seconds
+#define MAX_RETRIES 5           // Maximum retry attempts
+
+
+void connect_to_wifi() {
+    int retries = 0;
+
+    while (retries < MAX_RETRIES) {
+        printf("Connecting to Wi-Fi... Attempt %d\n", retries + 1);
+
+        // Attempt to connect to Wi-Fi
+        if (cyw43_arch_wifi_connect_timeout_ms("C14017750 7261", "malamala", CYW43_AUTH_WPA2_AES_PSK,
+                                               30000) == 0) {
+            if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
+                printf("Connected to Wi-Fi successfully!\n");
+                return;
+            }
+        }
+
+        printf("Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
+        vTaskDelay(pdMS_TO_TICKS(RECONNECT_DELAY_MS));
+        retries++;
+    }
+
+    printf("Failed to connect after %d attempts. Giving up.\n", MAX_RETRIES);
+}
+
 
 static void set_secondary_ip_address(int address) {
     /************************************ !!! WARNING !!! ************************************
@@ -109,6 +137,24 @@ static void main_task(__unused void *params) {
     ssi_init();
     mqtt_init();
 
+    static Serial my_uart0(uart0, 1, 2, 9600, 256);
+    my_uart0.init([]() {my_uart0.on_uart_rx(); });
+    my_uart0.set_timeout(pdMS_TO_TICKS(100));
+    my_uart0.set_delimiter('\n');
+
+    static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);    
+    s0.init();
+
+    // Monitor connection and reconnect if necessary
+    while (true) {
+        if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+
+            printf("Wi-Fi disconnected! Attempting to reconnect...\n");
+            connect_to_wifi();
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
+    }
+
     vTaskDelete(NULL);
 }
 
@@ -122,17 +168,18 @@ void writeStringTask(void *params) {
         uart_init(uart1, 9600);
 
         // Send out a string, with CR/LF conversions
-        uart_puts(uart1, " Hello, UART!\n");
+        // uart_puts(uart1, "Hel987.2233lo, UART!\n");
+        // vTaskDelay(1000);
+        uart_puts(uart1, "Mes12.34567890 from serial port!\n");
         vTaskDelay(1000);
-        uart_puts(uart1, " Message 2 from serial port!\n");
-        vTaskDelay(1000);
-        uart_puts(uart1, " Estaba la pajara pinta sentada en el verde limon\n");
-        vTaskDelay(1000);
+        // uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
+        // vTaskDelay(1000);
+
     }
 
 }
 
- int main(void) {
+int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();

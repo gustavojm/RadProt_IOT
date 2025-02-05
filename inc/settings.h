@@ -31,6 +31,7 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 
 class publish_settings_entry{
 public:
+
     bool enabled;
     char name[10];
     uint16_t start;
