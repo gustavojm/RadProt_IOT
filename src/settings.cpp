@@ -59,13 +59,14 @@ s_Client_Settings = {.settings = {
                            .password = "malamala",
                            .dhcp = true,
                            .ip = 0xC889A8C0,        // 192.168.137.200                           
-                           .net_mask = 0x00FFFFFF,  // 255.255.255.0
+                           .nm = 0x00FFFFFF,  // 255.255.255.0
                            .gw = 0x0189A8C0,        // 192.168.137.1
                            .dns = 0x0189A8C0        // 192.168.137.1
                           },
 
-                .mqtt = {.broker_address = "192.168.137.243",
-                         .password = ""
+                .mqtt = {.broker = "192.168.137.243",
+                         .username = "jorgito",
+                         .password = "pass_",
                         },
 
                 .sensor_settings = { {.baudrate = 9600,

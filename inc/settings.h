@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <lwip/ip_addr.h>
 
-#define MAX_SERIAL_SENSORS 30
+#define MAX_SERIAL_SENSORS 3
 #define MAX_PUBLISH_SETTINGS 10
 #define SERIAL_BUFFERS_SIZE 256
 
@@ -83,7 +83,7 @@ public:
     char password[32];
     bool dhcp;
     ip_addr_t ip;
-    ip_addr_t net_mask;
+    ip_addr_t nm;
     ip_addr_t gw;
     ip_addr_t dns;
     
@@ -93,7 +93,7 @@ public:
         json["password"] = password;
         json["dhcp"] = dhcp;
         json["ip"] = ip.addr;
-        json["net_mask"] = net_mask.addr;
+        json["nm"] = nm.addr;
         json["gw"] = gw.addr;
         json["dns"] = dns.addr;
         return json;
@@ -102,14 +102,14 @@ public:
 
 class mqtt_settings {
 public:
-    char broker_address[32];
+    char broker[32];
     uint16_t broker_port;
     char username[32];
     char password[32];
     
     ArduinoJson::JsonDocument to_json() const {
         ArduinoJson::JsonDocument json;
-        json["broker_address"] = broker_address;
+        json["broker"] = broker;
         json["broker_port"] = broker_port;
         json["username"] = username;
         json["password"] = password;
@@ -129,10 +129,10 @@ class client_settings {
         json["wifi"] = wifi.to_json();
         json["mqtt"] = mqtt.to_json();
 
-        auto sensor_settings_array = json["sensor_settings"].to<ArduinoJson::JsonArray>();
-        for (auto &entry : sensor_settings) {
-            sensor_settings_array.add(entry.to_json());
-        }
+        // auto sensor_settings_array = json["sensor_settings"].to<ArduinoJson::JsonArray>();
+        // for (auto &entry : sensor_settings) {
+        //     sensor_settings_array.add(entry.to_json());
+        // }
 
         return json;
     }

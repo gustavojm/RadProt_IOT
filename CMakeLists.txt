@@ -10,6 +10,8 @@ set(FREERTOS_KERNEL_PATH ../../FreeRTOS-Kernel)
 include(${CMAKE_CURRENT_SOURCE_DIR}/pico-sdk/pico_sdk_init.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FreeRTOS_Kernel_import.cmake)
 
+set(SKIP_PICO_MALLOC 1)
+
 pico_sdk_init()
 
 set(CMAKE_C_STANDARD 11)

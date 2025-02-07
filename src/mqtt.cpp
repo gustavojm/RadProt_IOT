@@ -103,7 +103,7 @@ void mqtt_task(void *pvParameters) {
     mqtt_client_t mqtt_client{};
 
     const client_settings *client_settings = get_client_settings();
-    dns_gethostbyname(client_settings->mqtt.broker_address, &broker_addr, dns_found_cb, NULL);
+    dns_gethostbyname(client_settings->mqtt.broker, &broker_addr, dns_found_cb, NULL);
 
     //vTaskDelay(10000);
 

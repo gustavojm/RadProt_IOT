@@ -48,13 +48,27 @@ namespace json = ArduinoJson;
 
 err_t httpd_process_post_data(struct http_state *hs) {
     err_t ret;
-    if (hs->post_uri && !memcmp(hs->post_uri, "/settings.cgi", 14)) {
+    if (hs->post_uri && !memcmp(hs->post_uri, "/settings_save.cgi", 19)) {
         auto post_data = json::JsonDocument();
         json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
         if (error) {
             printf("Error json parse. %s", error.c_str());
         } else {
+
+            static client_settings cs;
+			cs = *get_client_settings();
+            
+            strncpy(cs.wifi.ssid, post_data["wifi.ssid"], sizeof cs.wifi.ssid);
+            strncpy(cs.wifi.password, post_data["wifi.password"], sizeof cs.wifi.password);
+
+            strncpy(cs.mqtt.broker, post_data["mqtt.broker"], sizeof cs.mqtt.broker);
+            cs.mqtt.broker_port = atoi(post_data["mqtt.port"]);
+            strncpy(cs.mqtt.username, post_data["mqtt.username"], sizeof cs.mqtt.username);
+            strncpy(cs.mqtt.password, post_data["mqtt.password"], sizeof cs.mqtt.password);
+			
+			write_client_settings(&cs);
+
             /* Extracting data from form */
             char const *ssid = post_data["ssid"];
         }
@@ -145,25 +159,24 @@ err_t httpd_process_post_data(struct http_state *hs) {
     //     httpd_post_response(hs, body, body_len, "json"); //
     // }
 
-    // if (hs->post_uri && !memcmp(uri, "/config_get.cgi", 16)) {
-    //     auto body_JSON = get_client_settings_json();
+    if (hs->post_uri && !memcmp(hs->post_uri, "/settings_get.cgi", 18)) {
+        auto body_JSON = get_client_settings_json();
 
-    //     char *body = nullptr;
-    //     int body_len = 0;
-    //     body_len = json::measureJson(body_JSON); /* returns 0 on fail */
-    //     body_len++;         // place for null terminator
-    //     body = new char[body_len];
-    //     if (!body) {
-    //         printf("Out Of Memory");
-    //         body_len = 0;
-    //     } else {
-    //         json::serializeJson(body_JSON, body, body_len);
-    //         body[body_len] = '\0';
-    //     }
+        char *body = nullptr;
+        int body_len = 0;
+        body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+        //body_len++;         // place for null terminator
+        body = new char[body_len];
+        if (!body) {
+            printf("Out Of Memory");
+            body_len = 0;
+        } else {
+            json::serializeJson(body_JSON, body, body_len);
+            //body[body_len] = '\0';
+        }
 
-    //     //body_len = strlen(body); // meassureJson is returning more bytes than needed
-    //     httpd_post_response(hs, body, body_len, "json"); //
-    // }
+        httpd_post_response(hs, body, body_len, "json"); //
+    }
 
     return ERR_OK;
 }

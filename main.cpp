@@ -47,7 +47,7 @@ void connect_to_wifi() {
                     //cyw43_arch_enable_sta_mode();
                     cyw43_arch_lwip_begin();
                     dhcp_stop(cyw43_state.netif);     // turn off DHCP
-                    netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.net_mask, &client_settings->wifi.gw);
+                    netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
                     dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS    
                     char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
                     cyw43_arch_lwip_end();

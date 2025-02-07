@@ -235,7 +235,7 @@ struct http_state {
   u32_t time_started;
 #endif /* LWIP_HTTPD_TIMING */
 #if LWIP_HTTPD_SUPPORT_POST
-  char post_uri[256];
+  char post_uri[128];
   char *post_content;
   u32_t post_content_len;
   u32_t post_content_len_left;

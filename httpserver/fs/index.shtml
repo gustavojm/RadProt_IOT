@@ -44,18 +44,30 @@
                 </tr>
                 <tr>
                     <td align="right">IP: </td>
-                    <td><input type="text" name="wifi.ip_0" size="3">.<input type="text" name="wifi.ip_1" size="3">.<input
-                            type="text" name="wifi.ip_2" size="3">.<input type="text" name="wifi.ip_3" value="" size="3"></td>
+                    <td>
+                        <!-- <input type="text" name="wifi.ip[0]" size="3">.<input type="text" name="wifi.ip[1]" size="3">.<input
+                        type="text" name="wifi.ip[2]" size="3">.<input type="text" name="wifi.ip[3]" value="" size="3"> -->
+                        <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12" data-inputmask-alias="ip"
+                            data-inputmask-greedy="false">
+                    </td>
                 </tr>
                 <tr>
                     <td align="right">Netmask:</td>
-                    <td><input type="text" name="wifi.nm_0" size="3">.<input type="text" name="wifi.nm_1" size="3">.<input
-                            type="text" name="wifi.nm_2" size="3">.<input type="text" name="wifi.nm_3" size="3"></td>
+                    <td>
+                        <!-- <input type="text" name="wifi.nm[0]" size="3">.<input type="text" name="wifi.nm[1]" size="3">.<input
+                        type="text" name="wifi.nm[2]" size="3">.<input type="text" name="wifi.nm[3]" size="3"> -->
+                        <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12"
+                            data-inputmask-alias="ip" data-inputmask-greedy="false">
+                    </td>
                 </tr>
                 <tr>
                     <td align="right">Gateway:</td>
-                    <td><input type="text" name="wifi.gw_0" size="3">.<input type="text" name="wifi.gw_1" size="3">.<input
-                            type="text" name="wifi.gw_2" size="3">.<input type="text" name="wifi.gw_3" size="3"></td>
+                    <td>
+                        <!-- <input type="text" name="wifi.gw[0]" size="3">.<input type="text" name="wifi.gw[1]" size="3">.<input
+                        type="text" name="wifi.gw[2]" size="3">.<input type="text" name="wifi.gw[3]" size="3"> -->
+                        <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12" data-inputmask-alias="ip"
+                            data-inputmask-greedy="false">
+                    </td>
                 </tr>
             </table>
         </div>
@@ -78,7 +90,7 @@
         </div>
         <div style="display: flex; justify-content: center;">
             <strong>MQTT Settings:</strong>
-            
+
             <!-- <form action="" id="mqtt_form" style="display: flex; justify-content: center;"> -->
             <table border="0" cellspacing="0" cellpadding="3" style="width:310px">
                 <tr>
@@ -91,7 +103,7 @@
                 </tr>
                 <tr>
                     <td align="right">User Name:</td>
-                    <td><input type="text" name="mqtt.user_name" value=""></td>
+                    <td><input type="text" name="mqtt.username" value=""></td>
                 </tr>
                 <td align="right">Password:</td>
                 <td><input type="password" name="mqtt.password" value=""></td>
@@ -103,7 +115,7 @@
             <div id="sensors_div"></div>
         </div>
         <div style="display: flex; justify-content: center;">
-            <input type="button" onclick="apply_settings()" value="Save">            
+            <input type="button" onclick="apply_settings()" value="Save">
         </div>
     </form>
 </body>
@@ -212,7 +224,7 @@
 
     function apply_settings() {
         let xhr = new XMLHttpRequest();
-        xhr.open("POST", '/settings.cgi', true);
+        xhr.open("POST", '/settings_save.cgi', true);
         xhr.setRequestHeader("Content-Type", "application/json");
         json = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
         xhr.send(json);
@@ -232,7 +244,7 @@
             (uint32 >>> 8) & 0xFF,
             (uint32 >>> 16) & 0xFF,
             (uint32 >>> 24) & 0xFF
-        ];
+        ].join(".");
     }
 
     function toggle(checkbox, div_id) {
@@ -245,93 +257,115 @@
         }
     }
 
-    function get_settings() {
-        const settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"net_mask":16777215,"gw":16777215},"mqtt":{"broker_address":"broker_address","broker_port":0,"username":"","password":"broker_pass"},"sensor_settings":[{"baudrate":9600,"publish_settings":[{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]}';
-        const settings_json = JSON.parse(settings_string);
+    function settings_get() {
 
-        const settings_form = document.getElementById('settings_form');
-        settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
-        settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
-        settings_form.elements["wifi.dhcp"].value = settings_json["wifi"]["dhcp"];
+        //settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215},"mqtt":{"broker_address":"broker_address","broker_port":0,"username":"","password":"broker_pass"},"sensor_settings":[{"baudrate":9600,"publish_settings":[{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]}';
+        let settings_string = "";
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", '/settings_get.cgi', true);
+        xhr.setRequestHeader("Content-Type", "application/json");
 
-        ip = uint32ToIp(settings_json["wifi"]["ip"]);
-        settings_form.elements["wifi.ip_0"].value = ip[0];
-        settings_form.elements["wifi.ip_1"].value = ip[1];
-        settings_form.elements["wifi.ip_2"].value = ip[2];
-        settings_form.elements["wifi.ip_3"].value = ip[3];
+        // Use onreadystatechange instead of onload
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) { // Request is complete
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Check if responseText is not empty
+                    if (xhr.responseText) {
+                        try {
+                            // Parse the JSON response
+                            const settings_json= JSON.parse(xhr.responseText);
+                            
+                            const settings_form = document.getElementById('settings_form');
+                            settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
+                            settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
+                            settings_form.elements["wifi.dhcp"].value = settings_json["wifi"]["dhcp"];
 
-        net_mask = uint32ToIp(settings_json["wifi"]["net_mask"]);
-        settings_form.elements["wifi.nm_0"].value = net_mask[0];
-        settings_form.elements["wifi.nm_1"].value = net_mask[1];
-        settings_form.elements["wifi.nm_2"].value = net_mask[2];
-        settings_form.elements["wifi.nm_3"].value = net_mask[3];
+                            settings_form.elements["wifi.ip"].value = uint32ToIp(settings_json["wifi"]["ip"]);
+                            settings_form.elements["wifi.nm"].value = uint32ToIp(settings_json["wifi"]["nm"]);
+                            settings_form.elements["wifi.gw"].value = uint32ToIp(settings_json["wifi"]["gw"]);
 
-        gw = uint32ToIp(settings_json["wifi"]["gw"]);
-        settings_form.elements["wifi.gw_0"].value = gw[0];
-        settings_form.elements["wifi.gw_1"].value = gw[1];
-        settings_form.elements["wifi.gw_2"].value = gw[2];
-        settings_form.elements["wifi.gw_3"].value = gw[3];
+                            settings_form.elements["mqtt.broker"].value = settings_json["mqtt"]["broker"];
+                            settings_form.elements["mqtt.username"].value = settings_json["mqtt"]["username"];
+                            settings_form.elements["mqtt.password"].value = settings_json["mqtt"]["password"];
 
-        const sensors_div = document.querySelector("#sensors_div");
-        settings_json.sensor_settings.forEach((item, index_sensor) => {
-            const sensor_div = document.createElement("div");
+                            const sensors_div = document.querySelector("#sensors_div");
+                            settings_json.sensor_settings.forEach((item, index_sensor) => {
+                                const sensor_div = document.createElement("div");
 
-            sensor_div.innerHTML = `
-                ${index_sensor + 1} 
-                Enabled:
-                <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle(this, ${index_sensor})">
-                Baud:
-                <input name="s_s[${index_sensor}].baud" size="6" value="${item.baudrate}">
-            `;
+                                sensor_div.innerHTML = `
+                                    ${index_sensor + 1} 
+                                    Enabled:
+                                    <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle(this, ${index_sensor})">
+                                    Baud:
+                                    <input name="s_s[${index_sensor}].baud" size="6" value="${item.baudrate}">
+                                `;
 
 
-            const publish_settings_table = document.createElement("table");
-            publish_settings_table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Enabled</th>
-                        <th>Name</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Numeric</th>
-                        <th>Scale</th>
-                        <th>Average</th>
-                        <th>Topic</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            `;
+                                const publish_settings_table = document.createElement("table");
+                                publish_settings_table.innerHTML = `
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Enabled</th>
+                                            <th>Name</th>
+                                            <th>Start</th>
+                                            <th>End</th>
+                                            <th>Numeric</th>
+                                            <th>Scale</th>
+                                            <th>Average</th>
+                                            <th>Topic</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                `;
 
-            publish_settings_table.id = `publish_settings_${index_sensor}`;
-            //publish_settings_table.style.width = "100%";
-            publish_settings_table.style.display = item.enabled ? "block" : "none";
+                                publish_settings_table.id = `publish_settings_${index_sensor}`;
+                                //publish_settings_table.style.width = "100%";
+                                publish_settings_table.style.display = item.enabled ? "block" : "none";
 
-            settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
-                const detail_row = document.createElement("tr");
+                                settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
+                                    const detail_row = document.createElement("tr");
 
-                detail_row.innerHTML = `
-                <td>${index}</td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].name" size="6" value="${item.name}"></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].start" size="2" value="${item.start}"></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].end" size="2" value="${item.end}"></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].scale" size="2" value="${item.scale}"></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].avg_cnt" size="2" value="${item.avg_cnt}"></td>
-                <td><input name="s_s[${index_sensor}].p_s[${index}].topic" size="6" value="${item.topic}"></td>
-            `;
+                                    detail_row.innerHTML = `
+                                        <td>${index}</td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].name" size="6" value="${item.name}"></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].start" size="2" value="${item.start}"></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].end" size="2" value="${item.end}"></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].scale" size="2" value="${item.scale}"></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].avg_cnt" size="2" value="${item.avg_cnt}"></td>
+                                        <td><input name="s_s[${index_sensor}].p_s[${index}].topic" size="6" value="${item.topic}"></td>
+                                    `;
 
-                publish_settings_table.appendChild(detail_row);
-                sensor_div.appendChild(publish_settings_table);
-            });
-            sensors_div.appendChild(sensor_div);
-            sensors_div.appendChild(document.createElement("hr"));
-        });
+                                    publish_settings_table.appendChild(detail_row);
+                                    sensor_div.appendChild(publish_settings_table);
+                                });
+                                sensors_div.appendChild(sensor_div);
+                                sensors_div.appendChild(document.createElement("hr"));
+                            });
+
+
+
+                        } catch (error) {
+                            console.error("Failed to parse JSON:", error);
+                        }
+                    } else {
+                        console.error("Response is empty");
+                    }
+                } else {
+                    console.error("Request failed with status:", xhr.status);
+                }
+            }
+        };
+
+        xhr.send();
+
+
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        get_settings();
+        settings_get();
     });
 
 </script>
