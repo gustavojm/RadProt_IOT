@@ -2583,8 +2583,10 @@ err_t httpd_post_begin(
 
     current_connection = hs;
     strncpy(hs->post_uri, uri, sizeof hs->post_uri);
-    hs->post_content_len = content_len;
-    hs->post_content = new char[content_len];
+    if (content_len > 0) {
+        hs->post_content_len = content_len;
+        hs->post_content = new char[content_len];
+    }
     return ERR_OK;  // return ERR_OK to parse received data
                     // return something else and set the response_uri and response_uri_len to return a file
 }
