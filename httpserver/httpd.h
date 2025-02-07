@@ -235,6 +235,9 @@ struct http_state {
   u32_t time_started;
 #endif /* LWIP_HTTPD_TIMING */
 #if LWIP_HTTPD_SUPPORT_POST
+  char post_uri[256];
+  char *post_content;
+  u32_t post_content_len;
   u32_t post_content_len_left;
 #if LWIP_HTTPD_POST_MANUAL_WND
   u32_t unrecved_bytes;
@@ -420,6 +423,8 @@ void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, cons
  */
 
 err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri);
+
+err_t httpd_process_post_data(struct http_state *hs);
 
 /**
  * @ingroup httpd

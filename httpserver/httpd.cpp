@@ -1505,6 +1505,7 @@ static err_t http_handle_post_finished(struct http_state *hs) {
     if (hs->file) {     // file was used to pass the BODY of a POST response
         delete[] hs->file;
     }
+    httpd_post_finished(hs, http_uri_buf, LWIP_HTTPD_URI_BUF_LEN);
     return ERR_OK;
     // return http_find_file(hs, http_uri_buf, 0);
 }
@@ -1623,6 +1624,7 @@ http_post_request(struct pbuf *inp, struct http_state *hs, char *data, u16_t dat
                         hs->no_auto_wnd = !post_auto_wnd;
 #endif /* LWIP_HTTPD_POST_MANUAL_WND */
                         /* set the Content-Length to be received for this POST */
+                        hs->post_content_len = (u32_t)content_len;
                         hs->post_content_len_left = (u32_t)content_len;
 
                         /* get to the pbuf where the body starts */
@@ -1730,6 +1732,7 @@ static void http_continue(void *connection) {
 #endif /* LWIP_HTTPD_FS_ASYNC_READ */
 
 static bool host_name_matches(char *host) {
+    return true; // warning THIS IS TO SPEED UP DEBUGGING TODO REMOVE THIS ON PROD
     int len = strlen(s_HTTPServerSettings.hostname);
     if (strncasecmp(host, s_HTTPServerSettings.hostname, len))
         return false;
@@ -2579,11 +2582,18 @@ err_t httpd_post_begin(
     LWIP_UNUSED_ARG(post_auto_wnd);
 
     current_connection = hs;
+    strncpy(hs->post_uri, uri, sizeof hs->post_uri);
+    hs->post_content_len = content_len;
+    hs->post_content = new char[content_len];
     return ERR_OK;  // return ERR_OK to parse received data
                     // return something else and set the response_uri and response_uri_len to return a file
 }
 
 void httpd_post_finished(struct http_state *hs, char *response_uri, u16_t response_uri_len) {
+
+  httpd_process_post_data(hs);
+  delete[] (hs->post_content);
+  current_connection = NULL;
   /* default page is "login failed" */
   snprintf(response_uri, response_uri_len, "/404.html");
 }
@@ -2626,5 +2636,26 @@ void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, cons
     hs->hdr_pos = 0;
 
 }
+
+err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri) {
+    err_t ret;
+    static int calls = 0;
+    LWIP_ASSERT("NULL pbuf", p != NULL);
+    
+    int32_t already_received = hs->post_content_len - hs->post_content_len_left;
+    void *start = &hs->post_content[already_received - p->tot_len];
+    if (hs->post_content_len_left > 0) {
+        memcpy(start, p->payload, p->tot_len);
+    } else {
+        memcpy(start, p->payload, p->tot_len);
+
+    }
+
+    /* this function must ALWAYS free the pbuf it is passed or it will leak memory */
+    pbuf_free(p);
+
+    return ret;
+}
+
 
 #endif /* LWIP_TCP && LWIP_CALLBACK_API */

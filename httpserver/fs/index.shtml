@@ -27,130 +27,85 @@
     <h2>MAC Address: <!--#MACAddr--></h2>
 
     Connect to Router with these settings:<br>
-    <form action="" method="get" id="wifi_form" style="display: flex; justify-content: center;">
-        <table border="0" cellspacing="0" cellpadding="3">
-            <tr>
-                <td align="right">SSID:</td>
-                <td><input type="text" name="ssid" value=""></td>
-            </tr>
-            <tr>
-                <td align="right">Password:</td>
-                <td><input type="text" name="password" value=""></td>
-            </tr>
-            <tr>
-                <td align="right">DHCP:</td>
-                <td><input type="checkbox" name="dhcp"></td>
-            </tr>
-            <tr>
-                <td align="right">IP: </td>
-                <td><input type="text" name="ip_0" size="3">.<input type="text" name="ip_1" size="3">.<input type="text"
-                        name="ip_2" size="3">.<input type="text" name="ip_3" value="" size="3"></td>
-            </tr>
-            <tr>
-                <td align="right">Netmask:</td>
-                <td><input type="text" name="nm_0" size="3">.<input type="text" name="nm_1" size="3">.<input type="text"
-                        name="nm_2" size="3">.<input type="text" name="nm_3" size="3"></td>
-            </tr>
-            <tr>
-                <td align="right">Gateway:</td>
-                <td><input type="text" name="gw_0" size="3">.<input type="text" name="gw_1" size="3">.<input type="text"
-                        name="gw_2" size="3">.<input type="text" name="gw_3" size="3"></td>
-            </tr>
-            <tr>
-                <td colspan="2" align="center"><input id="save" type="submit" style="width:150px"
-                        class="btn btn--m btn--blue" value="Save"></td>
-            </tr>
-        </table>
-    </form>
-    <hr>
-    <strong>Connection State:</strong>
-    <div id="connectionstate">N/A</div>
-    <hr>
-    <strong>Networks:</strong><br>
-    <table id="wifiTable" style="width: 100%;">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>SSID</th>
-                <th>RSSI</th>
-                <th>Channel</th>
-                <th>BSSID</th>
-                <th>Security</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <hr>
-    <strong>MQTT Settings:</strong>
-    <form action="" method="get" id="mqtt_form" style="display: flex; justify-content: center;">
-        <table border="0" cellspacing="0" cellpadding="3" style="width:310px">
-            <tr>
-                <td align="right">Broker:</td>
-                <td><input type="text" id="broker" name="broker" value=""></td>
-            </tr>
-            <tr>
-                <td align="right">Port:</td>
-                <td><input type="text" id="port" name="port" size="3" value=""></td>
-            </tr>
-            <tr>
-                <td align="right">User Name:</td>
-                <td><input type="text" id="user_name" name="user_name" value=""></td>
-            </tr>
-            <td align="right">Password:</td>
-            <td><input type="password" id="password" name="password" value=""></td>
-        </table>
-    </form>
-    <hr>
-    <strong>Serial Interfaces:</strong>
-
-    <div id="sensors_div"></div>
-
-    <div>
-        <!-- 
-        <form id="settings_form">
-            <table>
-                <thead>
-                    <tr>
-                        <td>Setting</td>
-                        <td>Value</td>
-                    </tr>
-                </thead>
+    <form action="" id="settings_form">
+        <div style="display: flex; justify-content: center;">
+            <table border="0" cellspacing="0" cellpadding="3">
                 <tr>
-                    <td>Nombre de Red:</td>
-                    <td><input type="text" name="ssid"></td>
+                    <td align="right">SSID:</td>
+                    <td><input type="text" name="wifi.ssid" value=""></td>
                 </tr>
                 <tr>
-                    <td>Usuario:</td>
-                    <td><input type="text" name="wifi_user"></td>
+                    <td align="right">Password:</td>
+                    <td><input type="text" name="wifi.password" value=""></td>
                 </tr>
                 <tr>
-                    <td>Contrase&ntilde;a:</td>
-                    <td><input type="text" name="wifi_pass"></td>
+                    <td align="right">DHCP:</td>
+                    <td><input type="checkbox" name="wifi.dhcp"></td>
                 </tr>
                 <tr>
-                    <td>Seguridad:</td>
-                    <td>
-                        <select name="wifi_seq">
-                            <option value="OPEN" title="No authorisation required (open)">OPEN</option>
-                            <option value="WPA_TKIP_PSK" title="WPA authorisation">WPA TKIP PSK</option>
-                            <option value="WPA2_AES_PSK" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
-                            <option value="WPA2_MIXED_PSK" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED
-                                PSK</option>
-                            <option value="WPA3_SAE_AES_PSK" title="WPA3 AES authorisation">WPA3 AES</option>
-                            <option value="WPA3_WPA2_AES_PSK" title="WPA3 AES authorisation">WPA2/WPA3</option>
-                        </select>
-                    </td>
+                    <td align="right">IP: </td>
+                    <td><input type="text" name="wifi.ip_0" size="3">.<input type="text" name="wifi.ip_1" size="3">.<input
+                            type="text" name="wifi.ip_2" size="3">.<input type="text" name="wifi.ip_3" value="" size="3"></td>
                 </tr>
                 <tr>
-                    <td>
-                        <input type="button" onclick="apply_settings()" value="Guardar Config">
-                        <button onclick="show_settings_popup(false)">Cancel</button>
-                    </td>
+                    <td align="right">Netmask:</td>
+                    <td><input type="text" name="wifi.nm_0" size="3">.<input type="text" name="wifi.nm_1" size="3">.<input
+                            type="text" name="wifi.nm_2" size="3">.<input type="text" name="wifi.nm_3" size="3"></td>
+                </tr>
+                <tr>
+                    <td align="right">Gateway:</td>
+                    <td><input type="text" name="wifi.gw_0" size="3">.<input type="text" name="wifi.gw_1" size="3">.<input
+                            type="text" name="wifi.gw_2" size="3">.<input type="text" name="wifi.gw_3" size="3"></td>
                 </tr>
             </table>
-        </form>
-    -->
-    </div>
+        </div>
+
+        <div style="display: flex; justify-content: center;">
+            <strong>Networks:</strong><br>
+            <table id="wifiTable" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>SSID</th>
+                        <th>RSSI</th>
+                        <th>Channel</th>
+                        <th>BSSID</th>
+                        <th>Security</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div style="display: flex; justify-content: center;">
+            <strong>MQTT Settings:</strong>
+            
+            <!-- <form action="" id="mqtt_form" style="display: flex; justify-content: center;"> -->
+            <table border="0" cellspacing="0" cellpadding="3" style="width:310px">
+                <tr>
+                    <td align="right">Broker:</td>
+                    <td><input type="text" name="mqtt.broker" value=""></td>
+                </tr>
+                <tr>
+                    <td align="right">Port:</td>
+                    <td><input type="text" name="mqtt.port" size="3" value=""></td>
+                </tr>
+                <tr>
+                    <td align="right">User Name:</td>
+                    <td><input type="text" name="mqtt.user_name" value=""></td>
+                </tr>
+                <td align="right">Password:</td>
+                <td><input type="password" name="mqtt.password" value=""></td>
+            </table>
+        </div>
+        <div style="display: flex; justify-content: center;">
+            <strong>Serial Interfaces:</strong>
+
+            <div id="sensors_div"></div>
+        </div>
+        <div style="display: flex; justify-content: center;">
+            <input type="button" onclick="apply_settings()" value="Save">            
+        </div>
+    </form>
 </body>
 
 <script>
@@ -229,8 +184,8 @@
     });
 
     function select_ssid(value) {
-        const wifi_form = document.getElementById('wifi_form');
-        wifi_form.elements["ssid"].value = value;
+        const settings_form = document.getElementById('settings_form');
+        settings_form.elements["wifi.ssid"].value = value;
     }
 
     // window.onload = function () {
@@ -280,32 +235,42 @@
         ];
     }
 
+    function toggle(checkbox, div_id) {
+        const div = document.getElementById("publish_settings_" + div_id);
+        //div.display = "block";        
+        if (checkbox.checked) {
+            div.style.display = "block";
+        } else {
+            div.style.display = "none";
+        }
+    }
+
     function get_settings() {
         const settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"net_mask":16777215,"gw":16777215},"mqtt":{"broker_address":"broker_address","broker_port":0,"username":"","password":"broker_pass"},"sensor_settings":[{"baudrate":9600,"publish_settings":[{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]}';
         const settings_json = JSON.parse(settings_string);
 
-        const wifi_form = document.getElementById('wifi_form');
-        wifi_form.elements["ssid"].value = settings_json["wifi"]["ssid"];
-        wifi_form.elements["password"].value = settings_json["wifi"]["password"];
-        wifi_form.elements["dhcp"].value = settings_json["wifi"]["dhcp"];
+        const settings_form = document.getElementById('settings_form');
+        settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
+        settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
+        settings_form.elements["wifi.dhcp"].value = settings_json["wifi"]["dhcp"];
 
         ip = uint32ToIp(settings_json["wifi"]["ip"]);
-        wifi_form.elements["ip_0"].value = ip[0];
-        wifi_form.elements["ip_1"].value = ip[1];
-        wifi_form.elements["ip_2"].value = ip[2];
-        wifi_form.elements["ip_3"].value = ip[3];
+        settings_form.elements["wifi.ip_0"].value = ip[0];
+        settings_form.elements["wifi.ip_1"].value = ip[1];
+        settings_form.elements["wifi.ip_2"].value = ip[2];
+        settings_form.elements["wifi.ip_3"].value = ip[3];
 
         net_mask = uint32ToIp(settings_json["wifi"]["net_mask"]);
-        wifi_form.elements["nm_0"].value = net_mask[0];
-        wifi_form.elements["nm_1"].value = net_mask[1];
-        wifi_form.elements["nm_2"].value = net_mask[2];
-        wifi_form.elements["nm_3"].value = net_mask[3];
+        settings_form.elements["wifi.nm_0"].value = net_mask[0];
+        settings_form.elements["wifi.nm_1"].value = net_mask[1];
+        settings_form.elements["wifi.nm_2"].value = net_mask[2];
+        settings_form.elements["wifi.nm_3"].value = net_mask[3];
 
         gw = uint32ToIp(settings_json["wifi"]["gw"]);
-        wifi_form.elements["gw_0"].value = gw[0];
-        wifi_form.elements["gw_1"].value = gw[1];
-        wifi_form.elements["gw_2"].value = gw[2];
-        wifi_form.elements["gw_3"].value = gw[3];
+        settings_form.elements["wifi.gw_0"].value = gw[0];
+        settings_form.elements["wifi.gw_1"].value = gw[1];
+        settings_form.elements["wifi.gw_2"].value = gw[2];
+        settings_form.elements["wifi.gw_3"].value = gw[3];
 
         const sensors_div = document.querySelector("#sensors_div");
         settings_json.sensor_settings.forEach((item, index_sensor) => {
@@ -314,9 +279,9 @@
             sensor_div.innerHTML = `
                 ${index_sensor + 1} 
                 Enabled:
-                <input name="sensor_settings[].enabled" type="checkbox" ${item.enabled ? "checked" : ""}>
+                <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle(this, ${index_sensor})">
                 Baud:
-                <input name="sensor_settings[].baud" size="6" value="${item.baudrate}">
+                <input name="s_s[${index_sensor}].baud" size="6" value="${item.baudrate}">
             `;
 
 
@@ -338,21 +303,23 @@
                 <tbody></tbody>
             `;
 
-            publish_settings_table.style.width = "100%";
+            publish_settings_table.id = `publish_settings_${index_sensor}`;
+            //publish_settings_table.style.width = "100%";
+            publish_settings_table.style.display = item.enabled ? "block" : "none";
 
             settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
                 const detail_row = document.createElement("tr");
 
                 detail_row.innerHTML = `
-                <td>${index + 1}</td>
-                <td><input name="sensor_settings[].publish_settings[].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
-                <td><input name="sensor_settings[].publish_settings[].name" size="6" value="${item.name}"></td>
-                <td><input name="sensor_settings[].publish_settings[].start" size="2" value="${item.start}"></td>
-                <td><input name="sensor_settings[].publish_settings[].end" size="2" value="${item.end}"></td>
-                <td><input name="sensor_settings[].publish_settings[].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
-                <td><input name="sensor_settings[].publish_settings[].scale" size="2" value="${item.scale}"></td>
-                <td><input name="sensor_settings[].publish_settings[].avg_cnt" size="2" value="${item.avg_cnt}"></td>
-                <td><input name="sensor_settings[].publish_settings[].topic" size="6" value="${item.topic}"></td>
+                <td>${index}</td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].name" size="6" value="${item.name}"></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].start" size="2" value="${item.start}"></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].end" size="2" value="${item.end}"></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].scale" size="2" value="${item.scale}"></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].avg_cnt" size="2" value="${item.avg_cnt}"></td>
+                <td><input name="s_s[${index_sensor}].p_s[${index}].topic" size="6" value="${item.topic}"></td>
             `;
 
                 publish_settings_table.appendChild(detail_row);

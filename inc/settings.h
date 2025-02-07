@@ -2,6 +2,11 @@
 
 #include <ArduinoJson.h>
 #include <sys/types.h>
+#include <lwip/ip_addr.h>
+
+#define MAX_SERIAL_SENSORS 30
+#define MAX_PUBLISH_SETTINGS 10
+#define SERIAL_BUFFERS_SIZE 256
 
 typedef struct {
     uint32_t ip;
@@ -58,7 +63,7 @@ public:
 class sensor_settings_entry {
   public:
     uint baudrate;
-    publish_settings_entry publish_settings[10];
+    publish_settings_entry publish_settings[MAX_PUBLISH_SETTINGS];
 
     ArduinoJson::JsonDocument to_json() const {
         ArduinoJson::JsonDocument json;
@@ -77,18 +82,20 @@ public:
     char ssid[32];
     char password[32];
     bool dhcp;
-    uint32_t ip;
-    uint32_t net_mask;
-    uint32_t gw;
+    ip_addr_t ip;
+    ip_addr_t net_mask;
+    ip_addr_t gw;
+    ip_addr_t dns;
     
     ArduinoJson::JsonDocument to_json() const {
         ArduinoJson::JsonDocument json;
         json["ssid"] = ssid;
         json["password"] = password;
         json["dhcp"] = dhcp;
-        json["ip"] = ip;
-        json["net_mask"] = net_mask;
-        json["gw"] = gw;
+        json["ip"] = ip.addr;
+        json["net_mask"] = net_mask.addr;
+        json["gw"] = gw.addr;
+        json["dns"] = dns.addr;
         return json;
     }
 };
@@ -115,7 +122,7 @@ class client_settings {
   public:
     wifi_settings wifi;
     mqtt_settings mqtt;
-    sensor_settings_entry sensor_settings[3];
+    sensor_settings_entry sensor_settings[MAX_SERIAL_SENSORS];
 
     ArduinoJson::JsonDocument to_json() const {
         ArduinoJson::JsonDocument json;

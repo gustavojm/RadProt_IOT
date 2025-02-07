@@ -48,20 +48,24 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
         return NULL;
 }
 
+constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
+
 const union {
     client_settings settings;
-    char padding[FLASH_SECTOR_SIZE];
+    char padding[FLASH_SECTOR_SIZE * padding_multiplier];
 } __attribute__((aligned(FLASH_SECTOR_SIZE))) 
 s_Client_Settings = {.settings = { 
-                .wifi = {.ssid = "CNE_Radioproteccion",
-                           .password = "secret",
-                           .ip = 0x017BA8C0,
-                           .net_mask = 0x00FFFFFF,
-                           .gw = 0x00FFFFFF,
+                .wifi = {.ssid = "C14017750 7261",
+                           .password = "malamala",
+                           .dhcp = true,
+                           .ip = 0xC889A8C0,        // 192.168.137.200                           
+                           .net_mask = 0x00FFFFFF,  // 255.255.255.0
+                           .gw = 0x0189A8C0,        // 192.168.137.1
+                           .dns = 0x0189A8C0        // 192.168.137.1
                           },
 
-                .mqtt = {.broker_address = "broker_address",
-                         .password = "broker_pass"
+                .mqtt = {.broker_address = "192.168.137.243",
+                         .password = ""
                         },
 
                 .sensor_settings = { {.baudrate = 9600,

@@ -5,6 +5,7 @@
 
 #include <lwip/ip4_addr.h>
 #include <lwip/netif.h>
+#include <lwip/dns.h>
 
 #include <FreeRTOS.h>
 #include <semphr.h>
@@ -28,20 +29,33 @@
 #define RECONNECT_DELAY_MS 5000 // 5 seconds
 #define MAX_RETRIES 5           // Maximum retry attempts
 
-
 void connect_to_wifi() {
     int retries = 0;
 
     while (retries < MAX_RETRIES) {
         printf("Connecting to Wi-Fi... Attempt %d\n", retries + 1);
+        const client_settings *client_settings = get_client_settings();
+
 
         // Attempt to connect to Wi-Fi
         if (cyw43_arch_wifi_connect_timeout_ms("C14017750 7261", "malamala", CYW43_AUTH_WPA2_AES_PSK,
                                                30000) == 0) {
             if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
                 printf("Connected to Wi-Fi successfully!\n");
+
+                if (!client_settings->wifi.dhcp) {                  
+                    //cyw43_arch_enable_sta_mode();
+                    cyw43_arch_lwip_begin();
+                    dhcp_stop(cyw43_state.netif);     // turn off DHCP
+                    netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.net_mask, &client_settings->wifi.gw);
+                    dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS    
+                    char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
+                    cyw43_arch_lwip_end();
+                    printf("Static IP set to: %s\n", ip_addr);
+                }
                 return;
             }
+
         }
 
         printf("Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
@@ -133,17 +147,19 @@ static void main_task(__unused void *params) {
         settings->dns_ignores_network_suffix);
     set_secondary_ip_address(settings->secondary_address);
 
+    connect_to_wifi();
+
     httpd_init(settings->hostname, settings->domain_name);
     ssi_init();
-    mqtt_init();
 
-    static Serial my_uart0(uart0, 1, 2, 9600, 256);
+    static Serial my_uart0(uart0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
     my_uart0.init([]() {my_uart0.on_uart_rx(); });
     my_uart0.set_timeout(pdMS_TO_TICKS(100));
     my_uart0.set_delimiter('\n');
 
     static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);    
     s0.init();
+    mqtt_init();
 
     // Monitor connection and reconnect if necessary
     while (true) {
@@ -171,7 +187,7 @@ void writeStringTask(void *params) {
         // uart_puts(uart1, "Hel987.2233lo, UART!\n");
         // vTaskDelay(1000);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
-        vTaskDelay(1000);
+        vTaskDelay(3000);
         // uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
         // vTaskDelay(1000);
 

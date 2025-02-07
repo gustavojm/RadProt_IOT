@@ -31,6 +31,9 @@ void Serial::on_uart_rx() {
 Serial::Serial(uart_inst_t *uart, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
     : uart_id(uart), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate), uart_buffer_size(uart_buffer_size),
       uart_buffer(new char[uart_buffer_size]) {
+        if (! uart_buffer) {
+            printf("Serial Constructor, Out of Memory\n");
+        }        
 }
 
 Serial::~Serial() {

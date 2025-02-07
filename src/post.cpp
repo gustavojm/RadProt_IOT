@@ -46,25 +46,11 @@
 
 namespace json = ArduinoJson;
 
-err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri) {
+err_t httpd_process_post_data(struct http_state *hs) {
     err_t ret;
-
-    LWIP_ASSERT("NULL pbuf", p != NULL);
-
-    struct pbuf *unique_pbuf = nullptr;
-    if (p->next == NULL) { // Single pbuf?
-        unique_pbuf = p;
-    } else {
-        unique_pbuf = pbuf_coalesce(p, PBUF_TRANSPORT);
-        if (unique_pbuf == p) {
-            printf("allocation failed");
-            return -ENOMEM;
-        }
-    }
-
-    if (uri && !memcmp(uri, "/settings.cgi", 14)) {
+    if (hs->post_uri && !memcmp(hs->post_uri, "/settings.cgi", 14)) {
         auto post_data = json::JsonDocument();
-        json::DeserializationError error = json::deserializeJson(post_data, unique_pbuf->payload, unique_pbuf->len);
+        json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
         if (error) {
             printf("Error json parse. %s", error.c_str());
@@ -87,72 +73,97 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
         } else {
             json::serializeJson(body_JSON, body, body_len);
         }
-        httpd_post_response(hs, body, body_len, "json"); // indicate JSON IMPROVE THIS
+        httpd_post_response(hs, body, body_len, "json"); // indicate JSON IMPROVE THIS        
     }
 
-    if (uri && !memcmp(uri, "/wifi_nets.cgi", 15)) {
-        auto body_JSON = json::JsonDocument();
-        auto wifi_nets_array = body_JSON["WIFI_NETS"].to<json::JsonArray>();
+    // if (hs->post_uri && !memcmp(hs->post_uri, "/settings.cgi", 14)) {
+    //     auto post_data = json::JsonDocument();
+    //     json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
-        for (auto &wifi_net : wifi_networks) {
-            auto wifi_net_entry = json::JsonDocument();
-            wifi_net_entry["ssid"] = wifi_net.ssid;
-            wifi_net_entry["rssi"] = wifi_net.rssi;
-            wifi_net_entry["chann"] = wifi_net.channel;
-            wifi_net_entry["auth_mode"] = wifi_net.auth_mode;
+    //     if (error) {
+    //         printf("Error json parse. %s", error.c_str());
+    //     } else {
+    //         /* Extracting data from form */
+    //         char const *ssid = post_data["ssid"];
+    //     }
+    //     ret = ERR_OK;
 
-            char bssid[18];
-            snprintf(bssid, sizeof bssid,
-                "%02x:%02x:%02x:%02x:%02x:%02x",
-                wifi_net.bssid[0],
-                wifi_net.bssid[1],
-                wifi_net.bssid[2],
-                wifi_net.bssid[3],
-                wifi_net.bssid[4],
-                wifi_net.bssid[5]);
-            wifi_net_entry["bssid"] = bssid;
+    //     auto body_JSON = json::JsonDocument();
+
+    //     body_JSON["algunakey"] = "algunvalor";
+    //     char *body = nullptr;
+    //     int body_len = 0;
+    //     body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+    //     body = new char[body_len];
+    //     if (!(body)) {
+    //         printf("Out Of Memory");
+    //         body_len = 0;
+    //     } else {
+    //         json::serializeJson(body_JSON, body, body_len);
+    //     }
+    //     httpd_post_response(hs, body, body_len, "json"); // indicate JSON IMPROVE THIS
+    // }
+
+    // if (hs->post_uri && !memcmp(hs->post_uri, "/wifi_nets.cgi", 15)) {
+    //     auto body_JSON = json::JsonDocument();
+    //     auto wifi_nets_array = body_JSON["WIFI_NETS"].to<json::JsonArray>();
+
+    //     for (auto &wifi_net : wifi_networks) {
+    //         auto wifi_net_entry = json::JsonDocument();
+    //         wifi_net_entry["ssid"] = wifi_net.ssid;
+    //         wifi_net_entry["rssi"] = wifi_net.rssi;
+    //         wifi_net_entry["chann"] = wifi_net.channel;
+    //         wifi_net_entry["auth_mode"] = wifi_net.auth_mode;
+
+    //         char bssid[18];
+    //         snprintf(bssid, sizeof bssid,
+    //             "%02x:%02x:%02x:%02x:%02x:%02x",
+    //             wifi_net.bssid[0],
+    //             wifi_net.bssid[1],
+    //             wifi_net.bssid[2],
+    //             wifi_net.bssid[3],
+    //             wifi_net.bssid[4],
+    //             wifi_net.bssid[5]);
+    //         wifi_net_entry["bssid"] = bssid;
             
 
-            wifi_nets_array.add(wifi_net_entry);
-        }
+    //         wifi_nets_array.add(wifi_net_entry);
+    //     }
         
-        //body_JSON["config"] = get_client_settings_json();
+    //     //body_JSON["config"] = get_client_settings_json();
 
-        char *body = nullptr;
-        int body_len = 0;
-        body_len = json::measureJson(body_JSON); /* returns 0 on fail */
-        body = new char[body_len];
-        if (!(body)) {
-            printf("Out Of Memory");
-            body_len = 0;
-        } else {
-            json::serializeJson(body_JSON, body, body_len);
-        }
-        httpd_post_response(hs, body, body_len, "json"); //
-    }
+    //     char *body = nullptr;
+    //     int body_len = 0;
+    //     body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+    //     body = new char[body_len];
+    //     if (!(body)) {
+    //         printf("Out Of Memory");
+    //         body_len = 0;
+    //     } else {
+    //         json::serializeJson(body_JSON, body, body_len);
+    //     }
+    //     httpd_post_response(hs, body, body_len, "json"); //
+    // }
 
-    if (uri && !memcmp(uri, "/config_get.cgi", 16)) {
-        auto body_JSON = get_client_settings_json();
+    // if (hs->post_uri && !memcmp(uri, "/config_get.cgi", 16)) {
+    //     auto body_JSON = get_client_settings_json();
 
-        char *body = nullptr;
-        int body_len = 0;
-        body_len = json::measureJson(body_JSON); /* returns 0 on fail */
-        body_len++;         // place for null terminator
-        body = new char[body_len];
-        if (!body) {
-            printf("Out Of Memory");
-            body_len = 0;
-        } else {
-            json::serializeJson(body_JSON, body, body_len);
-            body[body_len] = '\0';
-        }
+    //     char *body = nullptr;
+    //     int body_len = 0;
+    //     body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+    //     body_len++;         // place for null terminator
+    //     body = new char[body_len];
+    //     if (!body) {
+    //         printf("Out Of Memory");
+    //         body_len = 0;
+    //     } else {
+    //         json::serializeJson(body_JSON, body, body_len);
+    //         body[body_len] = '\0';
+    //     }
 
-        //body_len = strlen(body); // meassureJson is returning more bytes than needed
-        httpd_post_response(hs, body, body_len, "json"); //
-    }
+    //     //body_len = strlen(body); // meassureJson is returning more bytes than needed
+    //     httpd_post_response(hs, body, body_len, "json"); //
+    // }
 
-    /* this function must ALWAYS free the pbuf it is passed or it will leak memory */
-    pbuf_free(unique_pbuf);
-
-    return ret;
+    return ERR_OK;
 }

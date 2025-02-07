@@ -2,6 +2,15 @@
 //#include <stdlib.h>
 #include "FreeRTOS.h"
 
+// Override malloc and free
+void *malloc(size_t size) {
+    return pvPortMalloc(size);
+}
+
+void free(void *ptr) {
+    vPortFree(ptr);
+}
+
 void *operator new(size_t size) {
     return pvPortMalloc(size);
 }
