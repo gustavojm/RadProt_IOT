@@ -106,5 +106,5 @@ void write_client_settings(const client_settings *new_settings) {
 }
 
 ArduinoJson::JsonDocument get_client_settings_json() {
-    return s_Client_Settings.settings.to_json();
+    return to_json(&s_Client_Settings.settings);
 };
