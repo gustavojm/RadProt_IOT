@@ -62,13 +62,13 @@ err_t httpd_process_post_data(struct http_state *hs) {
             static client_settings_t cs;
 			cs.settings = *get_client_settings();
             
-            strncpy(cs.settings.wifi.ssid, post_data["wifi.ssid"], sizeof cs.settings.wifi.ssid);
-            strncpy(cs.settings.wifi.password, post_data["wifi.password"], sizeof cs.settings.wifi.password);
+            strncpy(cs.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof cs.settings.wifi.ssid);
+            strncpy(cs.settings.wifi.password, post_data["wifi"]["password"], sizeof cs.settings.wifi.password);
 
-            strncpy(cs.settings.mqtt.broker, post_data["mqtt.broker"], sizeof cs.settings.mqtt.broker);
-            cs.settings.mqtt.port = atoi(post_data["mqtt.port"]);
-            strncpy(cs.settings.mqtt.username, post_data["mqtt.username"], sizeof cs.settings.mqtt.username);
-            strncpy(cs.settings.mqtt.password, post_data["mqtt.password"], sizeof cs.settings.mqtt.password);
+            strncpy(cs.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof cs.settings.mqtt.broker);
+            cs.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
+            strncpy(cs.settings.mqtt.username, post_data["mqtt"]["username"], sizeof cs.settings.mqtt.username);
+            strncpy(cs.settings.mqtt.password, post_data["mqtt"]["password"], sizeof cs.settings.mqtt.password);
 
             int elems =  post_data["s_s"].size();
             printf("elements : %i \n", elems);
