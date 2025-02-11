@@ -43,51 +43,55 @@
 #include <stdio.h>
 #include <string.h>
 #include <settings.h>
+#include <pico/flash.h>
+#include <hardware/watchdog.h>
 
 namespace json = ArduinoJson;
 
 err_t httpd_process_post_data(struct http_state *hs) {
     err_t ret;
     if (hs->post_uri && !memcmp(hs->post_uri, "/settings_save.cgi", 19)) {
+        printf("Entering save_settings.cgi\n");
         auto post_data = json::JsonDocument();
         json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
+        
         if (error) {
             printf("Error json parse. %s", error.c_str());
-        } else {
-
-            static client_settings cs;
-			cs = *get_client_settings();
+        } else {            
+            static client_settings_t cs;
+			cs.settings = *get_client_settings();
             
-            strncpy(cs.wifi.ssid, post_data["wifi.ssid"], sizeof cs.wifi.ssid);
-            strncpy(cs.wifi.password, post_data["wifi.password"], sizeof cs.wifi.password);
+            strncpy(cs.settings.wifi.ssid, post_data["wifi.ssid"], sizeof cs.settings.wifi.ssid);
+            strncpy(cs.settings.wifi.password, post_data["wifi.password"], sizeof cs.settings.wifi.password);
 
-            strncpy(cs.mqtt.broker, post_data["mqtt.broker"], sizeof cs.mqtt.broker);
-            cs.mqtt.broker_port = atoi(post_data["mqtt.port"]);
-            strncpy(cs.mqtt.username, post_data["mqtt.username"], sizeof cs.mqtt.username);
-            strncpy(cs.mqtt.password, post_data["mqtt.password"], sizeof cs.mqtt.password);
-			
-			write_client_settings(&cs);
+            strncpy(cs.settings.mqtt.broker, post_data["mqtt.broker"], sizeof cs.settings.mqtt.broker);
+            cs.settings.mqtt.broker_port = atoi(post_data["mqtt.port"]);
+            strncpy(cs.settings.mqtt.username, post_data["mqtt.username"], sizeof cs.settings.mqtt.username);
+            strncpy(cs.settings.mqtt.password, post_data["mqtt.password"], sizeof cs.settings.mqtt.password);			
 
-            /* Extracting data from form */
-            char const *ssid = post_data["ssid"];
+            ret = ERR_OK;
+
+            auto body_JSON = json::JsonDocument();
+
+            body_JSON["algunakey"] = "algunvalor";
+            char *body = nullptr;
+            int body_len = 0;
+            body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+            body = new char[body_len];
+            if (!(body)) {
+                printf("Out Of Memory");
+                body_len = 0;
+            } else {
+                json::serializeJson(body_JSON, body, body_len);
+            }
+            httpd_post_response(hs, body, body_len, "json");
+            
+            flash_safe_execute(write_client_settings , &cs, UINT32_MAX);
+
+            watchdog_reboot(0, SRAM_END, 500);
         }
-        ret = ERR_OK;
-
-        auto body_JSON = json::JsonDocument();
-
-        body_JSON["algunakey"] = "algunvalor";
-        char *body = nullptr;
-        int body_len = 0;
-        body_len = json::measureJson(body_JSON); /* returns 0 on fail */
-        body = new char[body_len];
-        if (!(body)) {
-            printf("Out Of Memory");
-            body_len = 0;
-        } else {
-            json::serializeJson(body_JSON, body, body_len);
-        }
-        httpd_post_response(hs, body, body_len, "json"); // indicate JSON IMPROVE THIS        
+    	
     }
 
     // if (hs->post_uri && !memcmp(hs->post_uri, "/settings.cgi", 14)) {

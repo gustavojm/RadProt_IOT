@@ -22,6 +22,8 @@
 #include "ssi.h"
 #include "mqtt.h"
 #include "sensor.h"
+#include <pico/multicore.h>
+#include <pico/flash.h>
 
 #include "debug_printf.h"
 
@@ -87,7 +89,7 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
 }
 
 static void main_task(__unused void *params) {
-
+    
     if (cyw43_arch_init()) {
         printf("failed to initialise\n");
         return;
@@ -174,11 +176,14 @@ static void main_task(__unused void *params) {
     vTaskDelete(NULL);
 }
 
-void writeStringTask(void *params) {
+void writeStringTask(void *params) {    
+    flash_safe_execute_core_init();
+
     // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select
+    // Set datasheet for more information on function select    
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
+
     while (1) {
 
         uart_init(uart1, 9600);
@@ -195,13 +200,17 @@ void writeStringTask(void *params) {
 
 }
 
+
 int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
 
     xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);    
-    xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, 1, NULL);
+
+    TaskHandle_t writeStringTask_handle;
+    xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, 1, &writeStringTask_handle);
+    vTaskCoreAffinitySet(writeStringTask_handle, 1);
 
     vTaskStartScheduler();
 }

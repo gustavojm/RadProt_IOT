@@ -1,5 +1,6 @@
 #pragma once
 
+#include "hardware/flash.h"
 #include <ArduinoJson.h>
 #include <sys/types.h>
 #include <lwip/ip_addr.h>
@@ -43,38 +44,40 @@ struct publish_settings_entry{
     float scale;
     int avg_cnt;
     char topic[10];
+
+    ArduinoJson::JsonDocument to_json() const {
+        ArduinoJson::JsonDocument json;
+        json["enabled"] = enabled;
+        json["name"] = name;
+        json["start"] = start;
+        json["end"] = end;
+        json["is_num"] = is_num;
+        json["scale"] = scale;
+        json["avg_cnt"] = avg_cnt;
+        json["topic"] = topic;
+        return json;
+    }
+    
 };
 
-inline ArduinoJson::JsonDocument to_json(const publish_settings_entry *pse) {
-    ArduinoJson::JsonDocument json;
-    json["enabled"] = pse->enabled;
-    json["name"] = pse->name;
-    json["start"] = pse->start;
-    json["end"] = pse->end;
-    json["is_num"] = pse->is_num;
-    json["scale"] = pse->scale;
-    json["avg_cnt"] = pse->avg_cnt;
-    json["topic"] = pse->topic;
-    return json;
-}
 
 struct sensor_settings_entry {
   public:
     uint baudrate;
     publish_settings_entry publish_settings[MAX_PUBLISH_SETTINGS];
-};
 
-inline ArduinoJson::JsonDocument to_json(const sensor_settings_entry *sse) {
-    ArduinoJson::JsonDocument json;
-    json["baudrate"] = sse->baudrate;
-    auto publish_settings_array = json["publish_settings"].to<ArduinoJson::JsonArray>();
-
-    for (auto &entry : sse->publish_settings) {
-        publish_settings_array.add(to_json(&entry));
+    ArduinoJson::JsonDocument to_json() const {
+        ArduinoJson::JsonDocument json;
+        json["baudrate"] = baudrate;
+        auto publish_settings_array = json["publish_settings"].to<ArduinoJson::JsonArray>();
+    
+        for (auto &entry : publish_settings) {
+            publish_settings_array.add(entry.to_json());
+        }
+        return json;
     }
-    return json;
-}
-
+    
+};
 
 struct wifi_settings {
     char ssid[32];
@@ -84,59 +87,68 @@ struct wifi_settings {
     ip_addr_t nm;
     ip_addr_t gw;
     ip_addr_t dns;
-};
 
-inline ArduinoJson::JsonDocument to_json(const wifi_settings *ws) {
-    ArduinoJson::JsonDocument json;
-    json["ssid"] = ws->ssid;
-    json["password"] = ws->password;
-    json["dhcp"] = ws->dhcp;
-    json["ip"] = ws->ip.addr;
-    json["nm"] = ws->nm.addr;
-    json["gw"] = ws->gw.addr;
-    json["dns"] = ws->dns.addr;
-    return json;
-}
+    ArduinoJson::JsonDocument to_json() const {
+        ArduinoJson::JsonDocument json;
+        json["ssid"] = ssid;
+        json["password"] = password;
+        json["dhcp"] = dhcp;
+        json["ip"] = ip.addr;
+        json["nm"] = nm.addr;
+        json["gw"] = gw.addr;
+        json["dns"] = dns.addr;
+        return json;
+    }
+    
+};
 
 struct mqtt_settings {
     char broker[32];
     uint16_t broker_port;
     char username[32];
     char password[32];    
-};
 
-inline ArduinoJson::JsonDocument to_json(const mqtt_settings *ms) {
-    ArduinoJson::JsonDocument json;
-    json["broker"] = ms->broker;
-    json["broker_port"] = ms->broker_port;
-    json["username"] = ms->username;
-    json["password"] = ms->password;
-    return json;
-}
+    ArduinoJson::JsonDocument to_json() const {
+        ArduinoJson::JsonDocument json;
+        json["broker"] = broker;
+        json["broker_port"] = broker_port;
+        json["username"] = username;
+        json["password"] = password;
+        return json;
+    }
+    
+};
 
 struct client_settings {
   public:
     wifi_settings wifi;
     mqtt_settings mqtt;
     sensor_settings_entry sensor_settings[MAX_SERIAL_SENSORS];
+
+    ArduinoJson::JsonDocument to_json() const {
+        ArduinoJson::JsonDocument json;
+        json["wifi"] = wifi.to_json();
+        json["mqtt"] = mqtt.to_json();
+    
+        auto sensor_settings_array = json["sensor_settings"].to<ArduinoJson::JsonArray>();
+        for (auto &entry : sensor_settings) {
+            sensor_settings_array.add(entry.to_json());
+        }
+    
+        return json;
+    }
+    
 };
 
-inline ArduinoJson::JsonDocument to_json(const client_settings *cs) {
-    ArduinoJson::JsonDocument json;
-    json["wifi"] = to_json(&cs->wifi);
-    json["mqtt"] = to_json(&cs->mqtt);
+union client_settings_t {
+    client_settings settings;
+    char padding[FLASH_SECTOR_SIZE];
+} __attribute__((aligned(FLASH_SECTOR_SIZE)));
 
-    // auto sensor_settings_array = json["sensor_settings"].to<ArduinoJson::JsonArray>();
-    // for (auto &entry : sensor_settings) {
-    //     sensor_settings_array.add(entry.to_json());
-    // }
-
-    return json;
-}
-
+static_assert(sizeof(client_settings_t) == FLASH_SECTOR_SIZE, "Size mismatch!");
 
 const client_settings *get_client_settings();
 
-void write_client_settings(const client_settings *new_settings);
+void __not_in_flash_func(write_client_settings)(void *param);
 
 ArduinoJson::JsonDocument get_client_settings_json();

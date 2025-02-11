@@ -1,7 +1,13 @@
 #include "settings.h"
-#include "hardware/flash.h"
 #include <portmacro.h>
 #include <string.h>
+#include <hardware/watchdog.h>
+#include <pico/cyw43_arch.h>
+
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include <pico/multicore.h>
 
 const union {
     config_server_settings settings;
@@ -48,13 +54,9 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
         return NULL;
 }
 
-constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
-
-const union {
-    client_settings settings;
-    char padding[FLASH_SECTOR_SIZE * padding_multiplier];
-} __attribute__((aligned(FLASH_SECTOR_SIZE))) 
-s_Client_Settings = {.settings = { 
+//constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
+const client_settings_t s_Client_Settings = {                
+                .settings = { 
                 .wifi = {.ssid = "C14017750 7261",
                            .password = "malamala",
                            .dhcp = true,
@@ -98,13 +100,27 @@ const client_settings *get_client_settings() {
     return &s_Client_Settings.settings;
 }
 
-void write_client_settings(const client_settings *new_settings) {
-    portENTER_CRITICAL();
+void __not_in_flash_func(write_client_settings)(void *param) {
+    const client_settings_t *new_settings = static_cast<const client_settings_t *>(param);
+    uint32_t start = (uint32_t)&s_Client_Settings - XIP_BASE;
+    printf("Start: %i\n", start );
+    printf("Size: %i\n", sizeof(client_settings_t));
+   
+    // Disable interrupts on the current core
+    uint32_t status = save_and_disable_interrupts();
+
+    // Perform flash write operation
     flash_range_erase((uint32_t)&s_Client_Settings - XIP_BASE, FLASH_SECTOR_SIZE);
-    flash_range_program((uint32_t)&s_Client_Settings - XIP_BASE, (const uint8_t *)new_settings, sizeof(*new_settings));
-    portEXIT_CRITICAL();
+    flash_range_program((uint32_t)&s_Client_Settings - XIP_BASE, (const uint8_t *)new_settings, FLASH_SECTOR_SIZE);
+
+    // Re-enable interrupts on the current core
+    restore_interrupts(status);    
+    
+    // #define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
+    // AIRCR_Register = 0x5FA0004;
+    
 }
 
 ArduinoJson::JsonDocument get_client_settings_json() {
-    return to_json(&s_Client_Settings.settings);
+    return s_Client_Settings.settings.to_json();
 };

@@ -18,6 +18,59 @@
             vertical-align: middle;
             text-align: center;
         }
+
+
+        /* The Modal (background) */
+        .modal {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            /* Stay in place */
+            z-index: 1;
+            /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            /* Full width */
+            height: 100%;
+            /* Full height */
+            overflow: auto;
+            /* Enable scroll if needed */
+            background-color: rgb(0, 0, 0);
+            /* Fallback color */
+            background-color: rgba(0, 0, 0, 0.4);
+            /* Black w/ opacity */
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            /* Could be more or less, depending on screen size */
+            max-width: 500px;
+            /* Maximum width */
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -118,6 +171,20 @@
             <input type="button" onclick="apply_settings()" value="Save">
         </div>
     </form>
+
+    <!-- The Modal -->
+    <div id="reboot_popup" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span id="closeModalBtn" class="close">&times;</span>
+            <p>The settings have been updated and the device is restarting.<br />Please disconnect from the Wi-Fi
+                network,
+                reconnect to it and proceed to the network login page.
+            </p>
+        </div>
+    </div>
+
+
 </body>
 
 <script>
@@ -229,12 +296,8 @@
         json = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
         xhr.send(json);
         xhr.onloadend = function () {
-            if (this.responseText == "OK") {
-                document.getElementById("reboot_popup").style.display = "block";
-                unrecoverable_error = "rebooting";
-            } else {
-                alert(this.responseText);
-            }
+            document.getElementById("reboot_popup").style.display = "block";
+            //alert(this.responseText);
         };
     }
 
@@ -273,8 +336,8 @@
                     if (xhr.responseText) {
                         try {
                             // Parse the JSON response
-                            const settings_json= JSON.parse(xhr.responseText);
-                            
+                            const settings_json = JSON.parse(xhr.responseText);
+
                             const settings_form = document.getElementById('settings_form');
                             settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
                             settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
@@ -366,6 +429,21 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         settings_get();
+    });
+
+    const modal = document.getElementById("reboot_popup");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+
+    // When the user clicks on the close button, close the modal
+    closeModalBtn.addEventListener("click", () => {
+        modal.style.display = "none";
+    });
+
+    // When the user clicks anywhere outside the modal, close it
+    window.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
     });
 
 </script>
