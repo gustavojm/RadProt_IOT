@@ -66,9 +66,34 @@ err_t httpd_process_post_data(struct http_state *hs) {
             strncpy(cs.settings.wifi.password, post_data["wifi.password"], sizeof cs.settings.wifi.password);
 
             strncpy(cs.settings.mqtt.broker, post_data["mqtt.broker"], sizeof cs.settings.mqtt.broker);
-            cs.settings.mqtt.broker_port = atoi(post_data["mqtt.port"]);
+            cs.settings.mqtt.port = atoi(post_data["mqtt.port"]);
             strncpy(cs.settings.mqtt.username, post_data["mqtt.username"], sizeof cs.settings.mqtt.username);
-            strncpy(cs.settings.mqtt.password, post_data["mqtt.password"], sizeof cs.settings.mqtt.password);			
+            strncpy(cs.settings.mqtt.password, post_data["mqtt.password"], sizeof cs.settings.mqtt.password);
+
+            int elems =  post_data["s_s"].size();
+            printf("elements : %i \n", elems);
+
+            for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
+                auto s_s = post_data["s_s"][i];
+                printf("BAUD RATE: %s", s_s["baud"]);
+                cs.settings.sensor_settings[i].baudrate = atoi(s_s["baud"]);
+                cs.settings.sensor_settings[i].enabled = s_s["enabled"];
+                
+                for (int j = 0; j < MAX_PUBLISH_SETTINGS; j++ ) {
+                    auto p_s = s_s["p_s"][j];                    
+                    cs.settings.sensor_settings[i].publish_settings[j].enabled = p_s["enabled"];
+                    
+                    printf("NAME: %s",  p_s["name"]);
+
+                    strncpy(cs.settings.sensor_settings[i].publish_settings[j].name, p_s["name"], sizeof cs.settings.sensor_settings->publish_settings->name);
+                    cs.settings.sensor_settings[i].publish_settings[j].start = p_s["start"];
+                    cs.settings.sensor_settings[i].publish_settings[j].end = p_s["end"];
+                    cs.settings.sensor_settings[i].publish_settings[j].is_num = p_s["is_num"];
+                    cs.settings.sensor_settings[i].publish_settings[j].avg_cnt = atoi(p_s["avg_cnt"]);
+                    cs.settings.sensor_settings[i].publish_settings[j].scale = atoi(p_s["scale"]);
+                    strncpy(cs.settings.sensor_settings[i].publish_settings[j].topic, p_s["topic"], sizeof cs.settings.sensor_settings->publish_settings->topic);
+                }
+            }
 
             ret = ERR_OK;
 

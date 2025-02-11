@@ -1,4 +1,5 @@
 <html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
 <head>
     <title>Radioprotección</title>
@@ -75,14 +76,12 @@
 </head>
 
 <body>
-    <a href="admin.html" class="btn btn--s">&lt;</a>&nbsp;&nbsp;<strong>Network Configuration</strong>
-    <hr>
     <h2>MAC Address: <!--#MACAddr--></h2>
 
-    Connect to Router with these settings:<br>
     <form action="" id="settings_form">
-        <div style="display: flex; justify-content: center;">
-            <table border="0" cellspacing="0" cellpadding="3">
+        <div style="display: flex; justify-content: center; flex-direction: column;">
+            <strong>Connect to Router with these settings:</strong>
+            <table border="0" cellspacing="0" cellpadding="3" style="width: 100%;">
                 <tr>
                     <td align="right">SSID:</td>
                     <td><input type="text" name="wifi.ssid" value=""></td>
@@ -125,7 +124,7 @@
             </table>
         </div>
 
-        <div style="display: flex; justify-content: center;">
+        <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>Networks:</strong><br>
             <table id="wifiTable" style="width: 100%;">
                 <thead>
@@ -141,11 +140,10 @@
                 <tbody></tbody>
             </table>
         </div>
-        <div style="display: flex; justify-content: center;">
+        <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>MQTT Settings:</strong>
-
             <!-- <form action="" id="mqtt_form" style="display: flex; justify-content: center;"> -->
-            <table border="0" cellspacing="0" cellpadding="3" style="width:310px">
+            <table border="0" cellspacing="0" cellpadding="3" style="width:100%">
                 <tr>
                     <td align="right">Broker:</td>
                     <td><input type="text" name="mqtt.broker" value=""></td>
@@ -168,7 +166,8 @@
             <div id="sensors_div"></div>
         </div>
         <div style="display: flex; justify-content: center;">
-            <input type="button" onclick="apply_settings()" value="Save">
+            <!-- <input type="button" onclick="apply_settings()" value="Save"> -->
+            <button type="submit">OK</button>
         </div>
     </form>
 
@@ -289,6 +288,48 @@
     //     }
     // }
 
+    document.getElementById('settings_form').addEventListener('submit', function (event) {
+        event.preventDefault(); // Prevent the form from submitting
+
+        // Step 1: Get the flattened JSON
+        const formData = new FormData(event.target);
+        const flatJson = Object.fromEntries(formData);
+
+        // Step 2: Convert the flat JSON to nested JSON
+        const nestedJson = {};
+
+        for (const key in flatJson) {
+            const keys = key.split(/\[|\]|\./).filter(Boolean); // Split key into parts
+            let current = nestedJson;
+
+            keys.forEach((k, i) => {
+                if (i === keys.length - 1) {
+                    current[k] = flatJson[key]; // Set the value
+                } else {
+                    if (!current[k]) {
+                        // Create an object or array based on the next key
+                        current[k] = isNaN(keys[i + 1]) ? {} : [];
+                    }
+                    current = current[k]; // Move deeper into the structure
+                }
+            });
+        }
+
+        // Step 3: Output the nested JSON
+        console.log(JSON.stringify(nestedJson, null, 2));
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", '/settings_save.cgi', true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        json = JSON.stringify(nestedJson, null, 2);
+        xhr.send(json);
+        xhr.onloadend = function () {
+            document.getElementById("reboot_popup").style.display = "block";
+            //alert(this.responseText);
+        };
+
+    });
+
+
     function apply_settings() {
         let xhr = new XMLHttpRequest();
         xhr.open("POST", '/settings_save.cgi', true);
@@ -322,7 +363,7 @@
 
     function settings_get() {
 
-        //settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215},"mqtt":{"broker_address":"broker_address","broker_port":0,"username":"","password":"broker_pass"},"sensor_settings":[{"baudrate":9600,"publish_settings":[{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]}';
+        //settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215},"mqtt":{"broker_address":"broker_address","port":0,"username":"","password":"broker_pass"},"sensor_settings":[{"baudrate":9600,"publish_settings":[{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]}';
         let settings_string = "";
         let xhr = new XMLHttpRequest();
         xhr.open("POST", '/settings_get.cgi', true);
@@ -348,6 +389,7 @@
                             settings_form.elements["wifi.gw"].value = uint32ToIp(settings_json["wifi"]["gw"]);
 
                             settings_form.elements["mqtt.broker"].value = settings_json["mqtt"]["broker"];
+                            settings_form.elements["mqtt.port"].value = settings_json["mqtt"]["port"];
                             settings_form.elements["mqtt.username"].value = settings_json["mqtt"]["username"];
                             settings_form.elements["mqtt.password"].value = settings_json["mqtt"]["password"];
 
@@ -391,14 +433,14 @@
 
                                     detail_row.innerHTML = `
                                         <td>${index}</td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].name" size="6" value="${item.name}"></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].start" size="2" value="${item.start}"></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].end" size="2" value="${item.end}"></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].scale" size="2" value="${item.scale}"></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].avg_cnt" size="2" value="${item.avg_cnt}"></td>
-                                        <td><input name="s_s[${index_sensor}].p_s[${index}].topic" size="6" value="${item.topic}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][enabled]" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][name]" size="6" value="${item.name}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][start]" size="2" value="${item.start}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][end]" size="2" value="${item.end}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][is_num]" type="checkbox" ${item.is_num ? "checked" : ""}></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][scale]" size="2" value="${item.scale}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][avg_cnt]" size="2" value="${item.avg_cnt}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}][topic]" size="6" value="${item.topic}"></td>
                                     `;
 
                                     publish_settings_table.appendChild(detail_row);

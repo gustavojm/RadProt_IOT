@@ -177,7 +177,7 @@ static void main_task(__unused void *params) {
 }
 
 void writeStringTask(void *params) {    
-    flash_safe_execute_core_init();
+    //flash_safe_execute_core_init();
 
     // Set the TX and RX pins by using the function select on the GPIO
     // Set datasheet for more information on function select    

@@ -72,6 +72,8 @@
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "ranges": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "typeindex": "cpp",
+        "typeinfo": "cpp"
     },
 }

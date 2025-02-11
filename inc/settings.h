@@ -64,11 +64,13 @@ struct publish_settings_entry{
 struct sensor_settings_entry {
   public:
     uint baudrate;
+    bool enabled;
     publish_settings_entry publish_settings[MAX_PUBLISH_SETTINGS];
 
     ArduinoJson::JsonDocument to_json() const {
         ArduinoJson::JsonDocument json;
         json["baudrate"] = baudrate;
+        json["enabled"] = enabled;
         auto publish_settings_array = json["publish_settings"].to<ArduinoJson::JsonArray>();
     
         for (auto &entry : publish_settings) {
@@ -104,14 +106,14 @@ struct wifi_settings {
 
 struct mqtt_settings {
     char broker[32];
-    uint16_t broker_port;
+    uint16_t port;
     char username[32];
     char password[32];    
 
     ArduinoJson::JsonDocument to_json() const {
         ArduinoJson::JsonDocument json;
         json["broker"] = broker;
-        json["broker_port"] = broker_port;
+        json["port"] = port;
         json["username"] = username;
         json["password"] = password;
         return json;
