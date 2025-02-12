@@ -65,6 +65,14 @@ add_executable(${PROJECT_NAME}
         src/sensor.cpp
         pico-sdk/lib/lwip/src/apps/mqtt/mqtt.c
         src/mqtt.cpp
+        src/MQTTEcho.cpp
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.c
+        paho.mqtt.embedded-c/MQTTClient-C/src/FreeRTOS/MQTTFreeRTOS.c
+        paho.mqtt.embedded-c/MQTTClient-C/src/MQTTClient.c        
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.c
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTSerializePublish.c
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTSubscribeClient.c
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -85,6 +93,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         hal/inc
         httpserver
         ${etl_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/paho.mqtt.embedded-c/MQTTClient-C/src
+        ${CMAKE_SOURCE_DIR}/paho.mqtt.embedded-c/MQTTPacket/src    
         )
 
 target_link_libraries(${PROJECT_NAME}        

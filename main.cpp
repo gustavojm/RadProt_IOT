@@ -26,6 +26,7 @@
 #include <pico/flash.h>
 
 #include "debug_printf.h"
+#include "MQTTEcho.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 #define RECONNECT_DELAY_MS 5000 // 5 seconds
@@ -161,7 +162,9 @@ static void main_task(__unused void *params) {
 
     static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);    
     s0.init();
-    mqtt_init();
+    //mqtt_init();
+    vStartMQTTTasks(1024, MAIN_TASK_PRIORITY);
+
 
     // Monitor connection and reconnect if necessary
     while (true) {

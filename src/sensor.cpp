@@ -55,19 +55,19 @@ void Sensor::read_task() {
                                     float average = avg_fields[i].accum / pub_settings.avg_cnt;
                                     printf("Publishing %s average: %f to: %s\n", pub_settings.name, average, pub_settings.topic);
                                     size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
-                                    sendToMqttQueue(pub_settings.topic, payload_buffer, len, 0, false);
+                                    //sendToMqttQueue(pub_settings.topic, payload_buffer, len, 0, false);
                                     avg_fields[i].accum = 0;
                                     avg_fields[i].avg_cnt_current = 0;
                                 }
                             } else {
                                 printf("Publishing %s number: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
                                 size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
-                                sendToMqttQueue(pub_settings.topic, payload_buffer, len, 0, false);
+                                //sendToMqttQueue(pub_settings.topic, payload_buffer, len, 0, false);
                             }
 
                         } else {
                             printf("Publishing %s : %f to: %s:\n", pub_settings.name, data, pub_settings.topic);
-                            sendToMqttQueue(pub_settings.topic, data, strlen(data), 0, false);
+                            //sendToMqttQueue(pub_settings.topic, data, strlen(data), 0, false);
                         }
 
                         free(data); // allocated by strndup

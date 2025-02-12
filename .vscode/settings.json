@@ -74,6 +74,9 @@
         "ranges": "cpp",
         "span": "cpp",
         "typeindex": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "mqttfreertos.h": "c",
+        "ip.h": "c",
+        "ip_addr.h": "c"
     },
 }
