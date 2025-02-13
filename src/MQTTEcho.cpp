@@ -37,10 +37,10 @@ static void prvMQTTEchoTask(void *pvParameters)
 	NetworkInit(&network);
 	MQTTClientInit(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
-	//char address[] = "192.168.137.243";
-	char address[] = "test.mosquitto.org";
+	char address[] = "192.168.137.243";
+	//char address[] = "test.mosquitto.org";
 	if ((rc = NetworkConnect(&network, address, 1883)) != 0)
-		printf("Return code from network connect is %d\n", rc);
+		printf("Return code from network connect is %d\n", rc); 
 
 	if ((rc = MQTTStartTask(&client)) != pdPASS)
 		printf("Return code from start tasks is %d\n", rc);

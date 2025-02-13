@@ -77,6 +77,8 @@
         "typeinfo": "cpp",
         "mqttfreertos.h": "c",
         "ip.h": "c",
-        "ip_addr.h": "c"
+        "ip_addr.h": "c",
+        "mqttclient.h": "c",
+        "shared_mutex": "c"
     },
 }

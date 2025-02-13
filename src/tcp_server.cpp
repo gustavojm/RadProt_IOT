@@ -109,6 +109,6 @@ void tcp_server::task() {
     }
 
 CLEAN_UP:
-    close(server_sock);
+    lwip_close(server_sock);
     vTaskDelete(NULL);
 }
