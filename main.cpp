@@ -26,7 +26,6 @@
 #include <pico/flash.h>
 
 #include "debug_printf.h"
-#include "MQTTEcho.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 #define RECONNECT_DELAY_MS 5000 // 5 seconds
@@ -162,9 +161,7 @@ static void main_task(__unused void *params) {
 
     static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);    
     s0.init();
-    //mqtt_init();
-    vStartMQTTTasks(1024, MAIN_TASK_PRIORITY);
-
+    mqtt_init();
 
     // Monitor connection and reconnect if necessary
     while (true) {
@@ -192,12 +189,12 @@ void writeStringTask(void *params) {
         uart_init(uart1, 9600);
 
         // Send out a string, with CR/LF conversions
-        // uart_puts(uart1, "Hel987.2233lo, UART!\n");
-        // vTaskDelay(1000);
+        uart_puts(uart1, "Hel987.2233lo, UART!\n");
+        vTaskDelay(10);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
-        vTaskDelay(3000);
-        // uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
-        // vTaskDelay(1000);
+        vTaskDelay(30);
+        uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
+        vTaskDelay(10);
 
     }
 

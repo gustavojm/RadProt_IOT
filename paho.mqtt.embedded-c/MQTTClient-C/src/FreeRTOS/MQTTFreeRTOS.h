@@ -59,12 +59,7 @@ void MutexInit(Mutex*);
 int MutexLock(Mutex*);
 int MutexUnlock(Mutex*);
 
-typedef struct Thread
-{
-	TaskHandle_t task;
-} Thread;
-
-int ThreadStart(Thread*, void (*fn)(void*), void* arg);
+int ThreadStart(TaskHandle_t task_handle, void (*fn)(void*), void* arg);
 
 int FreeRTOS_read(Network*, unsigned char*, int, int);
 int FreeRTOS_write(Network*, unsigned char*, int, int);

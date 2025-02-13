@@ -336,11 +336,12 @@ void MQTTRun(void *parm) {
         TimerCountdownMS(&timer, 500); /* Don't wait too long if no traffic is incoming */
         cycle(c, &timer);
         MutexUnlock(&c->mutex);
+        vTaskDelay(1000);
     }
 }
 
 int MQTTStartTask(MQTTClient *client) {
-    return ThreadStart(&client->thread, &MQTTRun, client);
+    return ThreadStart(&client->task_handle, &MQTTRun, client);
 }
 
 int waitfor(MQTTClient *c, int packet_type, Timer *timer) {

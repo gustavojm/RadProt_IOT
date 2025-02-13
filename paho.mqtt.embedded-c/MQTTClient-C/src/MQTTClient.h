@@ -122,7 +122,7 @@ typedef struct MQTTClient
     Network* ipstack;
     Timer last_sent, last_received;
     Mutex mutex;
-    Thread thread;
+    TaskHandle_t task_handle;
 } MQTTClient;
 
 #define DefaultClient {0, 0, 0, 0, NULL, NULL, 0, 0, 0}

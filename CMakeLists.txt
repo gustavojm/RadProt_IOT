@@ -65,7 +65,6 @@ add_executable(${PROJECT_NAME}
         src/sensor.cpp
         pico-sdk/lib/lwip/src/apps/mqtt/mqtt.c
         src/mqtt.cpp
-        src/MQTTEcho.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.c
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.c
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
