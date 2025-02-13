@@ -39,11 +39,10 @@ static void prvMQTTEchoTask(void *pvParameters)
 
 	char address[] = "192.168.137.243";
 	//char address[] = "test.mosquitto.org";
+	//char address[] = "5.196.78.28";
+
 	if ((rc = NetworkConnect(&network, address, 1883)) != 0)
 		printf("Return code from network connect is %d\n", rc); 
-
-	if ((rc = MQTTStartTask(&client)) != pdPASS)
-		printf("Return code from start tasks is %d\n", rc);
 
 	connectData.MQTTVersion = 3;
 	char clientID[] = "FreeRTOS_sample";
@@ -57,20 +56,27 @@ static void prvMQTTEchoTask(void *pvParameters)
 	// if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS2, messageArrived)) != 0)
 	// 	printf("Return code from MQTT subscribe is %d\n", rc);
 
+	// if ((rc = MQTTStartTask(&client)) != pdPASS)
+	// printf("Return code from start tasks is %d\n", rc);
+
 	while (true) {		
 		MQTTMessage message;
 		char payload[30];
 
 		message.qos = QOS0;
 		message.retained = 0;
-		message.payload = payload;
+		message.payload = payload;___int_size_t_h
 		sprintf(payload, "message number %d", count);
 		message.payloadlen = strlen(payload);
 
 		count++;
 		if ((rc = MQTTPublish(&client, "FreeRTOS/sample/a", &message)) != 0)
 			printf("Return code from MQTT publish is %d\n", rc);
+		
+		vTaskDelay(2000);
+			
 	}
+
 
 	/* do not return */
 }

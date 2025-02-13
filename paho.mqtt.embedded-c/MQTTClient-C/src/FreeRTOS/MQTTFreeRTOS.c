@@ -163,26 +163,24 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 
 int NetworkConnect(Network* n, char* addr, int port)
 {
-	struct sockaddr sAddr;
-	int retVal = -1;
-	
 	n->my_socket = lwip_socket(AF_INET, SOCK_STREAM, 0);
 	if (n->my_socket < 0) {
 		printf("Socket creation failed!\n");
-		goto exit;
+		return -1;
 	}
 	
 	ip_addr_t server;
 
 	if (dns_gethostbyname(addr, &server, dns_found_cb, NULL) != ERR_OK) {
 		printf("No such host");
-		goto exit;
+		return -1;
 	}
 
 	struct sockaddr_in server_addr;
 
 	// Configure server address
 	memset(&server_addr, 0, sizeof(server_addr));
+	server_addr.sin_len = sizeof(struct sockaddr_in),
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 	server_addr.sin_addr.s_addr = server.addr;
@@ -191,11 +189,10 @@ int NetworkConnect(Network* n, char* addr, int port)
 	if (lwip_connect(n->my_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
 		printf("Connection failed!\n");
 		lwip_close(n->my_socket);
-		goto exit;
+		return -1;
 	}
 
-exit:
-	return retVal;
+	return ERR_OK;
 }
 
 
