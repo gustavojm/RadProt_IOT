@@ -39,18 +39,20 @@ static void mqtt_task(void *pvParameters) {
     // char address[] = "test.mosquitto.org";
     // char address[] = "5.196.78.28";
 
-    if ((rc = NetworkConnect(&network, address, 1883)) != 0)
-        printf("Return code from network connect is %d\n", rc);
+    if ((rc = NetworkConnect(&network, address, 1883)) != 0) {
+        printf("Error in network connection: %d\n", rc);
+    }
 
     connectData.MQTTVersion = 3;
     char clientID[] = "FreeRTOS_sample";
     connectData.clientID.cstring = clientID;
 
-    if ((rc = MQTTConnect(&client, &connectData)) != 0)
-        printf("Return code from MQTT connect is %d\n", rc);
-    else
+    if ((rc = MQTTConnect(&client, &connectData)) != 0) {
+        printf("Error connecting: %d\n", rc);
+    } else {
         printf("MQTT Connected\n");
-
+    }
+        
     // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS2, messageArrived)) != 0)
     // 	printf("Return code from MQTT subscribe is %d\n", rc);
 
@@ -64,14 +66,14 @@ static void mqtt_task(void *pvParameters) {
             // Publish the message using your MQTT client library
             MQTTMessage message;
 
-            message.qos = QOS0;
+            message.qos = (enum QoS)msg.qos;
             message.retained = 0;
             message.payload = msg.payload;
             message.payloadlen = strlen(msg.payload);
 
-            if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0)
-                printf("Return code from MQTT publish is %d\n", rc);
-            printf("****PUBLISH****\n");
+            if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0) {
+                printf("Error publishing: %d\n", rc);
+            }
         }
     }
 
