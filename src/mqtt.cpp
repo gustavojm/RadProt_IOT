@@ -29,8 +29,7 @@ static void mqtt_task(void *pvParameters) {
     unsigned char sendbuf[80], readbuf[80];
     int rc = 0;
     int count = 0;
-    MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
-
+    
     pvParameters = 0;
     NetworkInit(&network);
     MQTTClientInit(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
@@ -43,9 +42,11 @@ static void mqtt_task(void *pvParameters) {
         printf("Error in network connection: %d\n", rc);
     }
 
+    MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
     connectData.MQTTVersion = 3;
-    char clientID[] = "FreeRTOS_sample";
-    connectData.clientID.cstring = clientID;
+    
+    connectData.clientID.cstring = const_cast<char *>("FreeRTOS_sample");
+    connectData.username.cstring = const_cast<char *>("Pepito");;
 
     if ((rc = MQTTConnect(&client, &connectData)) != 0) {
         printf("Error connecting: %d\n", rc);

@@ -82,4 +82,5 @@
         "shared_mutex": "c",
         "thread": "c"
     },
+    "cortex-debug.variableUseNaturalFormat": false,
 }
