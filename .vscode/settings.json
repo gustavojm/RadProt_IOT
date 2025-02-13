@@ -79,6 +79,7 @@
         "ip.h": "c",
         "ip_addr.h": "c",
         "mqttclient.h": "c",
-        "shared_mutex": "c"
+        "shared_mutex": "c",
+        "thread": "c"
     },
 }
