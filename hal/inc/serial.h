@@ -22,8 +22,7 @@ public:
     int read_string(char *buffer, size_t buffer_size);
     void on_uart_rx();
     bool task_notified = false;
-
-    static void set_irq_handler(uart_inst_t *uart_id, irq_handler_t handler);    
+    
     void set_timeout(TickType_t timeout);
     void set_delimiter(char delimiter);
     void set_receiving_task_handle();

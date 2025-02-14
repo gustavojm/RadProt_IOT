@@ -68,6 +68,7 @@ int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) {
     vTaskEnterCritical();
     size_t bytes = (index < buffer_size) ? index : buffer_size;
     memcpy(buffer, uart_buffer, bytes);
+    memset(uart_buffer, '\0', uart_buffer_size);
     index = 0;
     string_finished_ = false;
     vTaskExitCritical();

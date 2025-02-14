@@ -32,11 +32,11 @@ static void mqtt_task(void *pvParameters) {
     
     pvParameters = 0;
     NetworkInit(&network);
-    MQTTClientInit(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
+    MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
-    char address[] = "192.168.137.243";
-    // char address[] = "test.mosquitto.org";
-    // char address[] = "5.196.78.28";
+    //char address[] = "192.168.137.243";
+    char address[] = "test.mosquitto.org";
+    //char address[] = "5.196.78.28";
 
     if ((rc = NetworkConnect(&network, address, 1883)) != 0) {
         printf("Error in network connection: %d\n", rc);
@@ -46,7 +46,7 @@ static void mqtt_task(void *pvParameters) {
     connectData.MQTTVersion = 3;
     
     connectData.clientID.cstring = const_cast<char *>("FreeRTOS_sample");
-    connectData.username.cstring = const_cast<char *>("Pepito");;
+    //connectData.username.cstring = const_cast<char *>("Pepito");;
 
     if ((rc = MQTTConnect(&client, &connectData)) != 0) {
         printf("Error connecting: %d\n", rc);
@@ -54,10 +54,10 @@ static void mqtt_task(void *pvParameters) {
         printf("MQTT Connected\n");
     }
 
-    if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
-        printf("Error MQTT subscribe: %d\n", rc);
-    }
-
+    // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
+    //     printf("Error MQTT subscribe: %d\n", rc);
+    // }
+    
     if ((rc = MQTTStartTask(&client)) != pdPASS) {
         printf("Error MQTT start tasks: %d\n", rc);
     }

@@ -136,8 +136,10 @@ void NetworkInit(Network *n) {
     n->disconnect = FreeRTOS_disconnect;
 }
 
+static bool dnsFound;
 void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg) {
     char *ip_addr = ip4addr_ntoa(ipaddr);
+    dnsFound = true; 
     printf("RESOLVED HOSTNAME TO: %s\n", ip_addr);
 }
 
@@ -150,10 +152,11 @@ int NetworkConnect(Network *n, char *addr, int port) {
 
     ip_addr_t server;
 
-    if (dns_gethostbyname(addr, &server, dns_found_cb, NULL) != ERR_OK) {
-        printf("No such host");
-        return -1;
-    }
+    // dns_gethostbyname(addr, &server, dns_found_cb, NULL);
+    
+    // while (!dnsFound) {
+    //     vTaskDelay(1000);
+    // }
 
     struct sockaddr_in server_addr;
 
@@ -161,7 +164,10 @@ int NetworkConnect(Network *n, char *addr, int port) {
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_len = sizeof(struct sockaddr_in), server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
-    server_addr.sin_addr.s_addr = server.addr;
+    //server_addr.sin_addr.s_addr = server.addr;
+    server_addr.sin_addr.s_addr = inet_addr("5.196.78.28");
+    // server_addr.sin_addr.s_addr = inet_addr("192.168.137.243");
+    // server_addr.sin_addr.s_addr = inet_addr("18.195.250.223");
 
     // Connect to the server
     if (lwip_connect(n->my_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {

@@ -160,12 +160,12 @@
                 <td><input type="password" name="mqtt.password" value=""></td>
             </table>
         </div>
-        <div style="display: flex; justify-content: center;">
+        <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>Serial Interfaces:</strong>
 
             <div id="sensors_div"></div>
         </div>
-        <div style="display: flex; justify-content: center;">
+        <div style="display: flex; justify-content: center; flex-direction: column;">
             <!-- <input type="button" onclick="apply_settings()" value="Save"> -->
             <button type="submit">OK</button>
         </div>

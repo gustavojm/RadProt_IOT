@@ -39,7 +39,7 @@ void Sensor::read_task() {
                             }
 
                             if (endptr == data) {
-                                printf("No digits were found\n");                        
+                                printf("No digits were found in serial buffer: %s\n", serial_buffer); 
                             }
 
                             /* If we got here, strtol() successfully parsed a number. */

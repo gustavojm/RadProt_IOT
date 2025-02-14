@@ -128,4 +128,10 @@
 #define LWIP_SO_RCVTIMEO 1
 #define LWIP_SO_SNDTIMEO 1
 
+/* Maximum number of retransmissions of data segments. */
+#define TCP_MAXRTX              12
+
+/* Maximum number of retransmissions of SYN segments. */
+#define TCP_SYNMAXRTX           4
+
 #endif /* __LWIPOPTS_H__ */

@@ -42,19 +42,30 @@ void connect_to_wifi() {
         // Attempt to connect to Wi-Fi
         if (cyw43_arch_wifi_connect_timeout_ms("C14017750 7261", "malamala", CYW43_AUTH_WPA2_AES_PSK,
                                                30000) == 0) {
+        // if (cyw43_arch_wifi_connect_timeout_ms("Redmi", "peperina", CYW43_AUTH_WPA2_MIXED_PSK,
+        //     30000) == 0) {        
             if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
                 printf("Connected to Wi-Fi successfully!\n");
 
-                if (!client_settings->wifi.dhcp) {                  
-                    //cyw43_arch_enable_sta_mode();
-                    cyw43_arch_lwip_begin();
-                    dhcp_stop(cyw43_state.netif);     // turn off DHCP
-                    netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
-                    dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS    
-                    char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
-                    cyw43_arch_lwip_end();
-                    printf("Static IP set to: %s\n", ip_addr);
+                // if (!client_settings->wifi.dhcp) {                  
+                //     //cyw43_arch_enable_sta_mode();
+                //     cyw43_arch_lwip_begin();
+                //     dhcp_stop(cyw43_state.netif);     // turn off DHCP
+                //     netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
+                //     dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS    
+                //     char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
+                //     cyw43_arch_lwip_end();
+                //     printf("Static IP set to: %s\n", ip_addr);
+                // }
+
+                // Wait for DHCP to assign an IP
+                while (netif_default->ip_addr.addr == 0) {
+                    printf("Waiting for DHCP...\n");
+                    sleep_ms(1000);
                 }
+
+                printf("Connected! IP Address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
+
                 return;
             }
 
@@ -97,57 +108,59 @@ static void main_task(__unused void *params) {
 
     cyw43_arch_enable_sta_mode();
 
-    cyw43_wifi_scan_options_t scan_options = { 0 };
-    int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
-    if (err == 0) {
-        printf("\nPerforming wifi scan\n");
-    } else {
-        printf("Failed to start scan: %d\n", err);
-    }
-    while (cyw43_wifi_scan_active(&cyw43_state)) {
-        vTaskDelay(1000);
-    }
+    // cyw43_wifi_scan_options_t scan_options = { 0 };
+    // int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+    // if (err == 0) {
+    //     printf("\nPerforming wifi scan\n");
+    // } else {
+    //     printf("Failed to start scan: %d\n", err);
+    // }
+    // while (cyw43_wifi_scan_active(&cyw43_state)) {
+    //     vTaskDelay(1000);
+    // }
 
-    printf("WIFI Scan finished\n");
+    // printf("WIFI Scan finished\n");
 
-    printf("Detected WIFI Networks: \n");
+    // printf("Detected WIFI Networks: \n");
 
-    for (auto wifi_net : wifi_networks) {
-        printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
-        for (int i = 0; i < 6; i++) {
-            printf("%02x", wifi_net.bssid[i]);
-            if (i < 5) {
-                printf(":");
-            }
-        }
-        printf("\n");
-    }
+    // for (auto wifi_net : wifi_networks) {
+    //     printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
+    //     for (int i = 0; i < 6; i++) {
+    //         printf("%02x", wifi_net.bssid[i]);
+    //         if (i < 5) {
+    //             printf(":");
+    //         }
+    //     }
+    //     printf("\n");
+    // }
 
     // printf("MY MAC ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\n",
     // itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);
 
     const config_server_settings *settings = get_config_server_settings();
 
-    cyw43_arch_enable_ap_mode(
-        settings->ssid,
-        settings->password,
-        settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
+    // cyw43_arch_enable_ap_mode(
+    //     settings->ssid,
+    //     settings->password,
+    //     settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
 
-    struct netif *netif = netif_default;
-    ip4_addr_t addr = { .addr = settings->ip }, mask = { .addr = settings->net_mask };
+    // struct netif *netif = netif_default;
+    // ip4_addr_t addr = { .addr = settings->ip };
+    // ip4_addr_t mask = { .addr = settings->net_mask };
+    //ip4_addr_t gw = { .addr = settings->gw };
 
-    netif_set_addr(netif, &addr, &mask, &addr);
+    //netif_set_addr(netif, &addr, &mask, &addr);
 
     // Start the dhcp server
-    static dhcp_server_t dhcp_server;
-    dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, settings->domain_name);
-    dns_server_init(
-        netif->ip_addr.addr,
-        settings->secondary_address,
-        settings->hostname,
-        settings->domain_name,
-        settings->dns_ignores_network_suffix);
-    set_secondary_ip_address(settings->secondary_address);
+    // static dhcp_server_t dhcp_server;
+    // dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, settings->domain_name);
+    // dns_server_init(
+    //     netif->ip_addr.addr,
+    //     settings->secondary_address,
+    //     settings->hostname,
+    //     settings->domain_name,
+    //     settings->dns_ignores_network_suffix);
+    // set_secondary_ip_address(settings->secondary_address);
 
     connect_to_wifi();
 
@@ -183,24 +196,24 @@ void writeStringTask(void *params) {
     // Set datasheet for more information on function select    
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
+    uart_init(uart1, 9600);
+
+    vTaskDelay(5*1000);
 
     while (1) {
-
         uart_init(uart1, 9600);
-
-        // Send out a string, with CR/LF conversions
+        vTaskDelay(1000);
+        // Send out a string, with CR/LF conversions              
         uart_puts(uart1, "Hel987.2233lo, UART!\n");
-        vTaskDelay(10);
+        vTaskDelay(1000);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
-        vTaskDelay(30);
+        vTaskDelay(3000);
         uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
-        vTaskDelay(10);
+        vTaskDelay(1000);
 
     }
 
 }
-
-
 
 
 int main(void) {
