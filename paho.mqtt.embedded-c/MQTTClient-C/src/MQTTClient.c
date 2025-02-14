@@ -333,10 +333,10 @@ void MQTTRun(void *parm) {
 
     while (1) {
         MutexLock(&c->mutex);
-        TimerCountdownMS(&timer, 500); /* Don't wait too long if no traffic is incoming */
+        TimerCountdownMS(&timer, 50); /* Don't wait too long if no traffic is incoming */
         cycle(c, &timer);
         MutexUnlock(&c->mutex);
-        //vTaskDelay(1000);
+        vTaskDelay(100);
     }
 }
 

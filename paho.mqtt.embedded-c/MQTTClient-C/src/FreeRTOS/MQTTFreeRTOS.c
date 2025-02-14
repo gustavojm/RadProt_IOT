@@ -92,6 +92,9 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         }
     } while (recvLen < len && !TimerIsExpired(&timer));
 
+    if (TimerIsExpired(&timer)) {
+        return 0;
+    }
     return recvLen;
 }
 

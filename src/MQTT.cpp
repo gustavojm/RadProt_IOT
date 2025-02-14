@@ -54,13 +54,13 @@ static void mqtt_task(void *pvParameters) {
         printf("MQTT Connected\n");
     }
 
-    // if ((rc = MQTTStartTask(&client)) != pdPASS) {
-    //     printf("Error MQTT start tasks: %d\n", rc);
-    // }
+    if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
+        printf("Error MQTT subscribe: %d\n", rc);
+    }
 
-    // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS2, messageArrived)) != 0) {
-    //     printf("Error MQTT subscribe: %d\n", rc);
-    // }
+    if ((rc = MQTTStartTask(&client)) != pdPASS) {
+        printf("Error MQTT start tasks: %d\n", rc);
+    }
      	
     MqttPublishMessage msg;
 
