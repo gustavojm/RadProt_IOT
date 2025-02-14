@@ -1,7 +1,7 @@
 #pragma once
 
 #include "serial.h"
-#include "mqtt.h"
+#include "MQTT.h"
 #include "string.h"
 #include "settings.h"
 

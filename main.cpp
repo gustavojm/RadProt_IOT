@@ -20,7 +20,7 @@
 #include "hardware/vreg.h"
 #include "serial.h"
 #include "ssi.h"
-#include "mqtt.h"
+#include "MQTT.h"
 #include "sensor.h"
 #include <pico/multicore.h>
 #include <pico/flash.h>
@@ -199,6 +199,8 @@ void writeStringTask(void *params) {
     }
 
 }
+
+
 
 int main(void) {
     stdio_init_all();

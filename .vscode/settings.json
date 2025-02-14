@@ -80,7 +80,8 @@
         "ip_addr.h": "c",
         "mqttclient.h": "c",
         "shared_mutex": "c",
-        "thread": "c"
+        "thread": "c",
+        "condition_variable": "cpp"
     },
     "cortex-debug.variableUseNaturalFormat": false,
 }

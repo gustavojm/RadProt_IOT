@@ -336,12 +336,12 @@ void MQTTRun(void *parm) {
         TimerCountdownMS(&timer, 500); /* Don't wait too long if no traffic is incoming */
         cycle(c, &timer);
         MutexUnlock(&c->mutex);
-        vTaskDelay(1000);
+        //vTaskDelay(1000);
     }
 }
 
 int MQTTStartTask(MQTTClient *client) {
-    return ThreadStart(&client->task_handle, &MQTTRun, client);
+    return ThreadStart(client->task_handle, &MQTTRun, client);
 }
 
 int waitfor(MQTTClient *c, int packet_type, Timer *timer) {
@@ -448,7 +448,6 @@ int MQTTSubscribeWithResults(
     messageHandler messageHandler,
     MQTTSubackData *data) {
     int rc = FAILURE;
-    Timer timer;
     int len = 0;
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)topicFilter;
@@ -457,6 +456,7 @@ int MQTTSubscribeWithResults(
     if (!c->isconnected)
         goto exit;
 
+    Timer timer;
     TimerInit(&timer);
     TimerCountdownMS(&timer, c->command_timeout_ms);
 

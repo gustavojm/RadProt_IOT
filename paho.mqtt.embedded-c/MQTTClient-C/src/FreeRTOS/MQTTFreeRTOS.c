@@ -69,18 +69,20 @@ void TimerInit(Timer *timer) {
 }
 
 int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
-    TickType_t xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
-    TimeOut_t xTimeOut;
+    Timer timer;
+    TimerInit(&timer);
+    TimerCountdownMS(&timer, timeout_ms);
     int recvLen = 0;
-
-    vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
+    
     do {
         int rc = 0;
 
         struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
-        lwip_setsockopt(n->my_socket, 0, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+        if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+             printf("Can't set socket RECV timeout");
+        }
         rc = lwip_recv(n->my_socket, buffer + recvLen, len - recvLen, 0);
         if (rc > 0)
             recvLen += rc;
@@ -88,24 +90,26 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
             recvLen = rc;
             break;
         }
-    } while (recvLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
+    } while (recvLen < len && !TimerIsExpired(&timer));
 
     return recvLen;
 }
 
 int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
-    TickType_t xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
-    TimeOut_t xTimeOut;
+    Timer timer;
+    TimerInit(&timer);
+    TimerCountdownMS(&timer, timeout_ms);
     int sentLen = 0;
 
-    vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
     do {
         int rc = 0;
 
         struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
-        lwip_setsockopt(n->my_socket, 0, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
+        if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+            printf("Can't set socket SEND timeout");
+        }
         rc = lwip_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
         if (rc > 0)
             sentLen += rc;
@@ -113,7 +117,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
             sentLen = rc;
             break;
         }
-    } while (sentLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
+    } while (sentLen < len && !TimerIsExpired(&timer));
 
     return sentLen;
 }
@@ -135,7 +139,7 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 }
 
 int NetworkConnect(Network *n, char *addr, int port) {
-    n->my_socket = lwip_socket(AF_INET, SOCK_STREAM, 0);
+    n->my_socket = lwip_socket(AF_INET, SOCK_STREAM, 0); 
     if (n->my_socket < 0) {
         printf("Socket creation failed!\n");
         return -1;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "lwip/apps/mqtt.h"
 #include "lwip/apps/mqtt_priv.h"
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -23,4 +22,4 @@ typedef struct {
 void mqtt_init();
 
 // Example usage in FreeRTOS
-void sendToMqttQueue(const char* topic, const char* payload, size_t payload_length, uint8_t qos, bool retain);
+int sendToMqttQueue(const char* topic, const char* payload, size_t payload_length, uint8_t qos, bool retain);

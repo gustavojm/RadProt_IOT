@@ -5,7 +5,7 @@
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
-#include "mqtt.h"
+#include "MQTT.h"
 #include "queue.h"
 #include "task.h"
 
@@ -53,13 +53,15 @@ static void mqtt_task(void *pvParameters) {
     } else {
         printf("MQTT Connected\n");
     }
-        
-    // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS2, messageArrived)) != 0)
-    // 	printf("Return code from MQTT subscribe is %d\n", rc);
 
-    // if ((rc = MQTTStartTask(&client)) != pdPASS)
-    // printf("Return code from start tasks is %d\n", rc);
+    // if ((rc = MQTTStartTask(&client)) != pdPASS) {
+    //     printf("Error MQTT start tasks: %d\n", rc);
+    // }
 
+    // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS2, messageArrived)) != 0) {
+    //     printf("Error MQTT subscribe: %d\n", rc);
+    // }
+     	
     MqttPublishMessage msg;
 
     while (true) {
@@ -75,13 +77,14 @@ static void mqtt_task(void *pvParameters) {
             if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0) {
                 printf("Error publishing: %d\n", rc);
             }
+            printf("--->>>");
         }
     }
 
     /* do not return */
 }
 
-void sendToMqttQueue(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain) {
+int sendToMqttQueue(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain) {
     MqttPublishMessage msg;
 
     // Copy topic and payload into the structure
@@ -90,11 +93,9 @@ void sendToMqttQueue(const char *topic, const char *payload, size_t payload_leng
     msg.payload_length = payload_length;
     msg.qos = qos;
     msg.retain = retain;
-
+    
     // Send the message to the FreeRTOS queue
-    if (xQueueSend(mqttQueue, &msg, portMAX_DELAY) != pdPASS) {
-        // Handle error: failed to send to the queue
-    }
+    return xQueueSend(mqttQueue, &msg, 0);
 }
 
 void mqtt_init() {
