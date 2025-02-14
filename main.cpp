@@ -108,31 +108,31 @@ static void main_task(__unused void *params) {
 
     cyw43_arch_enable_sta_mode();
 
-    // cyw43_wifi_scan_options_t scan_options = { 0 };
-    // int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
-    // if (err == 0) {
-    //     printf("\nPerforming wifi scan\n");
-    // } else {
-    //     printf("Failed to start scan: %d\n", err);
-    // }
-    // while (cyw43_wifi_scan_active(&cyw43_state)) {
-    //     vTaskDelay(1000);
-    // }
+    cyw43_wifi_scan_options_t scan_options = { 0 };
+    int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+    if (err == 0) {
+        printf("\nPerforming wifi scan\n");
+    } else {
+        printf("Failed to start scan: %d\n", err);
+    }
+    while (cyw43_wifi_scan_active(&cyw43_state)) {
+        vTaskDelay(1000);
+    }
 
-    // printf("WIFI Scan finished\n");
+    printf("WIFI Scan finished\n");
 
-    // printf("Detected WIFI Networks: \n");
+    printf("Detected WIFI Networks: \n");
 
-    // for (auto wifi_net : wifi_networks) {
-    //     printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
-    //     for (int i = 0; i < 6; i++) {
-    //         printf("%02x", wifi_net.bssid[i]);
-    //         if (i < 5) {
-    //             printf(":");
-    //         }
-    //     }
-    //     printf("\n");
-    // }
+    for (auto wifi_net : wifi_networks) {
+        printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
+        for (int i = 0; i < 6; i++) {
+            printf("%02x", wifi_net.bssid[i]);
+            if (i < 5) {
+                printf(":");
+            }
+        }
+        printf("\n");
+    }
 
     // printf("MY MAC ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\n",
     // itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);
