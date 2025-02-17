@@ -84,6 +84,7 @@ struct sensor_settings_entry {
 struct wifi_settings {
     char ssid[32];
     char password[32];
+    int auth_mode;
     bool dhcp;
     ip_addr_t ip;
     ip_addr_t nm;
@@ -94,6 +95,7 @@ struct wifi_settings {
         ArduinoJson::JsonDocument json;
         json["ssid"] = ssid;
         json["password"] = password;
+        json["auth_mode"] = auth_mode;
         json["dhcp"] = dhcp;
         json["ip"] = ip.addr;
         json["nm"] = nm.addr;

@@ -91,8 +91,22 @@
                     <td><input type="text" name="wifi.password" value=""></td>
                 </tr>
                 <tr>
+                    <td align="right">Security:</td>
+                    <td>
+                        <select name="wifi.auth_mode">
+                            <option value="0" title="No authorisation required (open)">OPEN</option>
+                            <option value="1" title="WPA authorisation">WPA TKIP PSK</option>
+                            <option value="2" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
+                            <option value="3" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED
+                                PSK</option>
+                            <option value="4" title="WPA3 AES authorisation">WPA3 AES</option>
+                            <option value="5" title="WPA3 AES authorisation">WPA2/WPA3</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
                     <td align="right">DHCP:</td>
-                    <td><input type="checkbox" name="wifi.dhcp"></td>
+                    <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)"></td>
                 </tr>
                 <tr>
                     <td align="right">IP: </td>
@@ -234,36 +248,66 @@
 
     }
 
-    const networks_string = '\
-    {"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
-    {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
-    {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
-    {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:66"},\
-    {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode":3, "bssid":"00:6b:f1:c0:94:68"},\
-    {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode":3, "bssid":"00:6b:f1:c0:94:6b"},\
-    {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode":3, "bssid":"c6:03:a8:e6:d6:33"}]}';
+    function wifi_networks_get() {
+        let networks_string = '\
+        {"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
+        {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
+        {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
+        {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode": 4, "bssid":"00:6b:f1:c0:94:66"},\
+        {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode": 5, "bssid":"00:6b:f1:c0:94:68"},\
+        {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode": 3, "bssid":"00:6b:f1:c0:94:6b"},\
+        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]}';
 
-    const networks_json = JSON.parse(networks_string);
-    const wifi_tableBody = document.querySelector("#wifiTable tbody");
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", '/wifi_nets.cgi', true);
+        xhr.setRequestHeader("Content-Type", "application/json");
 
-    networks_json.WIFI_NETS.forEach((item, index) => {
-        const row = document.createElement("tr");
+        // Use onreadystatechange instead of onload
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) { // Request is complete
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Check if responseText is not empty
+                    if (xhr.responseText) {
+                        try {
+                            // Parse the JSON response
+                            const networks_json = JSON.parse(xhr.responseText);
 
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td><a href='javascript:select_ssid("${item.ssid}")'>${item.ssid}</a></td>
-            <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
-            <td>${item.chann}</td>
-            <td>${item.bssid}</td>
-            <td>${getAuthModeText(item.auth_mode)}</td>
-        `;
+                            const wifi_tableBody = document.querySelector("#wifiTable tbody");
 
-        wifi_tableBody.appendChild(row);
-    });
+                            networks_json.WIFI_NETS.forEach((item, index) => {
+                                const row = document.createElement("tr");
 
-    function select_ssid(value) {
+                                row.innerHTML = `
+                                    <td>${index + 1}</td>            
+                                    <td><a data-auth_mode="${item.auth_mode}" href="#" onclick='select_wifi_net(event)'>${item.ssid}</a></td>
+                                    <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
+                                    <td>${item.chann}</td>
+                                    <td>${item.bssid}</td>
+                                    <td>${getAuthModeText(item.auth_mode)}</td>
+                                `;
+
+                                wifi_tableBody.appendChild(row);
+                            });
+                        } catch (error) {
+                            console.error("Failed to parse JSON:", error);
+                        }
+                    } else {
+                        console.error("Response is empty");
+                    }
+                } else {
+                    console.error("Request failed with status:", xhr.status);
+                }
+            }
+        };
+
+        xhr.send();
+    }
+
+    function select_wifi_net(event) {
+
         const settings_form = document.getElementById('settings_form');
-        settings_form.elements["wifi.ssid"].value = value;
+        settings_form.elements["wifi.ssid"].value = event.target.text;
+        settings_form.elements["wifi.auth_mode"].value = event.target.dataset.auth_mode;
     }
 
     // window.onload = function () {
@@ -351,7 +395,7 @@
         ].join(".");
     }
 
-    function toggle(checkbox, div_id) {
+    function toggle_serial_settings(checkbox, div_id) {
         const div = document.getElementById("publish_settings_" + div_id);
         //div.display = "block";        
         if (checkbox.checked) {
@@ -360,6 +404,20 @@
             div.style.display = "none";
         }
     }
+
+    function toggle_ip_settings(checkbox) {
+        const settings_form = document.getElementById('settings_form');
+        if (checkbox.checked) {
+            settings_form.elements["wifi.ip"].disabled = true;
+            settings_form.elements["wifi.nm"].disabled = true;
+            settings_form.elements["wifi.gw"].disabled = true;
+        } else {
+            settings_form.elements["wifi.ip"].disabled = false;
+            settings_form.elements["wifi.nm"].disabled = false;
+            settings_form.elements["wifi.gw"].disabled = false;
+        }
+    }
+
 
     function settings_get() {
 
@@ -381,8 +439,10 @@
 
                             const settings_form = document.getElementById('settings_form');
                             settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
+                            settings_form.elements["wifi.auth_mode"].value = settings_json["wifi"]["auth_mode"];
                             settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
-                            settings_form.elements["wifi.dhcp"].value = settings_json["wifi"]["dhcp"];
+                            settings_form.elements["wifi.dhcp"].checked = settings_json["wifi"]["dhcp"];
+                            toggle_ip_settings(settings_form.elements["wifi.dhcp"]);
 
                             settings_form.elements["wifi.ip"].value = uint32ToIp(settings_json["wifi"]["ip"]);
                             settings_form.elements["wifi.nm"].value = uint32ToIp(settings_json["wifi"]["nm"]);
@@ -400,7 +460,7 @@
                                 sensor_div.innerHTML = `
                                     ${index_sensor + 1} 
                                     Enabled:
-                                    <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle(this, ${index_sensor})">
+                                    <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">
                                     Baud:
                                     <input name="s_s[${index_sensor}].baud" size="6" value="${item.baudrate}">
                                 `;
@@ -469,7 +529,8 @@
 
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function () {        
+        wifi_networks_get();
         settings_get();
     });
 

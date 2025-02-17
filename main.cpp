@@ -38,7 +38,6 @@ void connect_to_wifi() {
         printf("Connecting to Wi-Fi... Attempt %d\n", retries + 1);
         const client_settings *client_settings = get_client_settings();
 
-
         // Attempt to connect to Wi-Fi
         if (cyw43_arch_wifi_connect_timeout_ms("C14017750 7261", "malamala", CYW43_AUTH_WPA2_AES_PSK,
                                                30000) == 0) {
@@ -47,22 +46,21 @@ void connect_to_wifi() {
             if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
                 printf("Connected to Wi-Fi successfully!\n");
 
-                // if (!client_settings->wifi.dhcp) {                  
-                //     //cyw43_arch_enable_sta_mode();
-                //     cyw43_arch_lwip_begin();
-                //     dhcp_stop(cyw43_state.netif);     // turn off DHCP
-                //     netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
-                //     dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS    
-                //     char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
-                //     cyw43_arch_lwip_end();
-                //     printf("Static IP set to: %s\n", ip_addr);
-                // }
-
-                // Wait for DHCP to assign an IP
-                while (netif_default->ip_addr.addr == 0) {
-                    printf("Waiting for DHCP...\n");
-                    sleep_ms(1000);
-                }
+                if (client_settings->wifi.dhcp) {
+                    // Wait for DHCP to assign an IP
+                    while (netif_default->ip_addr.addr == 0) {
+                        printf("Waiting for DHCP...\n");
+                        sleep_ms(1000);
+                    }
+                } else {
+                    cyw43_arch_lwip_begin();
+                    dhcp_stop(cyw43_state.netif);     // turn off DHCP
+                    netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
+                    dns_setserver(0, &client_settings->wifi.dns);   // Set primary DNS    
+                    char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
+                    cyw43_arch_lwip_end();
+                    printf("Static IP set to: %s\n", ip_addr);
+                } 
 
                 printf("Connected! IP Address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
 
@@ -92,7 +90,7 @@ static void set_secondary_ip_address(int address) {
     ip4_secondary_ip_address = address;
 }
 
-static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
+static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
     if (result) {
         auto result_ins = wifi_networks.insert(*result);
     }
@@ -109,7 +107,7 @@ static void main_task(__unused void *params) {
     cyw43_arch_enable_sta_mode();
 
     cyw43_wifi_scan_options_t scan_options = { 0 };
-    int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+    int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, wifi_scan_cb);
     if (err == 0) {
         printf("\nPerforming wifi scan\n");
     } else {
@@ -214,7 +212,6 @@ void writeStringTask(void *params) {
     }
 
 }
-
 
 int main(void) {
     stdio_init_all();

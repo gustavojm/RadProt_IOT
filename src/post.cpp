@@ -147,46 +147,44 @@ err_t httpd_process_post_data(struct http_state *hs) {
     //     httpd_post_response(hs, body, body_len, "json"); // indicate JSON IMPROVE THIS
     // }
 
-    // if (hs->post_uri && !memcmp(hs->post_uri, "/wifi_nets.cgi", 15)) {
-    //     auto body_JSON = json::JsonDocument();
-    //     auto wifi_nets_array = body_JSON["WIFI_NETS"].to<json::JsonArray>();
+    if (hs->post_uri && !memcmp(hs->post_uri, "/wifi_nets.cgi", 15)) {
+        auto body_JSON = json::JsonDocument();
+        auto wifi_nets_array = body_JSON["WIFI_NETS"].to<json::JsonArray>();
 
-    //     for (auto &wifi_net : wifi_networks) {
-    //         auto wifi_net_entry = json::JsonDocument();
-    //         wifi_net_entry["ssid"] = wifi_net.ssid;
-    //         wifi_net_entry["rssi"] = wifi_net.rssi;
-    //         wifi_net_entry["chann"] = wifi_net.channel;
-    //         wifi_net_entry["auth_mode"] = wifi_net.auth_mode;
+        for (auto &wifi_net : wifi_networks) {
+            auto wifi_net_entry = json::JsonDocument();
+            wifi_net_entry["ssid"] = wifi_net.ssid;
+            wifi_net_entry["rssi"] = wifi_net.rssi;
+            wifi_net_entry["chann"] = wifi_net.channel;
+            wifi_net_entry["auth_mode"] = wifi_net.auth_mode;
 
-    //         char bssid[18];
-    //         snprintf(bssid, sizeof bssid,
-    //             "%02x:%02x:%02x:%02x:%02x:%02x",
-    //             wifi_net.bssid[0],
-    //             wifi_net.bssid[1],
-    //             wifi_net.bssid[2],
-    //             wifi_net.bssid[3],
-    //             wifi_net.bssid[4],
-    //             wifi_net.bssid[5]);
-    //         wifi_net_entry["bssid"] = bssid;
+            char bssid[18];
+            snprintf(bssid, sizeof bssid,
+                "%02x:%02x:%02x:%02x:%02x:%02x",
+                wifi_net.bssid[0],
+                wifi_net.bssid[1],
+                wifi_net.bssid[2],
+                wifi_net.bssid[3],
+                wifi_net.bssid[4],
+                wifi_net.bssid[5]);
+            wifi_net_entry["bssid"] = bssid;
             
-
-    //         wifi_nets_array.add(wifi_net_entry);
-    //     }
+            wifi_nets_array.add(wifi_net_entry);
+        }
         
-    //     //body_JSON["config"] = get_client_settings_json();
+        char *body = nullptr;
+        int body_len = 0;
+        body_len = json::measureJson(body_JSON); /* returns 0 on fail */
+        body = new char[body_len];
+        if (!(body)) {
+            printf("Out Of Memory");
+            body_len = 0;
+        } else {
+            json::serializeJson(body_JSON, body, body_len);
+        }
+        httpd_post_response(hs, body, body_len, "json"); // indicate JSON IMPROVE THIS
 
-    //     char *body = nullptr;
-    //     int body_len = 0;
-    //     body_len = json::measureJson(body_JSON); /* returns 0 on fail */
-    //     body = new char[body_len];
-    //     if (!(body)) {
-    //         printf("Out Of Memory");
-    //         body_len = 0;
-    //     } else {
-    //         json::serializeJson(body_JSON, body, body_len);
-    //     }
-    //     httpd_post_response(hs, body, body_len, "json"); //
-    // }
+    }
 
     if (hs->post_uri && !memcmp(hs->post_uri, "/settings_get.cgi", 18)) {
         auto body_JSON = get_client_settings_json();

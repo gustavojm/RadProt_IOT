@@ -58,13 +58,14 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 const client_settings_t s_Client_Settings = {                
                 .settings = { 
                 .wifi = {.ssid = "C14017750 7261",
-                           .password = "malamala",
-                           .dhcp = true,
-                           .ip = 0xC889A8C0,        // 192.168.137.200                           
-                           .nm = 0x00FFFFFF,  // 255.255.255.0
-                           .gw = 0x0189A8C0,        // 192.168.137.1
-                           .dns = 0x0189A8C0        // 192.168.137.1
-                          },
+                         .password = "malamala",
+                         .auth_mode = 0x00400004,
+                         .dhcp = true,
+                         .ip = 0xC889A8C0,        // 192.168.137.200                           
+                         .nm = 0x00FFFFFF,  // 255.255.255.0
+                         .gw = 0x0189A8C0,        // 192.168.137.1
+                         .dns = 0x0189A8C0        // 192.168.137.1
+                        },
 
                 .mqtt = {.broker = "192.168.137.243",
                          .username = "jorgito",
@@ -72,26 +73,28 @@ const client_settings_t s_Client_Settings = {
                         },
 
                 .sensor_settings = { {.baudrate = 9600,
-                                            .publish_settings = { { .enabled = true,
-                                                                    .name = "H3",
-                                                                    .start = 3,
-                                                                    .end = 9,
-                                                                    .is_num = true,
-                                                                    .scale = 0.1,
-                                                                    .avg_cnt = 0,
-                                                                    .topic = "12345" },
-                                                                   { .enabled = true,
-                                                                    .name = "H3AVG",
-                                                                    .start = 3,
-                                                                    .end = 9,
-                                                                    .is_num = true,
-                                                                    .scale = 0.1,
-                                                                    .avg_cnt = 5,
-                                                                    .topic = "r/12345" }
-                                                                },
-                                                                
-										 } 
-										} 
+                                      .enabled = true,
+                                      .publish_settings = { { .enabled = true,
+                                                                .name = "H3",
+                                                                .start = 3,
+                                                                .end = 9,
+                                                                .is_num = true,
+                                                                .scale = 0.1,
+                                                                .avg_cnt = 0,
+                                                                .topic = "12345" 
+                                                            }, { 
+                                                                .enabled = true,
+                                                                .name = "H3AVG",
+                                                                .start = 3,
+                                                                .end = 9,
+                                                                .is_num = true,
+                                                                .scale = 0.1,
+                                                                .avg_cnt = 5,
+                                                                .topic = "r/12345" 
+                                                            }
+                                                          },                                                                
+									  } 
+									} 
 				}
 					
 };
