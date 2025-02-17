@@ -250,13 +250,13 @@
 
     function wifi_networks_get() {
         let networks_string = '\
-        {"WIFI_NETS":[{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
+        [{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
         {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
         {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
         {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode": 4, "bssid":"00:6b:f1:c0:94:66"},\
         {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode": 5, "bssid":"00:6b:f1:c0:94:68"},\
         {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode": 3, "bssid":"00:6b:f1:c0:94:6b"},\
-        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]}';
+        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
 
         let xhr = new XMLHttpRequest();
         xhr.open("POST", '/wifi_nets.cgi', true);
@@ -274,7 +274,7 @@
 
                             const wifi_tableBody = document.querySelector("#wifiTable tbody");
 
-                            networks_json.WIFI_NETS.forEach((item, index) => {
+                            networks_json.forEach((item, index) => {
                                 const row = document.createElement("tr");
 
                                 row.innerHTML = `
@@ -460,7 +460,7 @@
                                 sensor_div.innerHTML = `
                                     ${index_sensor + 1} 
                                     Enabled:
-                                    <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">
+                                    <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
                                     Baud:
                                     <input name="s_s[${index_sensor}].baud" size="6" value="${item.baudrate}">
                                 `;

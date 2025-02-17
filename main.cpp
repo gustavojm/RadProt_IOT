@@ -39,7 +39,7 @@ void connect_to_wifi() {
         const client_settings *client_settings = get_client_settings();
 
         // Attempt to connect to Wi-Fi
-        if (cyw43_arch_wifi_connect_timeout_ms("C14017750 7261", "malamala", CYW43_AUTH_WPA2_AES_PSK,
+        if (cyw43_arch_wifi_connect_timeout_ms(client_settings->wifi.ssid, client_settings->wifi.password, client_settings->wifi.auth_mode,
                                                30000) == 0) {
         // if (cyw43_arch_wifi_connect_timeout_ms("Redmi", "peperina", CYW43_AUTH_WPA2_MIXED_PSK,
         //     30000) == 0) {        

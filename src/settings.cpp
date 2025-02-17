@@ -59,7 +59,7 @@ const client_settings_t s_Client_Settings = {
                 .settings = { 
                 .wifi = {.ssid = "C14017750 7261",
                          .password = "malamala",
-                         .auth_mode = 0x00400004,
+                         .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
                          .dhcp = true,
                          .ip = 0xC889A8C0,        // 192.168.137.200                           
                          .nm = 0x00FFFFFF,  // 255.255.255.0
