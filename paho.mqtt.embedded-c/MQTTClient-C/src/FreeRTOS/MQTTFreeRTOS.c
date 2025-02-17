@@ -145,21 +145,24 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
     printf("Resolved hostname to: %s\n", ip4addr_ntoa(&server));
 }
 
-int NetworkConnect(Network *n, char *addr, int port) {
+int NetworkConnect(Network *n, const char *addr, int port) {
     n->my_socket = lwip_socket(AF_INET, SOCK_STREAM, 0); 
     if (n->my_socket < 0) {
         printf("Socket creation failed!\n");
         return -1;
     }    
 
-    dns_gethostbyname(addr, &server, dns_found_cb, NULL);
-    
-    while (!dnsFound) {
-        vTaskDelay(1000);
+    if (!ipaddr_aton(addr, &server) == 1) {
+        dns_gethostbyname(addr, &server, dns_found_cb, NULL);
+        printf("Waiting hostname resolution");
+        while (!dnsFound) {
+            printf(".");
+            vTaskDelay(1000);
+        }
+        printf("\n");
     }
-
+    
     struct sockaddr_in server_addr;
-
     // Configure server address
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_len = sizeof(struct sockaddr_in), server_addr.sin_family = AF_INET;

@@ -66,7 +66,7 @@ int FreeRTOS_write(Network*, unsigned char*, int, int);
 void FreeRTOS_disconnect(Network*);
 
 void NetworkInit(Network*);
-int NetworkConnect(Network*, char*, int);
+int NetworkConnect(Network*, const char*, int);
 /*int NetworkConnectTLS(Network*, char*, int, SlSockSecureFiles_t*, unsigned char, unsigned int, char);*/
 
 #if defined(__cplusplus)

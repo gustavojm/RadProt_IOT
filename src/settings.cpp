@@ -68,6 +68,7 @@ const client_settings_t s_Client_Settings = {
                         },
 
                 .mqtt = {.broker = "192.168.137.243",
+                         .port = 1883,
                          .username = "jorgito",
                          .password = "pass_",
                         },

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "settings.h"
+
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "MQTT.h"
@@ -12,6 +14,7 @@
 #include "FreeRTOS/MQTTFreeRTOS.h"
 
 #include "MQTTClient.h"
+
 
 void messageArrived(MessageData *data) {
     printf(
@@ -34,53 +37,56 @@ static void mqtt_task(void *pvParameters) {
     NetworkInit(&network);
     MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
-    //char address[] = "192.168.137.243";
-    char address[] = "test.mosquitto.org";
-    //char address[] = "5.196.78.28";
-
-    if ((rc = NetworkConnect(&network, address, 1883)) != 0) {
-        printf("Error in network connection: %d\n", rc);
-    }
-
-    MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
-    connectData.MQTTVersion = 3;
-    
-    connectData.clientID.cstring = const_cast<char *>("FreeRTOS_sample");
-    //connectData.username.cstring = const_cast<char *>("Pepito");;
-
-    if ((rc = MQTTConnect(&client, &connectData)) != 0) {
-        printf("Error connecting: %d\n", rc);
-    } else {
-        printf("MQTT Connected\n");
-    }
-
-    // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
-    //     printf("Error MQTT subscribe: %d\n", rc);
-    // }
-    
-    if ((rc = MQTTStartTask(&client)) != pdPASS) {
-        printf("Error MQTT start tasks: %d\n", rc);
-    }
-     	
-    MqttPublishMessage msg;
-
     while (true) {
-        if (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
-            // Publish the message using your MQTT client library
-            MQTTMessage message;
+        //const char address[] = "192.168.137.243";
+        const char address[] = "test.mosquitto.org";
+        //const char address[] = "5.196.78.28";
 
-            message.qos = (enum QoS)msg.qos;
-            message.retained = 0;
-            message.payload = msg.payload;
-            message.payloadlen = strlen(msg.payload);
+        const client_settings *client_settings = get_client_settings();    
+        if ((rc = NetworkConnect(&network, client_settings->mqtt.broker, client_settings->mqtt.port)) != 0) {
+            printf("Error in network connection: %d\n", rc);
+        }
 
-            if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0) {
-                printf("Error publishing: %d\n", rc);
+        MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
+        connectData.MQTTVersion = 3;
+        
+        connectData.clientID.cstring = const_cast<char *>("FreeRTOS_sample");
+        //connectData.username.cstring = const_cast<char *>("Pepito");;
+
+        if ((rc = MQTTConnect(&client, &connectData)) != 0) {
+            printf("Error connecting: %d\n", rc);
+        } else {
+            printf("MQTT Connected\n");
+        }
+
+        // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
+        //     printf("Error MQTT subscribe: %d\n", rc);
+        // }
+        
+        if ((rc = MQTTStartTask(&client)) != pdPASS) {
+            printf("Error MQTT start tasks: %d\n", rc);
+        }
+            
+        MqttPublishMessage msg;
+
+        while (true) {
+            if (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
+                // Publish the message using your MQTT client library
+                MQTTMessage message;
+
+                message.qos = (enum QoS)msg.qos;
+                message.retained = 0;
+                message.payload = msg.payload;
+                message.payloadlen = strlen(msg.payload);
+
+                if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0) {
+                    printf("Error publishing: %d\n", rc);
+                    break;          // breaking inner loop will reconnect;
+                }
+                printf("--->>>");
             }
-            printf("--->>>");
         }
     }
-
     /* do not return */
 }
 
