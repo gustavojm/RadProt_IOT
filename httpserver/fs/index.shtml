@@ -43,56 +43,6 @@
             font-size: 18px;
         }
 
-        /* The Modal (background) */
-
-        .modal {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 400px;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: white;
-            display: none;
-            /* Hidden by default */
-            position: fixed;
-            /* Stay in place */
-            z-index: 1;
-            /* Sit on top */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            /* Full width */
-            height: 100%;
-            /* Full height */
-            overflow: auto;
-            /* Enable scroll if needed */
-            background-color: rgb(0, 0, 0);
-            /* Fallback color */
-            background-color: rgba(0, 0, 0, 0.4);
-            /* Black w/ opacity */
-        }
-
-        /* Modal Content */
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            /* 15% from the top and centered */
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            /* Could be more or less, depending on screen size */
-            max-width: 500px;
-            /* Maximum width */
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
         /* The Close Button */
         .close {
             color: #aaa;
@@ -106,6 +56,20 @@
             color: black;
             text-decoration: none;
             cursor: pointer;
+        }
+
+        .modal-reset-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            /* Could be more or less, depending on screen size */
+            max-width: 500px;
+            /* Maximum width */
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
         @media (max-width: 600px) {
@@ -167,7 +131,7 @@
         }
 
         .modal input {
-            width: 100%;
+            /* width: 100%; */
             padding: 8px;
             margin-top: 5px;
             border: 1px solid #ddd;
@@ -206,7 +170,7 @@
                 </tr>
                 <tr>
                     <td align="right">Password:</td>
-                    <td><input type="text" name="wifi.password" value=""></td>
+                    <td><input type="password" name="wifi.password" value=""></td>
                 </tr>
                 <tr>
                     <td align="right">Security:</td>
@@ -229,22 +193,19 @@
                 <tr>
                     <td align="right">IP: </td>
                     <td>
-                        <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12" data-inputmask-alias="ip"
-                            data-inputmask-greedy="false">
+                        <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12" class="ip-addr">
                     </td>
                 </tr>
                 <tr>
                     <td align="right">Netmask:</td>
                     <td>
-                        <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12"
-                            data-inputmask-alias="ip" data-inputmask-greedy="false">
+                        <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12" class="ip-addr">
                     </td>
                 </tr>
                 <tr>
                     <td align="right">Gateway:</td>
                     <td>
-                        <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12" data-inputmask-alias="ip"
-                            data-inputmask-greedy="false">
+                        <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12" class="ip-addr">
                     </td>
                 </tr>
             </table>
@@ -276,7 +237,7 @@
                 </tr>
                 <tr>
                     <td align="right">Port:</td>
-                    <td><input type="text" name="mqtt.port" size="3" value=""></td>
+                    <td><input type="number" name="mqtt.port" style="width: 5em" value=""></td>
                 </tr>
                 <tr>
                     <td align="right">User Name:</td>
@@ -292,21 +253,35 @@
             <div id="sensors_div"></div>
         </div>
         <div style="display: flex; justify-content: center; flex-direction: column;">
+            <strong>Settings Protection:</strong>
+            <table border="0" cellspacing="0" cellpadding="3" style="width:100%">
+                <tr>
+                    <td align="right">Password:</td>
+                    <td><input type="password" name="settings.password" value=""></td>
+                </tr>
+                <tr>
+                    <td align="right">Confirm Password:</td>
+                    <td><input type="password" name="settings.password_confirm" value=""></td>
+                </tr>
+            </table>
+        </div>
+        <div style="display: flex; justify-content: center; flex-direction: column;">
             <!-- <input type="button" onclick="apply_settings()" value="Save"> -->
-            <button type="submit">OK</button>
+            <button type="submit">Save and Restart</button>
         </div>
     </form>
 
     <!-- Modal Windows -->
     <div class="modal-overlay" id="modal-overlay"></div>
-    <div class="modal" id="modal">
+    <div class="modal" id="modal_content">
+        <span id="closeModalFormBtn" class="close">&times;</span>
         <form id="modal-form">
             <!-- Inputs will be inserted dynamically -->
         </form>
     </div>
 
-    <div id="reboot_popup" class="modal">
-        <div class="modal-content">
+    <div id="reboot_popup" class="modal-overlay">
+        <div class="modal-reset-content">
             <span id="closeModalBtn" class="close">&times;</span>
             <p>The settings have been updated and the device is restarting.<br />Please disconnect from the Wi-Fi
                 network,
@@ -427,6 +402,22 @@
     document.getElementById('settings_form').addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the form from submitting
 
+        ip_inputs = document.querySelectorAll(".ip-addr");
+
+        let data_valid = true;
+
+        for (let i=0; i < ip_inputs.length; i++) {
+            if (!isValidIP(ip_inputs[i].value)) {
+                data_valid = false;
+                ip_inputs[i].focus();
+                break;
+            }
+        };
+
+        if (!data_valid) {
+            return;
+        }
+
         // Step 1: Get the flattened JSON
         const formData = new FormData(event.target);
         const flatJson = Object.fromEntries(formData);
@@ -535,7 +526,7 @@
                                     Enabled:
                                     <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
                                     Baud:
-                                    <input name="s_s[${index_sensor}].baud" size="6" value="${item.baudrate}">
+                                    <input type="number" name="s_s[${index_sensor}].baud" style="width: 6em" value="${item.baudrate}">
                                 `;
 
 
@@ -569,11 +560,11 @@
                                         <td>${index}</td>
                                         <td style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}][enabled]" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
                                         <td><input name="s_s[${index_sensor}]p_s[${index}][name]" size="6" value="${item.name}"></td>
-                                        <td class="hide-on-small"><input name="s_s[${index_sensor}]p_s[${index}][start]" size="2" value="${item.start}"></td>
-                                        <td class="hide-on-small"><input name="s_s[${index_sensor}]p_s[${index}][end]" size="2" value="${item.end}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][start]" style="width: 3em" value="${item.start}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][end]" style="width: 3em" value="${item.end}"></td>
                                         <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}][is_num]" type="checkbox" ${item.is_num ? "checked" : ""}></td>
-                                        <td class="hide-on-small"><input name="s_s[${index_sensor}]p_s[${index}][scale]" size="2" value="${item.scale}"></td>
-                                        <td class="hide-on-small"><input name="s_s[${index_sensor}]p_s[${index}][avg_cnt]" size="2" value="${item.avg_cnt}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][scale]" style="width: 3em" value="${item.scale}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][avg_cnt]" style="width: 3em" value="${item.avg_cnt}"></td>
                                         <td><input name="s_s[${index_sensor}]p_s[${index}][topic]" size="6" value="${item.topic}"></td>
                                     `;
 
@@ -590,7 +581,7 @@
     }
 
 
-    function settings_get() {      
+    function settings_get() {
         let xhr = new XMLHttpRequest();
         xhr.open("POST", '/settings_get.cgi', true);
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -619,8 +610,6 @@
         };
 
         xhr.send();
-
-
     }
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -639,25 +628,25 @@
         //settings_get();
 
         let settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
-                                 "mqtt":{"broker_address":"broker_address","port":0,"username":"","password":"broker_pass"},\
+                                 "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
                                  "sensor_settings":[{"baudrate":9600, "enabled": true, "publish_settings": \
                                  [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
                                 }';
         settings_populate(JSON.parse(settings_string));
     });
 
-    const modal = document.getElementById("reboot_popup");
+    const modal_reboot = document.getElementById("reboot_popup");
     const closeModalBtn = document.getElementById("closeModalBtn");
 
     // When the user clicks on the close button, close the modal
     closeModalBtn.addEventListener("click", () => {
-        modal.style.display = "none";
+        modal_reboot.style.display = "none";
     });
 
     // When the user clicks anywhere outside the modal, close it
     window.addEventListener("click", (event) => {
-        if (event.target === modal) {
-            modal.style.display = "none";
+        if (event.target === modal_reboot) {
+            modal_reboot.style.display = "none";
         }
     });
 
@@ -667,90 +656,86 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        const ipInput = document.getElementById("ip-address");
-        const form = document.getElementById("settings_form");
-
-        // ipInput.addEventListener("input", () => {
-        //     if (isValidIP(ipInput.value)) {
-        //         ipInput.style.border = "2px solid green";
-        //     } else {
-        //         ipInput.style.border = "2px solid red";
-        //     }
-        // });
-
-        form.addEventListener("submit", (event) => {
-            if (!isValidIP(ipInput.value)) {
-                alert("Invalid IP address!");
-                event.preventDefault();
-            }
+        ip_inputs = document.querySelectorAll(".ip-addr");
+        ip_inputs.forEach(ip_input => {
+            ip_input.addEventListener("input", () => {
+                if (isValidIP(ip_input.value)) {
+                    ip_input.style.border = "2px solid green";
+                } else {
+                    ip_input.style.border = "2px solid red";
+                }
+            });
         });
     });
 
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const tableRows = document.querySelectorAll("#publish_settings_0 tbody tr");
-        const modal = document.getElementById("modal");
-        const modalOverlay = document.getElementById("modal-overlay");
+    function handleRowClick(event) {
+        const modalContent = document.getElementById("modal_content");
         const modalForm = document.getElementById("modal-form");
 
-        function handleRowClick(event) {
-            if (window.innerWidth > 600) {
-                return; // Don't open modal on large screens
+        if (window.innerWidth > 600) {
+            return; // Don't open modal on large screens
+        }
+
+        const row = event.currentTarget;
+        let headers = Array.from(document.querySelectorAll("#publish_settings_0 thead th")).map(th => th.innerText);
+
+        modalForm.innerHTML = ''; // Clear previous content
+
+        const tds = row.querySelectorAll("td");
+        tds.forEach((td, index) => {
+            let label = document.createElement("label");
+            label.innerText = headers[index];
+            let clonedInput
+            if (td.firstChild) {
+                clonedInput = td.firstChild.cloneNode(true);
+                clonedInput.classList = []; // Remove the hide-on-small class
+                clonedInput.readOnly = false
+            } else {
+                elem = document.createElement("div");
+                elem.innerHTML = td.innerHTML;
+                clonedInput = elem;
             }
 
-            const row = event.currentTarget;
-            let headers = Array.from(document.querySelectorAll("#publish_settings_0 thead th")).map(th => th.innerText);
+            modalForm.appendChild(label);
+            modalForm.appendChild(clonedInput);
+        });
 
-            modalForm.innerHTML = ''; // Clear previous content
-
-            const tds = row.querySelectorAll("td");
-            tds.forEach((td, index) => {
-                let label = document.createElement("label");
-                label.innerText = headers[index];
-                let clonedInput
-                if (td.firstChild) {
-                    clonedInput = td.firstChild.cloneNode(true);
-                    clonedInput.classList = []; // Remove the hide-on-small class
-                    clonedInput.readOnly = false
+        // Save button
+        let saveButton = document.createElement("button");
+        saveButton.innerText = "OK";
+        saveButton.type = "button";
+        saveButton.onclick = function () {
+            const modalInputs = modalForm.querySelectorAll("input");
+            modalInputs.forEach((modalInput, index) => {
+                if (modalInput.type === 'checkbox') {
+                    tds[index + 1].firstChild.checked = modalInput.checked; // +1 because first element is not an input
                 } else {
-                    elem = document.createElement("div");
-                    elem.innerHTML = td.innerHTML;
-                    clonedInput = elem;
+                    tds[index + 1].firstChild.value = modalInput.value; // +1 because first element is not an input
                 }
-
-                modalForm.appendChild(label);
-                modalForm.appendChild(clonedInput);
             });
+            closeFormModal();
+        };
 
-            // Save button
-            let saveButton = document.createElement("button");
-            saveButton.innerText = "Save Changes";
-            saveButton.type = "button";
-            saveButton.onclick = function () {
-                const modalInputs = modalForm.querySelectorAll("input");
-                modalInputs.forEach((modalInput, index) => {
-                    if (modalInput.type === 'checkbox') {
-                        tds[index + 1].firstChild.checked = modalInput.checked; // +1 because first element is not an input
-                    } else {
-                        tds[index + 1].firstChild.value = modalInput.value; // +1 because first element is not an input
-                    }
-                });
-                closeModal();
-            };
+        modalForm.appendChild(saveButton);
 
-            modalForm.appendChild(saveButton);
+        // Show modal
+        modalContent.style.display = "block";
+        const modalOverlay = document.getElementById("modal-overlay");
+        modalOverlay.style.display = "block";
+    }
 
-            // Show modal
-            modal.style.display = "block";
-            modalOverlay.style.display = "block";
-        }
+    function closeFormModal() {
+        const modalOverlay = document.getElementById("modal-overlay");
+        const modalContent = document.getElementById("modal_content");
+        modalContent.style.display = "none";
+        modalOverlay.style.display = "none";
+    }
 
-        function closeModal() {
-            modal.style.display = "none";
-            modalOverlay.style.display = "none";
-        }
+    function updateEditingBehavior() {
+        const tables = document.querySelectorAll("[id^='publish_settings_']"); // Selects all tables with ID starting with "publish_settings_"
+        tables.forEach(table => {
+            tableRows = table.querySelectorAll("tbody tr");
 
-        function updateEditingBehavior() {
             const isSmallScreen = window.innerWidth <= 600;
 
             tableRows.forEach(row => {
@@ -763,12 +748,20 @@
                     row.querySelectorAll("input").forEach(input => input.readOnly = false);
                 }
             });
-        }
+        });
+    }
 
-        modalOverlay.addEventListener("click", closeModal);
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalOverlay = document.getElementById("modal-overlay");
+        modalOverlay.addEventListener("click", closeFormModal);
+
+        const closeModalFormBtn = document.getElementById("closeModalFormBtn");
+        closeModalFormBtn.addEventListener("click", closeFormModal);
+
         window.addEventListener("resize", updateEditingBehavior);
         updateEditingBehavior(); // Run on page load
     });
+
 </script>
 
 </script>
