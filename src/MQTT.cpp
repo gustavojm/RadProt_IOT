@@ -37,11 +37,11 @@ static void mqtt_task(void *pvParameters) {
     NetworkInit(&network);
     MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
-    while (true) {
-        //const char address[] = "192.168.137.243";
-        const char address[] = "test.mosquitto.org";
-        //const char address[] = "5.196.78.28";
+    if ((rc = MQTTStartTask(&client)) != pdPASS) {
+        printf("Error MQTT start tasks: %d\n", rc);
+    }
 
+    while (true) {
         const client_settings *client_settings = get_client_settings();    
         if ((rc = NetworkConnect(&network, client_settings->mqtt.broker, client_settings->mqtt.port)) != 0) {
             printf("Error in network connection: %d\n", rc);
@@ -62,11 +62,7 @@ static void mqtt_task(void *pvParameters) {
         // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
         //     printf("Error MQTT subscribe: %d\n", rc);
         // }
-        
-        if ((rc = MQTTStartTask(&client)) != pdPASS) {
-            printf("Error MQTT start tasks: %d\n", rc);
-        }
-            
+                   
         MqttPublishMessage msg;
 
         while (true) {
