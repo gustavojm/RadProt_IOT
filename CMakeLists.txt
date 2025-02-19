@@ -59,7 +59,6 @@ add_executable(${PROJECT_NAME}
         src/tcp_server.cpp
         src/tcp_server_command.cpp
         src/hooks.cpp
-        src/ssi.cpp
         src/post.cpp
         hal/src/serial.cpp
         src/sensor.cpp

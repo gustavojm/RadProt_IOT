@@ -84,18 +84,26 @@
         /* Basic Table Styling */
         table {
             width: 100%;
-            border-collapse: collapse;
+            /*border-collapse: collapse;*/
+            border: none;
         }
 
-        th,
+        th {
+            border: 1px solid #ddd;
+        }
+
         td {
             padding: 10px;
-            border: 1px solid #ddd;
+            /* border: 1px solid #ddd; */
             text-align: left;
         }
 
         th {
             background: #f4f4f4;
+        }
+
+        .label {
+            text-align: right;
         }
 
         .modal {
@@ -154,26 +162,30 @@
                 cursor: pointer;
             }
         }
+
+        .show-on-initial-config {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <h2>MAC Address: <!--#MACAddr--></h2>
+    <h2>MAC Address:<span id="mac_address"></span> </h2>
 
     <form action="" id="settings_form">
         <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>Connect to Router with these settings:</strong>
-            <table border="0" cellspacing="0" cellpadding="3" style="width: 100%;">
+            <table cellspacing="0" cellpadding="3" style="width: 100%;">
                 <tr>
-                    <td align="right">SSID:</td>
+                    <td class="label">SSID:</td>
                     <td><input type="text" name="wifi.ssid" value=""></td>
                 </tr>
                 <tr>
-                    <td align="right">Password:</td>
+                    <td class="label">Password:</td>
                     <td><input type="password" name="wifi.password" value=""></td>
                 </tr>
                 <tr>
-                    <td align="right">Security:</td>
+                    <td class="label">Security:</td>
                     <td>
                         <select name="wifi.auth_mode">
                             <option value="0" title="No authorisation required (open)">OPEN</option>
@@ -187,23 +199,23 @@
                     </td>
                 </tr>
                 <tr>
-                    <td align="right">DHCP:</td>
+                    <td class="label">DHCP:</td>
                     <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)"></td>
                 </tr>
                 <tr>
-                    <td align="right">IP: </td>
+                    <td class="label">IP: </td>
                     <td>
                         <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12" class="ip-addr">
                     </td>
                 </tr>
                 <tr>
-                    <td align="right">Netmask:</td>
+                    <td class="label">Netmask:</td>
                     <td>
                         <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12" class="ip-addr">
                     </td>
                 </tr>
                 <tr>
-                    <td align="right">Gateway:</td>
+                    <td class="label">Gateway:</td>
                     <td>
                         <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12" class="ip-addr">
                     </td>
@@ -211,7 +223,7 @@
             </table>
         </div>
 
-        <div style="display: flex; justify-content: center; flex-direction: column;">
+        <div style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
             <strong>Networks:</strong><br>
             <table id="wifiTable" style="width: 100%;">
                 <thead>
@@ -230,43 +242,49 @@
         </div>
         <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>MQTT Settings:</strong>
-            <table border="0" cellspacing="0" cellpadding="3" style="width:100%">
+            <table cellspacing="0" cellpadding="3" style="width:100%">
                 <tr>
-                    <td align="right">Broker:</td>
+                    <td class="label">Broker:</td>
                     <td><input type="text" name="mqtt.broker" value=""></td>
                 </tr>
                 <tr>
-                    <td align="right">Port:</td>
+                    <td class="label">Port:</td>
                     <td><input type="number" name="mqtt.port" style="width: 5em" value=""></td>
                 </tr>
                 <tr>
-                    <td align="right">User Name:</td>
+                    <td class="label">User Name:</td>
                     <td><input type="text" name="mqtt.username" value=""></td>
                 </tr>
-                <td align="right">Password:</td>
+                <td class="label">Password:</td>
                 <td><input type="password" name="mqtt.password" value=""></td>
             </table>
         </div>
+
+
+
         <div style="display: flex; justify-content: center; flex-direction: column;">
+            <strong>Sensors Settings Templates:</strong>
+            <select id="templates_select" onchange="template_populate(this.value)"></select>
             <strong>Serial Interfaces:</strong>
 
             <div id="sensors_div"></div>
         </div>
         <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>Settings Protection:</strong>
-            <table border="0" cellspacing="0" cellpadding="3" style="width:100%">
-                <tr>
-                    <td align="right">Password:</td>
-                    <td><input type="password" name="settings.password" value=""></td>
-                </tr>
-                <tr>
-                    <td align="right">Confirm Password:</td>
-                    <td><input type="password" name="settings.password_confirm" value=""></td>
-                </tr>
+            <table cellspacing="0" cellpadding="3">
+                <tbody>
+                    <tr>
+                        <td class="label">Password:</td>
+                        <td><input type="password" name="settings.password" value=""></td>
+                    </tr>
+                    <tr>
+                        <td class="label show-on-initial-config">Confirm Password:</td>
+                        <td class="label show-on-initial-config"><input type="password" name="settings.password_confirm" value=""></td>
+                    </tr>
+                </tbody>
             </table>
         </div>
         <div style="display: flex; justify-content: center; flex-direction: column;">
-            <!-- <input type="button" onclick="apply_settings()" value="Save"> -->
             <button type="submit">Save and Restart</button>
         </div>
     </form>
@@ -404,19 +422,12 @@
 
         ip_inputs = document.querySelectorAll(".ip-addr");
 
-        let data_valid = true;
-
-        for (let i=0; i < ip_inputs.length; i++) {
+        for (let i = 0; i < ip_inputs.length; i++) {
             if (!isValidIP(ip_inputs[i].value)) {
-                data_valid = false;
                 ip_inputs[i].focus();
-                break;
+                return;
             }
         };
-
-        if (!data_valid) {
-            return;
-        }
 
         // Step 1: Get the flattened JSON
         const formData = new FormData(event.target);
@@ -501,6 +512,8 @@
     }
 
     function settings_populate(settings_json) {
+        document.getElementById('mac_address').innerHTML = settings_json["mac_address"];
+
         const settings_form = document.getElementById('settings_form');
         settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
         settings_form.elements["wifi.auth_mode"].value = settings_json["wifi"]["auth_mode"];
@@ -522,7 +535,7 @@
             const sensor_div = document.createElement("div");
 
             sensor_div.innerHTML = `
-                                    ${index_sensor + 1} 
+                                    #${index_sensor + 1} 
                                     Enabled:
                                     <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
                                     Baud:
@@ -558,14 +571,14 @@
 
                 detail_row.innerHTML = `
                                         <td>${index}</td>
-                                        <td style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}][enabled]" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
-                                        <td><input name="s_s[${index_sensor}]p_s[${index}][name]" size="6" value="${item.name}"></td>
-                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][start]" style="width: 3em" value="${item.start}"></td>
-                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][end]" style="width: 3em" value="${item.end}"></td>
-                                        <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}][is_num]" type="checkbox" ${item.is_num ? "checked" : ""}></td>
-                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][scale]" style="width: 3em" value="${item.scale}"></td>
-                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}][avg_cnt]" style="width: 3em" value="${item.avg_cnt}"></td>
-                                        <td><input name="s_s[${index_sensor}]p_s[${index}][topic]" size="6" value="${item.topic}"></td>
+                                        <td style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}].name" size="6" value="${item.name}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" style="width: 3em" value="${item.start}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" style="width: 3em" value="${item.end}"></td>
+                                        <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 3em" value="${item.scale}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 3em" value="${item.avg_cnt}"></td>
+                                        <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
                                     `;
 
                 let tbody = publish_settings_table.querySelector("tbody")
@@ -577,6 +590,14 @@
 
             sensors_div.appendChild(sensor_div);
             sensors_div.appendChild(document.createElement("hr"));
+
+            console.log(settings_json["initial_config"]);
+            if(settings_json["initial_config"]) {
+                elements_to_hide = document.getElementsByClassName("show-on-initial-config");
+                for (let i = 0; i < elements_to_hide.length; i++) {
+                    elements_to_hide[i].style.display = "table-cell";
+                }
+            }
         });
     }
 
@@ -627,16 +648,113 @@
 
         //settings_get();
 
-        let settings_string = '\{"wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
+        let settings_string = '\{"mac_address" : "99:99:99:99:99:99",\
+                                 "initial_config" : true,\
+                                 "wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
                                  "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
-                                 "sensor_settings":[{"baudrate":9600, "enabled": true, "publish_settings": \
-                                 [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},{"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},{"baudrate":0,"publish_settings":[{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
+                                 "sensor_settings":\
+                                 [{"baudrate":9600, "enabled": true, "publish_settings": \
+                                 [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},\
+                                 {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
+                                 {"baudrate":0, "enabled": false,"publish_settings":\
+                                 [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
+                                 {"baudrate":0, "enabled": false, "publish_settings":\
+                                 [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
                                 }';
         settings_populate(JSON.parse(settings_string));
     });
 
+    sensors_templates = {"Empty" : '[]',
+
+                         "femto-TECH THFS-400" : '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                             [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                                 {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                             ]\
+                             }\
+                         ]',
+
+                         "GRAETZ WS05C-3": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                             [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                                 {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                             ]},\
+                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                             [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                                 {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                             ]},\
+                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                             [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                                 {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                             ]\
+                             }\
+                         ]'                        
+                        };
+
+    function reset_sensors_settings() {
+        settings_form = document.getElementById("settings_form");
+        inputs = settings_form.querySelectorAll('input[name^="s_s"]');
+        inputs.forEach((input, index_input) => {
+            if (input.type === "checkbox") {
+                input.checked = false;
+            } else {
+                input.value = "";
+            }
+        });        
+    }
+
+    function template_populate(template_name) {
+        reset_sensors_settings();        
+
+        template_json = JSON.parse(sensors_templates[template_name]);
+
+        settings_form = document.getElementById("settings_form");
+        template_json.forEach((sensor_setting, index_sensor) => {
+            checkbox = document.getElementsByName("s_s[" + index_sensor + "].enabled")[0];
+            checkbox.checked = sensor_setting.enabled
+            toggle_serial_settings(checkbox, index_sensor);
+
+            document.getElementsByName("s_s[" + index_sensor + "].baud")[0].value = sensor_setting.baudrate;
+            sensor_setting["publish_settings"].forEach((publish_setting, index_publish) => {
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].enabled")[0].checked = publish_setting.enabled;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].name")[0].value = publish_setting.name;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].start")[0].value = publish_setting.start;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].end")[0].value = publish_setting.end;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].is_num")[0].checked = publish_setting.is_num;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].value = publish_setting.scale;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].value = publish_setting.avg_cnt;
+                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].topic")[0].value = publish_setting.topic;
+            });
+        });
+    }
+
     const modal_reboot = document.getElementById("reboot_popup");
     const closeModalBtn = document.getElementById("closeModalBtn");
+
 
     // When the user clicks on the close button, close the modal
     closeModalBtn.addEventListener("click", () => {
@@ -666,6 +784,8 @@
                 }
             });
         });
+
+        //template_populate(graetz_template);
     });
 
     function handleRowClick(event) {
@@ -760,6 +880,14 @@
 
         window.addEventListener("resize", updateEditingBehavior);
         updateEditingBehavior(); // Run on page load
+
+        templates_select = document.getElementById("templates_select");
+        for (name in sensors_templates) {
+            var opt = document.createElement('option');
+            opt.value = name;
+            opt.innerHTML = name;            
+            templates_select.appendChild(opt);
+        };
     });
 
 </script>

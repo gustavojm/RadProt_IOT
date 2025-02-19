@@ -19,7 +19,6 @@
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
 #include "serial.h"
-#include "ssi.h"
 #include "MQTT.h"
 #include "sensor.h"
 #include <pico/multicore.h>
@@ -163,7 +162,6 @@ static void main_task(__unused void *params) {
     connect_to_wifi();
 
     httpd_init(settings->hostname, settings->domain_name);
-    ssi_init();
 
     static Serial my_uart0(uart0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
     my_uart0.init([]() {my_uart0.on_uart_rx(); });

@@ -4,6 +4,25 @@
 #include <ArduinoJson.h>
 #include <sys/types.h>
 #include <lwip/ip_addr.h>
+#include <cstring>
+
+#include "etl/string.h"
+#include "etl/set.h"
+#include "etl/iterator.h"
+
+#include <pico/cyw43_arch.h>
+#include <pico/stdlib.h>
+
+// Define the map with string as key and array as value
+// Define comparison operator for cyw43_ev_scan_result_t
+inline bool operator<(const cyw43_ev_scan_result_t& lhs, const cyw43_ev_scan_result_t& rhs) {
+    // compare by BSSID
+    return std::memcmp(lhs.bssid, rhs.bssid, sizeof(lhs.bssid)) < 0;
+}
+
+constexpr size_t MAX_WIFI_NETWORKS = 10;
+
+inline etl::set<cyw43_ev_scan_result_t, MAX_WIFI_NETWORKS> wifi_networks;
 
 #define MAX_SERIAL_SENSORS 3
 #define MAX_PUBLISH_SETTINGS 10

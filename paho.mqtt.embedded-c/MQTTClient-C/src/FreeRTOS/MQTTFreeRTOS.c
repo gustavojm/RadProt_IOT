@@ -80,8 +80,14 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
+
+        if (!n->my_socket) {
+            printf("Invalid socket\n");
+            return -1;
+        }
+
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-             printf("Can't set socket RECV timeout");
+            printf("Can't set socket RECV timeout\n");
         }
         rc = lwip_recv(n->my_socket, buffer + recvLen, len - recvLen, 0);
         if (rc > 0)
@@ -107,11 +113,16 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
     do {
         int rc = 0;
 
+        if (!n->my_socket) {
+            printf("Invalid socket\n");
+            return -1;
+        }
+
         struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-            printf("Can't set socket SEND timeout");
+            printf("Can't set socket SEND timeout\n");
         }
         rc = lwip_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
         if (rc > 0)
@@ -126,7 +137,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
 }
 
 void FreeRTOS_disconnect(Network *n) {
-    lwip_close(n->my_socket);
+    lwip_close(n->my_socket);        
 }
 
 void NetworkInit(Network *n) {

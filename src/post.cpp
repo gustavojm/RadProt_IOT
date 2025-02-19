@@ -42,7 +42,6 @@
 #include <hardware/watchdog.h>
 #include <pico/flash.h>
 #include <settings.h>
-#include <ssi.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -231,6 +230,15 @@ err_t httpd_process_post_data(struct http_state *hs) {
         auto body_JSON = get_client_settings_json();
 
         body_JSON["wifi"]["auth_mode"] = connect_auth_mode_to_scan_auth_mode(body_JSON["wifi"]["auth_mode"]);
+
+        uint8_t itf_sta_mac[6];
+        cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
+        char mac_addr_str[18];
+        snprintf(mac_addr_str, sizeof mac_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x\n",
+        itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);    
+        body_JSON["mac_address"] =  mac_addr_str;
+        body_JSON["initial_config"] = true;
+
 
         char *body = nullptr;
         int body_len = 0;
