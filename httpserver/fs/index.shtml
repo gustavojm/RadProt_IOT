@@ -264,7 +264,9 @@
 
         <div style="display: flex; justify-content: center; flex-direction: column;">
             <strong>Sensors Settings Templates:</strong>
-            <select id="templates_select" onchange="template_populate(this.value)"></select>
+            <select id="templates_select" onchange="template_populate(this.value)">
+                <option value="">Select a template</option>
+            </select>
             <strong>Serial Interfaces:</strong>
 
             <div id="sensors_div"></div>
@@ -279,7 +281,8 @@
                     </tr>
                     <tr>
                         <td class="label show-on-initial-config">Confirm Password:</td>
-                        <td class="label show-on-initial-config"><input type="password" name="settings.password_confirm" value=""></td>
+                        <td class="label show-on-initial-config"><input type="password" name="settings.password_confirm"
+                                value=""></td>
                     </tr>
                 </tbody>
             </table>
@@ -490,8 +493,7 @@
 
     function toggle_serial_settings(checkbox, div_id) {
         const div = document.getElementById("publish_settings_" + div_id);
-        //div.display = "block";        
-        if (checkbox.checked) {
+        if (checkbox.checked == true) {            
             div.style.display = "block";
         } else {
             div.style.display = "none";
@@ -540,26 +542,26 @@
                                     <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
                                     Baud:
                                     <input type="number" name="s_s[${index_sensor}].baud" style="width: 6em" value="${item.baudrate}">
-                                `;
+                                   `;
 
 
             const publish_settings_table = document.createElement("table");
             publish_settings_table.innerHTML = `
-                                    <thead>
-                                        <tr>
-                                            <th style="text-align: center;">#</th>
-                                            <th style="text-align: center;">Enabled</th>
-                                            <th style="text-align: center;">Name</th>
-                                            <th style="text-align: center;" class="hide-on-small">Start</th>
-                                            <th style="text-align: center;" class="hide-on-small">End</th>
-                                            <th style="text-align: center;" class="hide-on-small">Numeric</th>
-                                            <th style="text-align: center;" class="hide-on-small">Scale</th>
-                                            <th style="text-align: center;" class="hide-on-small">Average</th>
-                                            <th style="text-align: center;">Topic</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                `;
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="text-align: center;">#</th>
+                                                            <th style="text-align: center;">Enabled</th>
+                                                            <th style="text-align: center;">Name</th>
+                                                            <th style="text-align: center;" class="hide-on-small">Start</th>
+                                                            <th style="text-align: center;" class="hide-on-small">End</th>
+                                                            <th style="text-align: center;" class="hide-on-small">Numeric</th>
+                                                            <th style="text-align: center;" class="hide-on-small">Scale</th>
+                                                            <th style="text-align: center;" class="hide-on-small">Average</th>
+                                                            <th style="text-align: center;">Topic</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                `;
 
             publish_settings_table.id = `publish_settings_${index_sensor}`;
             //publish_settings_table.style.width = "100%";
@@ -579,7 +581,7 @@
                                         <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 3em" value="${item.scale}"></td>
                                         <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 3em" value="${item.avg_cnt}"></td>
                                         <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
-                                    `;
+                                       `;
 
                 let tbody = publish_settings_table.querySelector("tbody")
                 tbody.appendChild(detail_row);
@@ -590,12 +592,11 @@
 
             sensors_div.appendChild(sensor_div);
             sensors_div.appendChild(document.createElement("hr"));
-
-            console.log(settings_json["initial_config"]);
-            if(settings_json["initial_config"]) {
-                elements_to_hide = document.getElementsByClassName("show-on-initial-config");
-                for (let i = 0; i < elements_to_hide.length; i++) {
-                    elements_to_hide[i].style.display = "table-cell";
+            
+            if (settings_json["initial_config"]) {
+                elements_to_show = document.getElementsByClassName("show-on-initial-config");
+                for (let i = 0; i < elements_to_show.length; i++) {
+                    elements_to_show[i].style.display = "table-cell";
                 }
             }
         });
@@ -690,30 +691,31 @@
         settings_populate(JSON.parse(settings_string));
     });
 
-    sensors_templates = {"Empty" : '[]',
+    sensors_templates = {
+        "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
 
-                         "femto-TECH THFS-400" : '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+        "femto-TECH THFS-400": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                              [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
                                  {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
                              ]\
                              }\
                          ]',
 
-                         "GRAETZ WS05C-3": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+        "GRAETZ WS05C-3": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                              [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
                                  {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
                              ]},\
-                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                             {"baudrate":9600,"enabled":true,"publish_settings":\
                              [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
                                  {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
                              ]},\
-                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                             {"baudrate":9600,"enabled":true,"publish_settings":\
                              [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
                                  {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
                              ]\
                              }\
-                         ]'                        
-                        };
+                            ]'
+    };
 
     function reset_sensors_settings() {
         settings_form = document.getElementById("settings_form");
@@ -724,32 +726,36 @@
             } else {
                 input.value = "";
             }
-        });        
+        });
     }
 
     function template_populate(template_name) {
-        reset_sensors_settings();        
+        reset_sensors_settings();
 
-        template_json = JSON.parse(sensors_templates[template_name]);
+        if (template_name != "") {
+            template_json = JSON.parse(sensors_templates[template_name]);
 
-        settings_form = document.getElementById("settings_form");
-        template_json.forEach((sensor_setting, index_sensor) => {
-            checkbox = document.getElementsByName("s_s[" + index_sensor + "].enabled")[0];
-            checkbox.checked = sensor_setting.enabled
-            toggle_serial_settings(checkbox, index_sensor);
+            settings_form = document.getElementById("settings_form");
+            template_json.forEach((sensor_setting, index_sensor) => {
+                checkbox = document.getElementsByName("s_s[" + index_sensor + "].enabled")[0];
+                checkbox.checked = sensor_setting.enabled
+                toggle_serial_settings(checkbox, index_sensor);
 
-            document.getElementsByName("s_s[" + index_sensor + "].baud")[0].value = sensor_setting.baudrate;
-            sensor_setting["publish_settings"].forEach((publish_setting, index_publish) => {
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].enabled")[0].checked = publish_setting.enabled;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].name")[0].value = publish_setting.name;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].start")[0].value = publish_setting.start;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].end")[0].value = publish_setting.end;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].is_num")[0].checked = publish_setting.is_num;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].value = publish_setting.scale;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].value = publish_setting.avg_cnt;
-                 document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].topic")[0].value = publish_setting.topic;
+                document.getElementsByName("s_s[" + index_sensor + "].baud")[0].value = sensor_setting.baudrate;
+                if (sensor_setting["publish_settings"]) {
+                    sensor_setting["publish_settings"].forEach((publish_setting, index_publish) => {
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].enabled")[0].checked = publish_setting.enabled;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].name")[0].value = publish_setting.name;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].start")[0].value = publish_setting.start;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].end")[0].value = publish_setting.end;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].is_num")[0].checked = publish_setting.is_num;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].value = publish_setting.scale;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].value = publish_setting.avg_cnt;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].topic")[0].value = publish_setting.topic;
+                    });
+                }
             });
-        });
+        }
     }
 
     const modal_reboot = document.getElementById("reboot_popup");
@@ -785,7 +791,6 @@
             });
         });
 
-        //template_populate(graetz_template);
     });
 
     function handleRowClick(event) {
@@ -885,7 +890,7 @@
         for (name in sensors_templates) {
             var opt = document.createElement('option');
             opt.value = name;
-            opt.innerHTML = name;            
+            opt.innerHTML = name;
             templates_select.appendChild(opt);
         };
     });
