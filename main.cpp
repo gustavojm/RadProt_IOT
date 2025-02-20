@@ -25,6 +25,7 @@
 #include <pico/flash.h>
 
 #include "debug_printf.h"
+#include "websocket.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 #define RECONNECT_DELAY_MS 5000 // 5 seconds
@@ -94,6 +95,11 @@ static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
         auto result_ins = wifi_networks.insert(*result);
     }
     return 0;
+}
+
+
+void ws_message_handler (uint8_t *data, uint32_t len, ws_type_t type) {
+    printf("%.*s", len, data);
 }
 
 static void main_task(__unused void *params) {
@@ -171,6 +177,10 @@ static void main_task(__unused void *params) {
     static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);    
     s0.init();
     mqtt_init();
+    
+    ws_server.msg_handler = ws_message_handler;
+    
+    ws_server_init(&ws_server);
 
     // Monitor connection and reconnect if necessary
     while (true) {

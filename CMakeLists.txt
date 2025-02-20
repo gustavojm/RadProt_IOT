@@ -7,7 +7,7 @@ set(PICO_BOARD pico_w)
 set(PICO_SDK_PATH ./pico-sdk)
 set(FREERTOS_KERNEL_PATH ../../FreeRTOS-Kernel)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/pico-sdk/pico_sdk_init.cmake)
+include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FreeRTOS_Kernel_import.cmake)
 
 set(SKIP_PICO_MALLOC 1)
@@ -62,8 +62,9 @@ add_executable(${PROJECT_NAME}
         src/post.cpp
         hal/src/serial.cpp
         src/sensor.cpp
-        pico-sdk/lib/lwip/src/apps/mqtt/mqtt.c
+        ${PICO_SDK_PATH}/lib/lwip/src/apps/mqtt/mqtt.c
         src/MQTT.cpp
+        src/websocket.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.c
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.c
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
@@ -81,9 +82,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         ETL_NO_INITIALIZER_LIST
         ARDUINOJSON_ENABLE_STD_STREAM=0
         PICO_CXX_DISABLE_ALLOCATION_OVERRIDES=1
-        #LWIP_DEBUG=1
+        #LWIP_DEBUG=1        
         )
-        
+
+
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}
@@ -93,11 +95,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${etl_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/paho.mqtt.embedded-c/MQTTClient-C/src
         ${CMAKE_SOURCE_DIR}/paho.mqtt.embedded-c/MQTTPacket/src    
+        ${PICO_SDK_PATH}/lib/mbedtls
         )
 
 target_link_libraries(${PROJECT_NAME}        
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
+        pico_mbedtls
         hardware_uart
         hardware_flash
         FreeRTOS-Kernel-Heap4

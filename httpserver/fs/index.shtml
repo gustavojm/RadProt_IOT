@@ -156,6 +156,17 @@
             width: 100%;
         }
 
+        .ws-div {
+		font-family: monospace;
+		font-size: 1.1em;
+		white-space: pre-wrap;
+		/* Preserves whitespace and wraps lines */
+		padding: 10px;
+		border: 1px solid #ccc;
+		height: 50%;
+		overflow-y: scroll;
+	}
+
         /* Small screen: Make rows clickable */
         @media (max-width: 600px) {
             td {
@@ -167,130 +178,156 @@
             display: none;
         }
     </style>
+
+    <script src="slider.js"></script>
+    <link rel="stylesheet" href="slider.css">
 </head>
 
 <body>
-    <h2>MAC Address:<span id="mac_address"></span> </h2>
 
-    <form action="" id="settings_form">
-        <div style="display: flex; justify-content: center; flex-direction: column;">
-            <strong>Connect to Router with these settings:</strong>
-            <table cellspacing="0" cellpadding="3" style="width: 100%;">
-                <tr>
-                    <td class="label">SSID:</td>
-                    <td><input type="text" name="wifi.ssid" value=""></td>
-                </tr>
-                <tr>
-                    <td class="label">Password:</td>
-                    <td><input type="password" name="wifi.password" value=""></td>
-                </tr>
-                <tr>
-                    <td class="label">Security:</td>
-                    <td>
-                        <select name="wifi.auth_mode">
-                            <option value="0" title="No authorisation required (open)">OPEN</option>
-                            <option value="1" title="WPA authorisation">WPA TKIP PSK</option>
-                            <option value="2" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
-                            <option value="3" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED
-                                PSK</option>
-                            <option value="4" title="WPA3 AES authorisation">WPA3 AES</option>
-                            <option value="5" title="WPA3 AES authorisation">WPA2/WPA3</option>
+    <div class="slider-container">
+        <div class="slider">
+            <div class="slide">
+                <h2>MAC Address:<span id="mac_address"></span> </h2>
+
+                <form action="" id="settings_form">
+                    <div style="display: flex; justify-content: center; flex-direction: column;">
+                        <strong>Connect to Router with these settings:</strong>
+                        <table cellspacing="0" cellpadding="3" style="width: 100%;">
+                            <tr>
+                                <td class="label">SSID:</td>
+                                <td><input type="text" name="wifi.ssid" value=""></td>
+                            </tr>
+                            <tr>
+                                <td class="label">Password:</td>
+                                <td><input type="password" name="wifi.password" value=""></td>
+                            </tr>
+                            <tr>
+                                <td class="label">Security:</td>
+                                <td>
+                                    <select name="wifi.auth_mode">
+                                        <option value="0" title="No authorisation required (open)">OPEN</option>
+                                        <option value="1" title="WPA authorisation">WPA TKIP PSK</option>
+                                        <option value="2" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
+                                        <option value="3" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED
+                                            PSK</option>
+                                        <option value="4" title="WPA3 AES authorisation">WPA3 AES</option>
+                                        <option value="5" title="WPA3 AES authorisation">WPA2/WPA3</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label">DHCP:</td>
+                                <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)"></td>
+                            </tr>
+                            <tr>
+                                <td class="label">IP: </td>
+                                <td>
+                                    <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12"
+                                        class="ip-addr">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label">Netmask:</td>
+                                <td>
+                                    <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12"
+                                        class="ip-addr">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label">Gateway:</td>
+                                <td>
+                                    <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12"
+                                        class="ip-addr">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
+                        <strong>Networks:</strong><br>
+                        <table id="wifiTable" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: center;" class="hide-on-small">#</th>
+                                    <th style="text-align: center;">SSID</th>
+                                    <th style="text-align: center;">RSSI</th>
+                                    <th style="text-align: center;" class="hide-on-small">Channel</th>
+                                    <th style="text-align: center;" class="hide-on-small">BSSID</th>
+                                    <th style="text-align: center;">🔒</th>
+                                    <th style="text-align: center;" class="hide-on-small">Security</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div style="display: flex; justify-content: center; flex-direction: column;">
+                        <strong>MQTT Settings:</strong>
+                        <table cellspacing="0" cellpadding="3" style="width:100%">
+                            <tr>
+                                <td class="label">Broker:</td>
+                                <td><input type="text" name="mqtt.broker" value=""></td>
+                            </tr>
+                            <tr>
+                                <td class="label">Port:</td>
+                                <td><input type="number" name="mqtt.port" style="width: 5em" value=""></td>
+                            </tr>
+                            <tr>
+                                <td class="label">User Name:</td>
+                                <td><input type="text" name="mqtt.username" value=""></td>
+                            </tr>
+                            <td class="label">Password:</td>
+                            <td><input type="password" name="mqtt.password" value=""></td>
+                        </table>
+                    </div>
+
+
+
+                    <div style="display: flex; justify-content: center; flex-direction: column;">
+                        <strong>Sensors Settings Templates:</strong>
+                        <select id="templates_select" onchange="template_populate(this.value)">
+                            <option value="">Select a template</option>
                         </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label">DHCP:</td>
-                    <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)"></td>
-                </tr>
-                <tr>
-                    <td class="label">IP: </td>
-                    <td>
-                        <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12" class="ip-addr">
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label">Netmask:</td>
-                    <td>
-                        <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12" class="ip-addr">
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label">Gateway:</td>
-                    <td>
-                        <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12" class="ip-addr">
-                    </td>
-                </tr>
-            </table>
-        </div>
+                        <strong>Serial Interfaces:</strong>
 
-        <div style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
-            <strong>Networks:</strong><br>
-            <table id="wifiTable" style="width: 100%;">
-                <thead>
-                    <tr>
-                        <th style="text-align: center;" class="hide-on-small">#</th>
-                        <th style="text-align: center;">SSID</th>
-                        <th style="text-align: center;">RSSI</th>
-                        <th style="text-align: center;" class="hide-on-small">Channel</th>
-                        <th style="text-align: center;" class="hide-on-small">BSSID</th>
-                        <th style="text-align: center;">🔒</th>
-                        <th style="text-align: center;" class="hide-on-small">Security</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <div style="display: flex; justify-content: center; flex-direction: column;">
-            <strong>MQTT Settings:</strong>
-            <table cellspacing="0" cellpadding="3" style="width:100%">
-                <tr>
-                    <td class="label">Broker:</td>
-                    <td><input type="text" name="mqtt.broker" value=""></td>
-                </tr>
-                <tr>
-                    <td class="label">Port:</td>
-                    <td><input type="number" name="mqtt.port" style="width: 5em" value=""></td>
-                </tr>
-                <tr>
-                    <td class="label">User Name:</td>
-                    <td><input type="text" name="mqtt.username" value=""></td>
-                </tr>
-                <td class="label">Password:</td>
-                <td><input type="password" name="mqtt.password" value=""></td>
-            </table>
-        </div>
+                        <div id="sensors_div"></div>
+                    </div>
+                    <div style="display: flex; justify-content: center; flex-direction: column;">
+                        <strong>Settings Protection:</strong>
+                        <table cellspacing="0" cellpadding="3">
+                            <tbody>
+                                <tr>
+                                    <td class="label">Password:</td>
+                                    <td><input type="password" name="settings.password" value=""></td>
+                                </tr>
+                                <tr>
+                                    <td class="label show-on-initial-config">Confirm Password:</td>
+                                    <td class="label show-on-initial-config"><input type="password"
+                                            name="settings.password_confirm" value=""></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display: flex; justify-content: center; flex-direction: column;">
+                        <button type="submit">Save and Restart</button>
+                    </div>
+                </form>
+            </div>
+            <div class="slide">
+                <h1>Slide 2</h1>
+
+                <div id="ws_div" class="ws-div"></div>
+           
 
 
+            </div>
+        </div>
+        <div class="pagination">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
 
-        <div style="display: flex; justify-content: center; flex-direction: column;">
-            <strong>Sensors Settings Templates:</strong>
-            <select id="templates_select" onchange="template_populate(this.value)">
-                <option value="">Select a template</option>
-            </select>
-            <strong>Serial Interfaces:</strong>
-
-            <div id="sensors_div"></div>
-        </div>
-        <div style="display: flex; justify-content: center; flex-direction: column;">
-            <strong>Settings Protection:</strong>
-            <table cellspacing="0" cellpadding="3">
-                <tbody>
-                    <tr>
-                        <td class="label">Password:</td>
-                        <td><input type="password" name="settings.password" value=""></td>
-                    </tr>
-                    <tr>
-                        <td class="label show-on-initial-config">Confirm Password:</td>
-                        <td class="label show-on-initial-config"><input type="password" name="settings.password_confirm"
-                                value=""></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div style="display: flex; justify-content: center; flex-direction: column;">
-            <button type="submit">Save and Restart</button>
-        </div>
-    </form>
 
     <!-- Modal Windows -->
     <div class="modal-overlay" id="modal-overlay"></div>
@@ -493,7 +530,7 @@
 
     function toggle_serial_settings(checkbox, div_id) {
         const div = document.getElementById("publish_settings_" + div_id);
-        if (checkbox.checked == true) {            
+        if (checkbox.checked == true) {
             div.style.display = "block";
         } else {
             div.style.display = "none";
@@ -592,7 +629,7 @@
 
             sensors_div.appendChild(sensor_div);
             sensors_div.appendChild(document.createElement("hr"));
-            
+
             if (settings_json["initial_config"]) {
                 elements_to_show = document.getElementsByClassName("show-on-initial-config");
                 for (let i = 0; i < elements_to_show.length; i++) {
@@ -893,9 +930,94 @@
             opt.innerHTML = name;
             templates_select.appendChild(opt);
         };
+
+        // Initialize the slider
+        new TouchSlider();
     });
 
-</script>
+    class WebSocketClient {
+        constructor(path = "", maxReconnectAttempts = 10) {
+            this.path = path;
+            this.maxReconnectAttempts = maxReconnectAttempts;
+            this.reconnectAttempts = 0;
+            this.socket = null;
+            this.connect();
+        }
+
+        connect() {
+            const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+            //const wsUrl = `${protocol}${window.location.host}:8765${this.path}`;
+            const wsUrl = `${protocol}192.168.137.11:8765${this.path}`;
+
+            console.log("Connecting to", wsUrl);
+            this.socket = new WebSocket(wsUrl);
+
+            this.socket.addEventListener("open", () => {
+                console.log("Connected to WebSocket server");
+                this.reconnectAttempts = 0; // Reset on successful connection
+                this.send({ type: "hello", message: "Hello, server!" });
+            });
+
+            this.socket.addEventListener("message", (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("Message received:", data);
+                    this.handleMessage(data);
+                } catch (error) {
+                    console.error("Error parsing message:", event.data);
+                    this.handleMessage(event.data);
+                }
+            });
+
+            this.socket.addEventListener("error", (error) => {
+                console.error("WebSocket error:", error);
+            });
+
+            this.socket.addEventListener("close", (event) => {
+                console.log(`WebSocket closed (code: ${event.code}, reason: ${event.reason})`);
+                this.reconnect();
+            });
+        }
+
+        send(data) {
+            if (this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(JSON.stringify(data));
+            } else {
+                console.warn("WebSocket is not open. Message not sent.");
+            }
+        }
+
+        reconnect() {
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000); // Exponential backoff (max 30s)
+                console.log(`Reconnecting in ${delay / 1000} seconds...`);
+                setTimeout(() => this.connect(), delay);
+                this.reconnectAttempts++;
+            } else {
+                console.error("Max reconnect attempts reached. Giving up.");
+            }
+        }
+
+        handleMessage(data) {
+            ws_addEntry(data);
+            // if (data.type === "update") {
+            //     console.log("Update received:", data.payload);
+            // } else {
+            //     console.log("Unhandled message:", data);
+            // }
+        }
+    }
+
+    function ws_addEntry(entry) {
+        div = document.createElement("div");
+		div.innerHTML = entry;
+		ws_div = document.getElementById('ws_div');
+        ws_div.append(div);
+		ws_div.scrollTop = ws_div.lastChild.scrollHeight;
+	}
+
+    // Start WebSocket client
+    const wsClient = new WebSocketClient();
 
 </script>
 

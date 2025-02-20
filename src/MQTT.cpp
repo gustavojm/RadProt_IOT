@@ -14,6 +14,7 @@
 #include "FreeRTOS/MQTTFreeRTOS.h"
 
 #include "MQTTClient.h"
+#include "websocket.h"
 
 
 void messageArrived(MessageData *data) {
@@ -96,6 +97,12 @@ int sendToMqttQueue(const char *topic, const char *payload, size_t payload_lengt
     msg.qos = qos;
     msg.retain = retain;
     
+    ws_msg_t ws_msg;
+    ws_msg.message = (uint8_t *)payload;
+    ws_msg.msg_size = payload_length;
+    ws_msg.msg_type = WS_TYPE_STRING;
+    ws_send_message(&ws_server, &ws_msg);
+
     // Send the message to the FreeRTOS queue
     return xQueueSend(mqttQueue, &msg, 0);
 }
@@ -107,7 +114,7 @@ void mqtt_init() {
         xTaskCreate(
             mqtt_task,                  // Task to be run
             "MQTTTask",                 // Name of the Task for debugging and managing its Task Handle
-            1024,                       // Stack depth to be allocated for use with task's stack (see docs)
+            configMINIMAL_STACK_SIZE,   // Stack depth to be allocated for use with task's stack (see docs)
             NULL,                       // Arguments needed by the Task (NULL because we don't have any)
             (configMAX_PRIORITIES - 2), // Task Priority - Higher the number the more priority [max is (configMAX_PRIORITIES
                                         // - 1) provided in FreeRTOSConfig.h]
