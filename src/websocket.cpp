@@ -1,4 +1,5 @@
 #include "websocket.h"
+#include "FreeRTOSTimers.h"
 #include "mbedtls/base64.h"
 #include "mbedtls/sha1.h"
 #include <string.h>
@@ -28,6 +29,8 @@ static uint8_t *ws_set_data_to_frame(uint8_t *data, uint8_t size, uint8_t *out_f
  * @param arg ws_server_ptr structure (refer websockets.h)
  */
 void ws_server_task(void *arg) {
+    websocketQueue = xQueueCreate(10, sizeof(ws_msg_t)); // 10 is the queue size
+
     ws_server_t *ws = (ws_server_t *)arg;
     ws_client_t *new_client;
 
@@ -43,10 +46,13 @@ void ws_server_task(void *arg) {
     ws_init_client_structs(ws);
 
     while (true) {
-        for (int iClient = 0; iClient < WS_MAX_CLIENTS; ++iClient) {
+        for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
             new_client = &ws->ws_clients[iClient];
             if (!new_client->established) {
-                if (netconn_accept(ws_con, &new_client->accepted_sock) == ERR_OK) {
+                // netconn_set_recvtimeout(ws_con, 1000);
+                int errorrrrr = netconn_accept(ws_con, &new_client->accepted_sock);
+                printf ("******** errrorr:  %i *******************\n", errorrrrr);
+                if (errorrrrr == ERR_OK) {
                     // Resume the task that will handle the processing
                     new_client->established = true;
                     vTaskResume(new_client->task_handle);
@@ -56,11 +62,28 @@ void ws_server_task(void *arg) {
     }
 }
 
+void ws_server_task_send(void *arg) {
+    ws_msg_t msg;
+    while (true) {
+        while (xQueueReceive(websocketQueue, &msg, 1000) == pdPASS) {
+            ws_send_message(&ws_server, &msg);
+
+            ws_msg_t msg_ping;
+            msg_ping.message = nullptr;
+            msg_ping.msg_size = 0;
+            msg_ping.msg_type = WS_TYPE_PING;
+            ws_send_message(&ws_server, &msg_ping);
+
+            printf("---WS--->>>");
+        }
+    }
+}
+
 static void ws_init_client_structs(ws_server_t *ws) {
     ws_client_t *client;
 
     ws->connected_clients_cnt = 0;
-    for (int i = 0; i < WS_MAX_CLIENTS; ++i) {
+    for (int i = 0; i < WS_MAX_CLIENTS; i++) {
         client = &ws->ws_clients[i];
         memset((void *)(client), 0x00, sizeof(ws_client_t));
         client->server_ptr = (void *)ws;
@@ -83,7 +106,10 @@ static void ws_client_task(void *arg) {
 
         server_ptr->connected_clients_cnt++;
 
-        while (netconn_recv(client->accepted_sock, &inbuf) == ERR_OK) {
+        //netconn_set_recvtimeout(client->accepted_sock, 10000);
+        err_t rc;
+        while ((rc = netconn_recv(client->accepted_sock, &inbuf)) == ERR_OK) {
+            printf("============%i===============", rc);
             memset(client->recv_buf, 0x00, WS_CLIENT_RECV_BUFFER_SIZE);
             netbuf_data(inbuf, (void **)&inbuf_ptr, &size_inbuf);
             memcpy(client->recv_buf, (void *)inbuf_ptr, size_inbuf);
@@ -111,7 +137,7 @@ static void ws_client_task(void *arg) {
                     break;
                 }
 
-                uint32_t len = get_message_len(inbuf_ptr);                
+                uint32_t len = get_message_len(inbuf_ptr);
                 uint8_t *payload = get_payload_ptr(inbuf_ptr);
                 if (is_masked_msg(inbuf_ptr)) {
                     uint8_t *mask = get_mask(inbuf_ptr);
@@ -120,11 +146,16 @@ static void ws_client_task(void *arg) {
                 server_ptr->msg_handler(payload, len, (ws_type_t)inbuf_ptr[0]);
             }
             netbuf_delete(inbuf);
+        } 
+
+        if (rc==ERR_TIMEOUT) {
+            printf("DEAD CLIENT... DO SOMETHING?");
         }
+
         client->established = false;
         server_ptr->connected_clients_cnt--;
         netconn_close(client->accepted_sock);
-        netconn_delete(client->accepted_sock);        
+        netconn_delete(client->accepted_sock);
     }
 }
 
@@ -186,29 +217,28 @@ static uint8_t *get_mask(uint8_t *msg) {
 }
 
 static void unmask_message_payload(uint8_t *pld, uint32_t len, uint8_t *mask) {
-    for (int i = 0; i < len; ++i)
+    for (int i = 0; i < len; i++)
         pld[i] = mask[i % 4] ^ pld[i];
 }
 
 void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
-    if (ws->connected_clients_cnt > 0) {
-        uint8_t *outbuf_ptr = ws->send_buf;
-        ws_client_t *client;
+    uint8_t *outbuf_ptr = ws->send_buf;
+    ws_client_t *client;
 
-        if (msg->msg_size + 7 > WS_SEND_BUFFER_SIZE)
-            return;
+    if (msg->msg_size + 7 > WS_SEND_BUFFER_SIZE)
+        return;
 
-        memset(outbuf_ptr, 0x00, WS_SEND_BUFFER_SIZE);
-        outbuf_ptr[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
-        outbuf_ptr = ws_set_size_to_frame(msg->msg_size, &outbuf_ptr[1]);
-        outbuf_ptr = ws_set_data_to_frame(msg->message, msg->msg_size, outbuf_ptr);
-        size_t packet_size = outbuf_ptr - ws->send_buf;
+    memset(outbuf_ptr, 0x00, WS_SEND_BUFFER_SIZE);
+    outbuf_ptr[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
+    outbuf_ptr = ws_set_size_to_frame(msg->msg_size, &outbuf_ptr[1]);
+    outbuf_ptr = ws_set_data_to_frame(msg->message, msg->msg_size, outbuf_ptr);
+    size_t packet_size = outbuf_ptr - ws->send_buf;
 
-        for (int iClient = 0; iClient < ws->connected_clients_cnt; ++iClient) {
-            client = &(ws->ws_clients[iClient]);
-            if (client->established) {
-                netconn_write(client->accepted_sock, ws->send_buf, packet_size, NETCONN_NOCOPY);
-            }
+    for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
+        client = &(ws->ws_clients[iClient]);
+        if (client->established) {
+            // netconn_set_sendtimeout(client->accepted_sock, 500);
+            netconn_write(client->accepted_sock, ws->send_buf, packet_size, NETCONN_NOCOPY);
         }
     }
 }
@@ -234,4 +264,11 @@ static uint8_t *ws_set_data_to_frame(uint8_t *data, uint8_t size, uint8_t *out_f
 
 void ws_server_init(ws_server_t *ws) {
     xTaskCreate(ws_server_task, "ws_server", configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 2), NULL);
+    xTaskCreate(ws_server_task_send, "ws_server_send", configMINIMAL_STACK_SIZE, NULL, (configMAX_PRIORITIES - 2), NULL);
+}
+
+int sendToWebsocketQueue(ws_msg_t msg) {
+
+    // Send the message to the FreeRTOS queue
+    return xQueueSend(websocketQueue, &msg, 0);
 }

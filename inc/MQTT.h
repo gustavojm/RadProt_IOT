@@ -21,5 +21,4 @@ typedef struct {
 
 void mqtt_init();
 
-// Example usage in FreeRTOS
 int sendToMqttQueue(const char* topic, const char* payload, size_t payload_length, uint8_t qos, bool retain);

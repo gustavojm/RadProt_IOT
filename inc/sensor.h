@@ -1,9 +1,11 @@
 #pragma once
 
 #include "serial.h"
-#include "MQTT.h"
 #include "string.h"
 #include "settings.h"
+
+#include "MQTT.h"
+#include "websocket.h"
 
 class Sensor {
     public:
@@ -12,6 +14,8 @@ class Sensor {
     void init();
 
     void read_task();
+
+    void sendToEndpoints(const char* topic, const char* payload, size_t payload_length, uint8_t qos, bool retain);
     
     Serial &uart;    
     const sensor_settings_entry *settings;

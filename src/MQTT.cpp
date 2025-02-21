@@ -97,19 +97,6 @@ int sendToMqttQueue(const char *topic, const char *payload, size_t payload_lengt
     msg.qos = qos;
     msg.retain = retain;
     
-    ws_msg_t ws_msg;
-    ws_msg.message = (uint8_t *)payload;
-    ws_msg.msg_size = payload_length;
-    ws_msg.msg_type = WS_TYPE_STRING;
-    ws_send_message(&ws_server, &ws_msg);
-
-    ws_msg_t ws_msg_ping;
-    ws_msg.message = nullptr;
-    ws_msg.msg_size = 0;
-    ws_msg.msg_type = WS_TYPE_PING;
-    ws_send_message(&ws_server, &ws_msg);
-
-
     // Send the message to the FreeRTOS queue
     return xQueueSend(mqttQueue, &msg, 0);
 }
