@@ -45,32 +45,8 @@ int MutexUnlock(Mutex *mutex) {
     return xSemaphoreGive(mutex->sem);
 }
 
-void TimerCountdownMS(Timer *timer, unsigned int timeout_ms) {
-    timer->xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
-    vTaskSetTimeOutState(&timer->xTimeOut);                /* Record the time at which this function was entered. */
-}
-
-void TimerCountdown(Timer *timer, unsigned int timeout) {
-    TimerCountdownMS(timer, timeout * 1000);
-}
-
-int TimerLeftMS(Timer *timer) {
-    xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait); /* updates xTicksToWait to the number left */
-    return (timer->xTicksToWait < 0) ? 0 : (timer->xTicksToWait * portTICK_PERIOD_MS);
-}
-
-char TimerIsExpired(Timer *timer) {
-    return xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait) == pdTRUE;
-}
-
-void TimerInit(Timer *timer) {
-    timer->xTicksToWait = 0;
-    memset(&timer->xTimeOut, '\0', sizeof(timer->xTimeOut));
-}
-
 int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
     Timer timer;
-    TimerInit(&timer);
     TimerCountdownMS(&timer, timeout_ms);
     int recvLen = 0;
     
@@ -106,7 +82,6 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
 
 int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
     Timer timer;
-    TimerInit(&timer);
     TimerCountdownMS(&timer, timeout_ms);
     int sentLen = 0;
 

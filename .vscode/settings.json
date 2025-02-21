@@ -81,7 +81,9 @@
         "mqttclient.h": "c",
         "shared_mutex": "c",
         "thread": "c",
-        "condition_variable": "cpp"
+        "condition_variable": "cpp",
+        "async_context_freertos.h": "c",
+        "cyw43_driver.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": false,
 }

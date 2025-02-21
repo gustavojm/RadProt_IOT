@@ -163,7 +163,7 @@
 		/* Preserves whitespace and wraps lines */
 		padding: 10px;
 		border: 1px solid #ccc;
-		height: 50%;
+		height: 5%;
 		overflow-y: scroll;
 	}
 
@@ -313,7 +313,7 @@
                     </div>
                 </form>
             </div>
-            <div class="slide">
+            <div class="slide" id="slide_2">
                 <h1>Slide 2</h1>
 
                 <div id="ws_div" class="ws-div"></div>
@@ -947,7 +947,7 @@
         connect() {
             const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
             //const wsUrl = `${protocol}${window.location.host}:8765${this.path}`;
-            const wsUrl = `${protocol}192.168.137.11:8765${this.path}`;
+            const wsUrl = `${protocol}192.168.137.108:8765${this.path}`;
 
             console.log("Connecting to", wsUrl);
             this.socket = new WebSocket(wsUrl);
@@ -1013,7 +1013,7 @@
 		div.innerHTML = entry;
 		ws_div = document.getElementById('ws_div');
         ws_div.append(div);
-		ws_div.scrollTop = ws_div.lastChild.scrollHeight;
+		ws_div.scrollTop = ws_div.scrollHeight;
 	}
 
     // Start WebSocket client

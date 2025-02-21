@@ -62,16 +62,16 @@ add_executable(${PROJECT_NAME}
         src/post.cpp
         hal/src/serial.cpp
         src/sensor.cpp
-        ${PICO_SDK_PATH}/lib/lwip/src/apps/mqtt/mqtt.c
+        src/FreeRTOSTimers.cpp
         src/MQTT.cpp
         src/websocket.cpp
-        paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.c
-        paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.c
-        paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
-        paho.mqtt.embedded-c/MQTTPacket/src/MQTTSerializePublish.c
-        paho.mqtt.embedded-c/MQTTPacket/src/MQTTSubscribeClient.c
-        paho.mqtt.embedded-c/MQTTClient-C/src/FreeRTOS/MQTTFreeRTOS.c        
-        paho.mqtt.embedded-c/MQTTClient-C/src/MQTTClient.c        
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.cpp
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.cpp
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.cpp
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTSerializePublish.cpp
+        paho.mqtt.embedded-c/MQTTPacket/src/MQTTSubscribeClient.cpp
+        paho.mqtt.embedded-c/MQTTClient-C/src/FreeRTOS/MQTTFreeRTOS.cpp
+        paho.mqtt.embedded-c/MQTTClient-C/src/MQTTClient.cpp
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

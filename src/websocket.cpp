@@ -13,7 +13,8 @@ static char *create_ws_key_accept(char *inbuf);
 static char *get_ws_key(char *buf, size_t *len);
 static uint32_t get_message_len(uint8_t *msg);
 static uint8_t *get_payload_ptr(uint8_t *msg);
-static uint8_t is_masked_msg(uint8_t *msg);
+static bool is_masked_msg(uint8_t *msg);
+static bool is_fin_msg(uint8_t *msg);
 static uint8_t *get_mask(uint8_t *msg);
 static void unmask_message_payload(uint8_t *payload, uint32_t len, uint8_t *mask);
 static uint8_t *ws_set_size_to_frame(uint32_t size, uint8_t *out_frame);
@@ -41,17 +42,15 @@ void ws_server_task(void *arg) {
 
     ws_init_client_structs(ws);
 
-    for (;;) {
+    while (true) {
         for (int iClient = 0; iClient < WS_MAX_CLIENTS; ++iClient) {
             new_client = &ws->ws_clients[iClient];
-            if (new_client->established == 0) {
+            if (!new_client->established) {
                 if (netconn_accept(ws_con, &new_client->accepted_sock) == ERR_OK) {
                     // Resume the task that will handle the processing
-                    new_client->established = 1;
+                    new_client->established = true;
                     vTaskResume(new_client->task_handle);
                 }
-            } else {
-                vTaskDelay(100);
             }
         }
     }
@@ -77,7 +76,7 @@ static void ws_client_task(void *arg) {
     uint16_t size_inbuf = 0;
     uint8_t *inbuf_ptr = NULL;
 
-    for (;;) {
+    while (true) {
         // The created task is in standby mode
         // until an incoming connection unblocks it
         vTaskSuspend(NULL);
@@ -98,10 +97,23 @@ static void ws_client_task(void *arg) {
                     client->accepted_sock, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), NETCONN_NOCOPY);
             }
             // If is a message
-            else if ((inbuf_ptr[0] & 0x80) == 0x80) {
-                uint32_t len = get_message_len(inbuf_ptr);
+            else if (is_fin_msg(inbuf_ptr)) {
+                if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PING) {
+                    printf("PING");
+                }
+
+                if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PONG) {
+                    printf("PONG");
+                }
+
+                if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_CLOSE) {
+                    printf("CLOSE");
+                    break;
+                }
+
+                uint32_t len = get_message_len(inbuf_ptr);                
                 uint8_t *payload = get_payload_ptr(inbuf_ptr);
-                if (is_masked_msg(inbuf_ptr) == 1) {
+                if (is_masked_msg(inbuf_ptr)) {
                     uint8_t *mask = get_mask(inbuf_ptr);
                     unmask_message_payload(payload, len, mask);
                 }
@@ -109,22 +121,18 @@ static void ws_client_task(void *arg) {
             }
             netbuf_delete(inbuf);
         }
-        client->established = 0;
+        client->established = false;
         server_ptr->connected_clients_cnt--;
         netconn_close(client->accepted_sock);
-        netconn_delete(client->accepted_sock);
-        vTaskDelay(1000);
+        netconn_delete(client->accepted_sock);        
     }
 }
 
 static char *create_ws_key_accept(char *inbuf) {
     static char concat_key[64] = { 0 };
-    static char hash[22] = { 0 }, hash_base64[64] = { 0 };
+    static char hash[22] = { 0 };
+    static char hash_base64[64] = { 0 };
     size_t len = 0, baselen = 0;
-
-    memset(concat_key, 0x00, 64);
-    memset(hash, 0x00, 22);
-    memset(hash_base64, 0x00, 64);
 
     char *key = get_ws_key(inbuf, &len);
     strncpy(concat_key, key, len);
@@ -162,10 +170,12 @@ static uint8_t *get_payload_ptr(uint8_t *msg) {
     return p;
 }
 
-static uint8_t is_masked_msg(uint8_t *msg) {
-    if ((msg[1] & 0x80) == 0x80)
-        return 1;
-    return 0;
+static bool is_masked_msg(uint8_t *msg) {
+    return (msg[1] & WS_MASKED_FLAG);
+}
+
+static bool is_fin_msg(uint8_t *msg) {
+    return (msg[0] & WS_FIN_FLAG);
 }
 
 static uint8_t *get_mask(uint8_t *msg) {
@@ -189,14 +199,14 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
             return;
 
         memset(outbuf_ptr, 0x00, WS_SEND_BUFFER_SIZE);
-        outbuf_ptr[0] = (uint8_t)msg->msg_type;
+        outbuf_ptr[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
         outbuf_ptr = ws_set_size_to_frame(msg->msg_size, &outbuf_ptr[1]);
         outbuf_ptr = ws_set_data_to_frame(msg->message, msg->msg_size, outbuf_ptr);
         size_t packet_size = outbuf_ptr - ws->send_buf;
 
         for (int iClient = 0; iClient < ws->connected_clients_cnt; ++iClient) {
             client = &(ws->ws_clients[iClient]);
-            if (client->established == 1) {
+            if (client->established) {
                 netconn_write(client->accepted_sock, ws->send_buf, packet_size, NETCONN_NOCOPY);
             }
         }

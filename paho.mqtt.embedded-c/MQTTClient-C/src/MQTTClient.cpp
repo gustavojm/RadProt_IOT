@@ -69,8 +69,6 @@ void MQTTClientInit(
     c->ping_outstanding = 0;
     c->defaultMessageHandler = NULL;
     c->next_packetid = 1;
-    TimerInit(&c->last_sent);
-    TimerInit(&c->last_received);
     MutexInit(&c->mutex);
 }
 
@@ -197,8 +195,7 @@ int keepalive(MQTTClient *c) {
         if (c->ping_outstanding)
             rc = FAILURE; /* PINGRESP not received in keepalive interval */
         else {
-            Timer timer;
-            TimerInit(&timer);
+            Timer timer;            
             TimerCountdownMS(&timer, 1000);
             int len = MQTTSerialize_pingreq(c->buf, c->buf_size);
             if (len > 0 && (rc = sendPacket(c, len, &timer)) == SUCCESS) // send the ping packet
@@ -307,8 +304,7 @@ exit:
 int MQTTYield(MQTTClient *c, int timeout_ms) {
     int rc = SUCCESS;
     Timer timer;
-
-    TimerInit(&timer);
+    
     TimerCountdownMS(&timer, timeout_ms);
 
     do {
@@ -327,9 +323,7 @@ int MQTTIsConnected(MQTTClient *client) {
 
 void MQTTRun(void *parm) {
     Timer timer;
-    MQTTClient *c = (MQTTClient *)parm;
-
-    TimerInit(&timer);
+    MQTTClient *c = (MQTTClient *)parm;    
 
     while (1) {
         MutexLock(&c->mutex);
@@ -365,8 +359,7 @@ int MQTTConnectWithResults(MQTTClient *c, MQTTPacket_connectData *options, MQTTC
     MutexLock(&c->mutex);
     if (c->isconnected) /* don't send connect packet again if we are already connected */
         goto exit;
-
-    TimerInit(&connect_timer);
+    
     TimerCountdownMS(&connect_timer, c->command_timeout_ms);
 
     if (options == 0)
@@ -451,13 +444,12 @@ int MQTTSubscribeWithResults(
     int len = 0;
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)topicFilter;
+    Timer timer;    
 
     MutexLock(&c->mutex);
     if (!c->isconnected)
         goto exit;
 
-    Timer timer;
-    TimerInit(&timer);
     TimerCountdownMS(&timer, c->command_timeout_ms);
 
     len = MQTTSerialize_subscribe(c->buf, c->buf_size, 0, getNextPacketId(c), 1, &topic, (int *)&qos);
@@ -500,8 +492,7 @@ int MQTTUnsubscribe(MQTTClient *c, const char *topicFilter) {
     MutexLock(&c->mutex);
     if (!c->isconnected)
         goto exit;
-
-    TimerInit(&timer);
+    
     TimerCountdownMS(&timer, c->command_timeout_ms);
 
     if ((len = MQTTSerialize_unsubscribe(c->buf, c->buf_size, 0, getNextPacketId(c), 1, &topic)) <= 0)
@@ -536,7 +527,6 @@ int MQTTPublish(MQTTClient *c, const char *topicName, MQTTMessage *message) {
     if (!c->isconnected)
         goto exit;
 
-    TimerInit(&timer);
     TimerCountdownMS(&timer, c->command_timeout_ms);
 
     if (message->qos == QOS1 || message->qos == QOS2)
@@ -587,8 +577,7 @@ int MQTTDisconnect(MQTTClient *c) {
     Timer timer; // we might wait for incomplete incoming publishes to complete
     int len = 0;
 
-    MutexLock(&c->mutex);
-    TimerInit(&timer);
+    MutexLock(&c->mutex);    
     TimerCountdownMS(&timer, c->command_timeout_ms);
 
     len = MQTTSerialize_disconnect(c->buf, c->buf_size);

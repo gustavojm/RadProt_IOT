@@ -19,10 +19,6 @@
 #if !defined(MQTT_CLIENT_H)
 #define MQTT_CLIENT_H
 
-#if defined(__cplusplus)
- extern "C" {
-#endif
-
 #if defined(WIN32_DLL) || defined(WIN64_DLL)
   #define DLLImport __declspec(dllimport)
   #define DLLExport __declspec(dllexport)
@@ -217,9 +213,5 @@ DLLExport int MQTTIsConnected(MQTTClient* client);
 *  @return success code
 */
 DLLExport int MQTTStartTask(MQTTClient* client);
-
-#if defined(__cplusplus)
-     }
-#endif
 
 #endif

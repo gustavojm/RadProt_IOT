@@ -23,16 +23,11 @@
 
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
+#include "FreeRTOSTimers.h"
 
 #if defined(__cplusplus)
  extern "C" {
 #endif
-
-typedef struct Timer 
-{
-	TickType_t xTicksToWait;
-	TimeOut_t xTimeOut;
-} Timer;
 
 typedef struct Network Network;
 
@@ -43,12 +38,6 @@ struct Network
 	int (*mqttwrite) (Network*, unsigned char*, int, int);
 	void (*disconnect) (Network*);
 };
-
-void TimerInit(Timer*);
-char TimerIsExpired(Timer*);
-void TimerCountdownMS(Timer*, unsigned int);
-void TimerCountdown(Timer*, unsigned int);
-int TimerLeftMS(Timer*);
 
 typedef struct Mutex
 {

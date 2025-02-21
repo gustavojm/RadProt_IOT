@@ -98,8 +98,8 @@ static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
 }
 
 
-void ws_message_handler (uint8_t *data, uint32_t len, ws_type_t type) {
-    printf("%.*s", len, data);
+void ws_message_handler (uint8_t *data, uint32_t len, ws_type_t type) {    
+    printf("Websocket received: %.*s", len, data);
 }
 
 static void main_task(__unused void *params) {
