@@ -29,8 +29,8 @@ static uint8_t *ws_set_data_to_frame(uint8_t *data, uint8_t size, uint8_t *out_f
  * @param arg ws_server_ptr structure (refer websockets.h)
  */
 void ws_server_task(void *arg) {
-    ws_msg_t msg;
-    websocketQueue = xQueueCreate(10, sizeof(ws_msg_t)); // 10 is the queue size
+    WebsocketPublishMessage msg;
+    websocketQueue = xQueueCreate(10, sizeof(WebsocketPublishMessage)); // 10 is the queue size
 
     ws_server_t *ws = (ws_server_t *)arg;
     ws_client_t *client;
@@ -59,8 +59,13 @@ void ws_server_task(void *arg) {
             }
         }
 
-        while (xQueueReceive(websocketQueue, &msg, 0) == pdPASS ) {
-            ws_send_message(ws, &msg);
+        while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS ) {
+            
+            ws_msg_t ws_msg;
+            ws_msg.message = (uint8_t *) &msg.payload;
+            ws_msg.msg_size = msg.payload_length;
+            ws_msg.msg_type = WS_TYPE_STRING;
+            ws_send_message(ws, &ws_msg);
             printf("---WS--->>>");
         }        
     }
@@ -244,10 +249,17 @@ static uint8_t *ws_set_data_to_frame(uint8_t *data, uint8_t size, uint8_t *out_f
 }
 
 void ws_server_init(ws_server_t *ws) {    
-    xTaskCreate(ws_server_task, "ws_server", configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 1), NULL);
+    TaskHandle_t ws_serverTask_handle;
+    xTaskCreate(ws_server_task, "ws_server", configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 1), &ws_serverTask_handle);
+    vTaskCoreAffinitySet(ws_serverTask_handle, 1);
 }
 
-int sendToWebsocketQueue(ws_msg_t msg) {
+int sendToWebsocketQueue(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain) {
+    WebsocketPublishMessage msg;
+
+    // Copy topic and payload into the structure
+    size_t len = snprintf(msg.payload, WS_MAX_PAYLOAD_LENGTH, "%s -> %s", payload, topic);
+    msg.payload_length = len;
 
     // Send the message to the FreeRTOS queue
     return xQueueSend(websocketQueue, &msg, 0);

@@ -91,8 +91,8 @@ int sendToMqttQueue(const char *topic, const char *payload, size_t payload_lengt
     MqttPublishMessage msg;
 
     // Copy topic and payload into the structure
-    snprintf(msg.topic, MAX_TOPIC_LENGTH, "%s", topic);
-    snprintf(msg.payload, MAX_PAYLOAD_LENGTH, "%s", payload);
+    snprintf(msg.topic, MQTT_MAX_TOPIC_LENGTH, "%s", topic);
+    snprintf(msg.payload, MQTT_MAX_PAYLOAD_LENGTH, "%s", payload);
     msg.payload_length = payload_length;
     msg.qos = qos;
     msg.retain = retain;

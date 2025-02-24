@@ -209,14 +209,14 @@ void writeStringTask(void *params) {
 
     while (1) {
         uart_init(uart1, 9600);
-        vTaskDelay(1000);
+        vTaskDelay(500);
         // Send out a string, with CR/LF conversions              
         uart_puts(uart1, "Hel987.2233lo, UART!\n");
-        vTaskDelay(1000);
+        vTaskDelay(500);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
-        vTaskDelay(3000);
+        vTaskDelay(500);
         uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
-        vTaskDelay(1000);
+        vTaskDelay(500);
 
     }
 

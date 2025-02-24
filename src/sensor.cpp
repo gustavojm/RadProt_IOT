@@ -16,13 +16,7 @@ void Sensor::sendToEndpoints(const char *topic, const char *payload, size_t payl
         printf("mqttQueue is full\n");
     }
 
-    ws_msg_t msg = {
-        .message = (uint8_t *)payload,
-        .msg_size = payload_length,
-        .msg_type = WS_TYPE_STRING,
-    };
-
-    if (sendToWebsocketQueue(msg) != pdPASS) {
+    if (sendToWebsocketQueue(topic, payload, payload_length, qos, retain) != pdPASS) {
         printf("WebsocketQueue is full\n");
     }
 };

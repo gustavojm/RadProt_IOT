@@ -16,6 +16,8 @@
 #define WS_MASKED_FLAG             1 << 7
 #define WS_TYPE_MASK               0xF
 
+#define WS_MAX_PAYLOAD_LENGTH 256
+
 #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11\0"
 
 inline QueueHandle_t websocketQueue;
@@ -49,6 +51,12 @@ typedef struct {
     void (*msg_handler)(uint8_t *data, uint32_t len, ws_type_t type);
 } ws_server_t;
 
+// Structure to hold MQTT publish information
+typedef struct {
+    char payload[WS_MAX_PAYLOAD_LENGTH];   // Message payload to publish
+    size_t payload_length;                 // Length of the payload (in bytes)
+} WebsocketPublishMessage;
+
 void ws_server_init(ws_server_t *ws);
 void ws_send_message(ws_server_t *ws, ws_msg_t *msg);
-int sendToWebsocketQueue(ws_msg_t msg);
+int sendToWebsocketQueue(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain);

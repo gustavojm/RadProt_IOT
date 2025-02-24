@@ -7,13 +7,13 @@
 inline QueueHandle_t mqttQueue;
 
 // Define maximum lengths for the MQTT topic and payload
-#define MAX_TOPIC_LENGTH 128
-#define MAX_PAYLOAD_LENGTH 256
+#define MQTT_MAX_TOPIC_LENGTH 128
+#define MQTT_MAX_PAYLOAD_LENGTH 256
 
 // Structure to hold MQTT publish information
 typedef struct {
-    char topic[MAX_TOPIC_LENGTH];      // MQTT topic to publish to
-    char payload[MAX_PAYLOAD_LENGTH];  // Message payload to publish
+    char topic[MQTT_MAX_TOPIC_LENGTH];      // MQTT topic to publish to
+    char payload[MQTT_MAX_PAYLOAD_LENGTH];  // Message payload to publish
     size_t payload_length;             // Length of the payload (in bytes)
     uint8_t qos;                       // Quality of Service (0, 1, or 2)
     bool retain;                       // Retain flag for the MQTT message

@@ -959,14 +959,7 @@
             });
 
             this.socket.addEventListener("message", (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    console.log("Message received:", data);
-                    this.handleMessage(data);
-                } catch (error) {
-                    console.error("Error parsing message:", event.data);
-                    this.handleMessage(event.data);
-                }
+                this.handleMessage(event.data);
             });
 
             this.socket.addEventListener("error", (error) => {
