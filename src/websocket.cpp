@@ -112,15 +112,15 @@ static void ws_client_task(void *arg) {
             // If is a message
             else if (is_fin_msg(inbuf_ptr)) {
                 if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PING) {
-                    printf("PING");
+                    printf("Websocket PING\n");
                 }
 
                 if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PONG) {
-                    printf("PONG");
+                    printf("Websocket PONG\n");
                 }
 
                 if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_CLOSE) {
-                    printf("CLOSE");
+                    printf("Websocket CLOSE\n");
                     break;
                 }
 
