@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 #include "lwip/api.h"
 
@@ -34,9 +35,9 @@ typedef struct {
     ws_type_t msg_type;
 } ws_msg_t;
 
-typedef struct {
+typedef struct ws_client {
     TaskHandle_t task_handle;
-    struct netconn *accepted_sock;
+    volatile struct netconn *accepted_sock;
     void *server_ptr;
     uint8_t recv_buf[WS_CLIENT_RECV_BUFFER_SIZE] = {};
     volatile bool established = false;
@@ -46,10 +47,7 @@ typedef struct {
     ws_client_t ws_clients[WS_MAX_CLIENTS];
     uint8_t send_buf[WS_SEND_BUFFER_SIZE] = {};
     void (*msg_handler)(uint8_t *data, uint32_t len, ws_type_t type);
-    volatile uint32_t connected_clients_cnt = 0;
 } ws_server_t;
-
-inline ws_server_t ws_server;
 
 void ws_server_init(ws_server_t *ws);
 void ws_send_message(ws_server_t *ws, ws_msg_t *msg);

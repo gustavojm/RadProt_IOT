@@ -29,10 +29,11 @@ static uint8_t *ws_set_data_to_frame(uint8_t *data, uint8_t size, uint8_t *out_f
  * @param arg ws_server_ptr structure (refer websockets.h)
  */
 void ws_server_task(void *arg) {
+    ws_msg_t msg;
     websocketQueue = xQueueCreate(10, sizeof(ws_msg_t)); // 10 is the queue size
 
     ws_server_t *ws = (ws_server_t *)arg;
-    ws_client_t *new_client;
+    ws_client_t *client;
 
     struct netconn *ws_con = netconn_new(NETCONN_TCP);
     if (ws_con == NULL)
@@ -47,47 +48,31 @@ void ws_server_task(void *arg) {
 
     while (true) {
         for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
-            new_client = &ws->ws_clients[iClient];
-            if (!new_client->established) {
-                // netconn_set_recvtimeout(ws_con, 1000);
-                int errorrrrr = netconn_accept(ws_con, &new_client->accepted_sock);
-                printf ("******** errrorr:  %i *******************\n", errorrrrr);
-                if (errorrrrr == ERR_OK) {
+            client = &ws->ws_clients[iClient];
+            if (!client->established) {
+                netconn_set_recvtimeout(ws_con, 100);
+                if (netconn_accept(ws_con, (netconn **)&client->accepted_sock) == ERR_OK) {
                     // Resume the task that will handle the processing
-                    new_client->established = true;
-                    vTaskResume(new_client->task_handle);
+                    client->established = true;
+                    vTaskResume(client->task_handle);
                 }
             }
         }
-    }
-}
 
-void ws_server_task_send(void *arg) {
-    ws_msg_t msg;
-    while (true) {
-        while (xQueueReceive(websocketQueue, &msg, 1000) == pdPASS) {
-            ws_send_message(&ws_server, &msg);
-
-            ws_msg_t msg_ping;
-            msg_ping.message = nullptr;
-            msg_ping.msg_size = 0;
-            msg_ping.msg_type = WS_TYPE_PING;
-            ws_send_message(&ws_server, &msg_ping);
-
+        while (xQueueReceive(websocketQueue, &msg, 0) == pdPASS ) {
+            ws_send_message(ws, &msg);
             printf("---WS--->>>");
-        }
+        }        
     }
 }
 
 static void ws_init_client_structs(ws_server_t *ws) {
     ws_client_t *client;
 
-    ws->connected_clients_cnt = 0;
     for (int i = 0; i < WS_MAX_CLIENTS; i++) {
-        client = &ws->ws_clients[i];
-        memset((void *)(client), 0x00, sizeof(ws_client_t));
+        client = &ws->ws_clients[i];        
         client->server_ptr = (void *)ws;
-        xTaskCreate(ws_client_task, "ws_client", 256, (void *)client, (configMAX_PRIORITIES - 2), &client->task_handle);
+        xTaskCreate(ws_client_task, "ws_client", 256, (void *)client, (tskIDLE_PRIORITY + 2), &client->task_handle);
     }
 }
 
@@ -104,12 +89,9 @@ static void ws_client_task(void *arg) {
         // until an incoming connection unblocks it
         vTaskSuspend(NULL);
 
-        server_ptr->connected_clients_cnt++;
-
         //netconn_set_recvtimeout(client->accepted_sock, 10000);
         err_t rc;
-        while ((rc = netconn_recv(client->accepted_sock, &inbuf)) == ERR_OK) {
-            printf("============%i===============", rc);
+        while ((rc = netconn_recv((netconn *)client->accepted_sock, &inbuf)) == ERR_OK) {
             memset(client->recv_buf, 0x00, WS_CLIENT_RECV_BUFFER_SIZE);
             netbuf_data(inbuf, (void **)&inbuf_ptr, &size_inbuf);
             memcpy(client->recv_buf, (void *)inbuf_ptr, size_inbuf);
@@ -120,7 +102,7 @@ static void ws_client_task(void *arg) {
                 char *ws_key_accept = create_ws_key_accept((char *)inbuf_ptr);
                 sprintf((char *)server_ptr->send_buf, "%s%s%s", head_ws, ws_key_accept, "\r\n\r\n");
                 netconn_write(
-                    client->accepted_sock, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), NETCONN_NOCOPY);
+                    (netconn *)client->accepted_sock, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), NETCONN_NOCOPY);
             }
             // If is a message
             else if (is_fin_msg(inbuf_ptr)) {
@@ -153,9 +135,8 @@ static void ws_client_task(void *arg) {
         }
 
         client->established = false;
-        server_ptr->connected_clients_cnt--;
-        netconn_close(client->accepted_sock);
-        netconn_delete(client->accepted_sock);
+        netconn_close((netconn *)client->accepted_sock);
+        netconn_delete((netconn *)client->accepted_sock);
     }
 }
 
@@ -238,7 +219,7 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
         client = &(ws->ws_clients[iClient]);
         if (client->established) {
             // netconn_set_sendtimeout(client->accepted_sock, 500);
-            netconn_write(client->accepted_sock, ws->send_buf, packet_size, NETCONN_NOCOPY);
+            netconn_write((netconn *) client->accepted_sock, ws->send_buf, packet_size, NETCONN_NOCOPY);
         }
     }
 }
@@ -262,9 +243,8 @@ static uint8_t *ws_set_data_to_frame(uint8_t *data, uint8_t size, uint8_t *out_f
     return (out_frame + size);
 }
 
-void ws_server_init(ws_server_t *ws) {
-    xTaskCreate(ws_server_task, "ws_server", configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 2), NULL);
-    xTaskCreate(ws_server_task_send, "ws_server_send", configMINIMAL_STACK_SIZE, NULL, (configMAX_PRIORITIES - 2), NULL);
+void ws_server_init(ws_server_t *ws) {    
+    xTaskCreate(ws_server_task, "ws_server", configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 1), NULL);
 }
 
 int sendToWebsocketQueue(ws_msg_t msg) {

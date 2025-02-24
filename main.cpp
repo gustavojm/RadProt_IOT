@@ -178,6 +178,7 @@ static void main_task(__unused void *params) {
     s0.init();
     mqtt_init();
     
+    ws_server_t ws_server;
     ws_server.msg_handler = ws_message_handler;
     
     ws_server_init(&ws_server);
@@ -226,10 +227,10 @@ int main(void) {
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
 
-    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &task);    
+    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 2, NULL, MAIN_TASK_PRIORITY, &task);    
 
     TaskHandle_t writeStringTask_handle;
-    xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, 1, &writeStringTask_handle);
+    xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, MAIN_TASK_PRIORITY, &writeStringTask_handle);
     vTaskCoreAffinitySet(writeStringTask_handle, 1);
 
     vTaskStartScheduler();

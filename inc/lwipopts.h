@@ -28,7 +28,7 @@
 #define LWIP_NETIF_STATUS_CALLBACK 1
 #define LWIP_NETIF_LINK_CALLBACK 1
 #define LWIP_NETIF_HOSTNAME 1
-#define LWIP_NETCONN 0
+#define LWIP_NETCONN 1
 #define MEM_STATS 0
 #define SYS_STATS 0
 #define MEMP_STATS 0
@@ -128,10 +128,8 @@
 #define LWIP_SO_RCVTIMEO 1
 #define LWIP_SO_SNDTIMEO 1
 
-/* Maximum number of retransmissions of data segments. */
-#define TCP_MAXRTX              12
-
-/* Maximum number of retransmissions of SYN segments. */
-#define TCP_SYNMAXRTX           4
+#define MEMP_NUM_NETCONN 16
+#define MEMP_NUM_PBUF 16
+#define MEMP_NUM_NETBUF 16
 
 #endif /* __LWIPOPTS_H__ */

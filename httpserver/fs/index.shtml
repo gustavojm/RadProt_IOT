@@ -947,7 +947,7 @@
         connect() {
             const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
             //const wsUrl = `${protocol}${window.location.host}:8765${this.path}`;
-            const wsUrl = `${protocol}192.168.137.108:8765${this.path}`;
+            const wsUrl = `${protocol}192.168.137.124:8765${this.path}`;
 
             console.log("Connecting to", wsUrl);
             this.socket = new WebSocket(wsUrl);
