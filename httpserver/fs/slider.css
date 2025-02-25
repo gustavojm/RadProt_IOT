@@ -40,11 +40,11 @@ body {
 }
 
 .slide:nth-child(1) {
-    background-color: #ff7675;
+    background-color: #c1c1c1;
 }
 
 .slide:nth-child(2) {
-    background-color: #74b9ff;
+    background-color: #d1d1d1;
 }
 
 .pagination {

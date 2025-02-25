@@ -8,10 +8,9 @@
 #include "lwip/api.h"
 
 #define WS_PORT                    8765
-#define WS_MAX_CLIENTS             5
+#define WS_MAX_CLIENTS             2
 #define WS_SEND_BUFFER_SIZE        1024
-#define WS_MSG_BUFFER_SIZE         512
-#define WS_CLIENT_RECV_BUFFER_SIZE 1024
+#define WS_RECV_BUFFER_SIZE        1024
 #define WS_FIN_FLAG                1 << 7
 #define WS_MASKED_FLAG             1 << 7
 #define WS_TYPE_MASK               0xF
@@ -21,6 +20,8 @@
 #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11\0"
 
 inline QueueHandle_t websocketQueue;
+
+typedef struct ws_server ws_server_t;
 
 typedef enum { 
     WS_TYPE_CONT = 0x0, 
@@ -40,16 +41,16 @@ typedef struct {
 typedef struct ws_client {
     TaskHandle_t task_handle;
     volatile struct netconn *accepted_sock;
-    void *server_ptr;
-    uint8_t recv_buf[WS_CLIENT_RECV_BUFFER_SIZE] = {};
+    ws_server_t *server_ptr;
+    uint8_t recv_buf[WS_RECV_BUFFER_SIZE] = {};
     volatile bool established = false;
 } ws_client_t;
 
-typedef struct {
+struct ws_server {
     ws_client_t ws_clients[WS_MAX_CLIENTS];
     uint8_t send_buf[WS_SEND_BUFFER_SIZE] = {};
     void (*msg_handler)(uint8_t *data, uint32_t len, ws_type_t type);
-} ws_server_t;
+};
 
 // Structure to hold MQTT publish information
 typedef struct {
