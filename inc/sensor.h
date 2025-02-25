@@ -7,6 +7,8 @@
 #include "MQTT.h"
 #include "websocket.h"
 
+#include "timers.h"
+
 class Sensor {
     public:
 
@@ -19,5 +21,5 @@ class Sensor {
     
     Serial &uart;    
     const sensor_settings_entry *settings;
-    
+    TimerHandle_t sensor_read_led_off_timer;
 };

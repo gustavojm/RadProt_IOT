@@ -27,12 +27,10 @@ void messageArrived(MessageData *data) {
 }
 
 static void mqtt_task(void *pvParameters) {
-    /* connect to m2m.eclipse.org, subscribe to a topic, send and receive messages regularly every 1 sec */
     MQTTClient client;
     Network network;
     unsigned char sendbuf[80], readbuf[80];
     int rc = 0;
-    int count = 0;
     
     pvParameters = 0;
     NetworkInit(&network);
@@ -51,7 +49,7 @@ static void mqtt_task(void *pvParameters) {
         MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
         connectData.MQTTVersion = 3;
         
-        connectData.clientID.cstring = const_cast<char *>("FreeRTOS_sample");
+        connectData.clientID.cstring = const_cast<char *>("RadProt_IOT");
         //connectData.username.cstring = const_cast<char *>("Pepito");;
 
         if ((rc = MQTTConnect(&client, &connectData)) != 0) {
