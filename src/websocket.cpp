@@ -66,7 +66,7 @@ void ws_server_task(void *arg) {
             ws_msg.msg_size = msg.payload_length;
             ws_msg.msg_type = WS_TYPE_STRING;
             ws_send_message(ws, &ws_msg);
-            printf("---WS--->>>");
+            printf("---WS--->");
         }        
     }
 }
