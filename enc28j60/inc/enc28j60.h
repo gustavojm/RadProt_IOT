@@ -99,6 +99,8 @@ class enc28j60 {
     size_t read_buff(uint8_t *dst, size_t len);
     void write_buff(const uint8_t *src, size_t len);
 
+    static struct pbuf * pbuf_coalesce_mine(struct pbuf *p, pbuf_layer layer);
+
     uint8_t current_register_bank;
     uint16_t next_packet_pointer;
     bool current_link_state;

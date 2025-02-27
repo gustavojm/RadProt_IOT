@@ -533,24 +533,54 @@ int enc28j60::get_free_rxfifo() {
     return free_space;
 }
 
+
+static uint8_t* flatten_pbuf(const pbuf *p) {
+    if (!p || p->tot_len == 0) {
+        return nullptr;  // Handle null or empty pbuf
+    }
+
+    uint8_t *buf = new uint8_t[p->tot_len];
+    if (!buf) {
+        return nullptr;  // Handle allocation failure
+    }
+
+    size_t copied = 0;
+    for (const pbuf *q = p; q != nullptr; q = q->next) {
+        if (q->payload && q->len > 0) {
+            std::memcpy(buf + copied, q->payload, q->len);
+            copied += q->len;
+        }
+    }
+
+    // Optional: check if we copied the expected number of bytes
+    if (copied != p->tot_len) {
+        delete[] buf;  // Clean up in case of unexpected error
+        return nullptr;
+    }
+
+    return buf;
+}
+
 err_t enc28j60::eth_packet_output(struct netif *netif, struct pbuf *p) {
     LINK_STATS_INC(link.xmit);
     drivers::enc28j60 *me = static_cast<drivers::enc28j60 *>(netif->state);
 
-    struct pbuf *q;
-    for (q = p; q != nullptr; q = q->next) {
-        // print_pbuf_payload(q);
+    uint8_t *buf = flatten_pbuf(p);
 
-        if (!me->send_packet(static_cast<uint8_t *>(q->payload), q->len)) {
-            ENC_DEBUG_print("Cannot send fragment of length %d\r\n", q->len);
-            return ERR_ABRT;
-        }
+    if (!buf) {
+        ENC_DEBUG_print("Failed to flatten pbuf\r\n");
+        return ERR_MEM;  // Memory allocation failed
     }
-    //
-#if ENC_DEBUG_ON
+
+    if (!me->send_packet(buf, p->tot_len)) {
+        ENC_DEBUG_print("Cannot send packet of length %d\r\n", p->tot_len);
+        delete[] buf;
+        return ERR_ABRT;
+    }
+
     ENC_DEBUG_print("Sent packet with len %d[%d]!\r\n", p->len, p->tot_len);
-#endif
-    return ERR_OK;
+    delete[] buf;
+    return ERR_OK;    
 }
 
 err_t enc28j60::eth_netif_init(struct netif *netif) {
