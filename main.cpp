@@ -173,10 +173,17 @@ static void main_task(__unused void *params) {
     my_uart0.init([]() {my_uart0.on_uart_rx(); });
     my_uart0.set_timeout(pdMS_TO_TICKS(100));
     my_uart0.set_delimiter('\n');
-
-    static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);    
+    static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);
     s0.init();
-    mqtt_init();
+
+    static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
+    my_uart2.init([]() {my_uart2.on_uart_rx(); });
+    my_uart2.set_timeout(pdMS_TO_TICKS(100));
+    my_uart2.set_delimiter('\n');
+    static Sensor s2(my_uart2, &(get_client_settings()->sensor_settings)[2]);
+    s2.init();
+
+     mqtt_init();
     
     ws_server_t ws_server;
     ws_server.msg_handler = ws_message_handler;

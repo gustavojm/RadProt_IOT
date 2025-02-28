@@ -94,7 +94,51 @@ const client_settings_t s_Client_Settings = {
                                                                 .topic = "r/12345" 
                                                             }
                                                           },                                                                
-									  } 
+									  },
+                                      {.baudrate = 9600,
+                                        .enabled = true,
+                                        .publish_settings = { { .enabled = true,
+                                                                  .name = "H3",
+                                                                  .start = 3,
+                                                                  .end = 9,
+                                                                  .is_num = true,
+                                                                  .scale = 0.1,
+                                                                  .avg_cnt = 0,
+                                                                  .topic = "12345" 
+                                                              }, { 
+                                                                  .enabled = true,
+                                                                  .name = "H3AVG",
+                                                                  .start = 3,
+                                                                  .end = 9,
+                                                                  .is_num = true,
+                                                                  .scale = 0.1,
+                                                                  .avg_cnt = 5,
+                                                                  .topic = "r/12345" 
+                                                              }
+                                                            },                                                                
+                                        },
+                                        {.baudrate = 9600,
+                                            .enabled = true,
+                                            .publish_settings = { { .enabled = true,
+                                                                      .name = "H3",
+                                                                      .start = 3,
+                                                                      .end = 9,
+                                                                      .is_num = true,
+                                                                      .scale = 0.1,
+                                                                      .avg_cnt = 0,
+                                                                      .topic = "12345" 
+                                                                  }, { 
+                                                                      .enabled = true,
+                                                                      .name = "H3AVG",
+                                                                      .start = 3,
+                                                                      .end = 9,
+                                                                      .is_num = true,
+                                                                      .scale = 0.1,
+                                                                      .avg_cnt = 5,
+                                                                      .topic = "r/12345" 
+                                                                  }
+                                                                },                                                                
+                                        }                                                                                
 									} 
 				}
 					
