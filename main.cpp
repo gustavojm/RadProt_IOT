@@ -169,7 +169,7 @@ static void main_task(__unused void *params) {
 
     httpd_init(settings->hostname, settings->domain_name);
 
-    static Serial my_uart0(uart0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
+    static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
     my_uart0.init([]() {my_uart0.on_uart_rx(); });
     my_uart0.set_timeout(pdMS_TO_TICKS(100));
     my_uart0.set_delimiter('\n');

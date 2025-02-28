@@ -10,49 +10,124 @@ void Serial::on_uart_rx() {
         return;
     }
     
-    while (uart_is_readable(uart_id)) {
-        // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline
-        vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-
-        char c = uart_getc(uart_id);
-        if (c == terminationChar || index == (uart_buffer_size - 2)) { // if we are about to overflow the buffer
-            uart_buffer[index++] = '\0';                                 // Null-terminate the string
-            string_finished_ = true;
-            // Notification for read_string to indicate that a whole string was read or that the buffer is full
+    char c;
+    if (uart_nro < 2) {     // Hardware UARTS
+        while (uart_is_readable(hardware_uart)) {
+            // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline
             vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        } else if (index < uart_buffer_size - 1) {
-            uart_buffer[index++] = c; // Add the character to the buffer
+
+            c = uart_getc(hardware_uart);
+            handle_received_char(c, xHigherPriorityTaskWoken);
         }
+    } else {                // PIO UARTS
+        while(!pio_sm_is_rx_fifo_empty(pio_hw, sm)) {
+            // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline
+            vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    
+            c = uart_rx_program_getc(pio_hw, sm);
+            handle_received_char(c, xHigherPriorityTaskWoken);
+        }    
+    }        
+}
+
+void Serial::handle_received_char(char c, BaseType_t &xHigherPriorityTaskWoken) {
+    if (c == terminationChar || index == (uart_buffer_size - 2)) { // if we are about to overflow the buffer
+        uart_buffer[index++] = '\0';                               // Null-terminate the string
+        string_finished_ = true;
+        // Notification for read_string to indicate that a whole string was read or that the buffer is full
+        vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    } else if (index < uart_buffer_size - 1) {
+        uart_buffer[index++] = c; // Add the character to the buffer
     }
 }
 
-Serial::Serial(uart_inst_t *uart, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
-    : uart_id(uart), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate), uart_buffer_size(uart_buffer_size),
+Serial::Serial(unsigned int uart_nro, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
+    : uart_nro(uart_nro), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate), uart_buffer_size(uart_buffer_size),
       uart_buffer(new char[uart_buffer_size]) {
+        hardware_uart = uart_nro == 0 ? uart0 : uart1;
+        hardware_uart_IRQ = uart_nro == 0 ? UART0_IRQ : UART1_IRQ;
+
         if (! uart_buffer) {
             printf("Serial Constructor, Out of Memory\n");
         }        
+
 }
 
 Serial::~Serial() {
     delete[] uart_buffer;
 }
 
-void Serial::init(irq_handler_t handler) {
-    // Initialize UART
-    uart_init(uart_id, baud_rate);
-    gpio_set_function(gpio_tx, GPIO_FUNC_UART);
-    gpio_set_function(gpio_rx, GPIO_FUNC_UART);
+bool Serial::init(irq_handler_t handler) {
+    // Initialize UART    
+    uint pio_irq_index;
+    pio_interrupt_source_t pis_sm_rx_fifo_not_empty;
 
-    // Turn off FIFO's - we want to do this character by character
-    uart_set_fifo_enabled(uart_id, false);    
+    switch (uart_nro) {
+    case 0:
+    case 1:       
+        uart_init(hardware_uart, baud_rate);
+        gpio_set_function(gpio_tx, GPIO_FUNC_UART);
+        gpio_set_function(gpio_rx, GPIO_FUNC_UART);
+    
+        // Turn off FIFO's - we want to do this character by character
+        uart_set_fifo_enabled(hardware_uart, false);    
+            
+        irq_set_enabled(hardware_uart_IRQ, true);
+        uart_set_irq_enables(hardware_uart, true, false);
+        irq_set_exclusive_handler(hardware_uart_IRQ, handler);
+        return true;
+        break;
 
-    irq_num_t IRQ = uart_id == uart0 ? UART0_IRQ : UART1_IRQ;
-    irq_set_enabled(IRQ, true);
-    uart_set_irq_enables(uart_id, true, false);
-    irq_set_exclusive_handler(IRQ, handler);
+    case 2:
+    case 3:
+        // Find a free pio
+        pio_hw = pio1;
+        if (!pio_can_add_program(pio_hw, &uart_rx_program)) {
+            pio_hw = pio0;
+            if (!pio_can_add_program(pio_hw, &uart_rx_program)) {
+                offset = -1;
+                panic("failed to setup pio");
+                return false;
+            }
+        }
+        offset = pio_add_program(pio_hw, &uart_rx_program);
+        // Find a state machine
+        sm = (int8_t)pio_claim_unused_sm(pio_hw, false);
+        if (sm < 0) {
+            panic("failed to setup pio");
+            return false;
+        }
+
+        uart_rx_program_init(pio_hw, sm, offset, gpio_rx, baud_rate);
+
+        // Find a free irq
+        static_assert(PIO0_IRQ_1 == PIO0_IRQ_0 + 1 && PIO1_IRQ_1 == PIO1_IRQ_0 + 1, "");
+        pio_irq = (pio_hw == pio0) ? PIO0_IRQ_0 : PIO1_IRQ_0;
+        if (irq_get_exclusive_handler(pio_irq)) {
+            pio_irq = (pio_irq == PIO0_IRQ_0 ? PIO0_IRQ_1 : PIO1_IRQ_1);
+            if (irq_get_exclusive_handler(pio_irq)) {
+                panic("All IRQs are in use");
+            }
+        }
+    
+        // Enable interrupt
+        irq_add_shared_handler(pio_irq, handler, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY); // Add a shared IRQ handler
+        irq_set_enabled(pio_irq, true); // Enable the IRQ
+        pio_irq_index = pio_irq - ((pio_hw == pio0) ? PIO0_IRQ_0 : PIO1_IRQ_0); // Get index of the IRQ
+        
+        pis_sm_rx_fifo_not_empty = pio_get_rx_fifo_not_empty_interrupt_source(sm);
+        pio_set_irqn_source_enabled(pio_hw, pio_irq_index, pis_sm_rx_fifo_not_empty, true); // Set pio to tell us when the FIFO is NOT empty
+    
+        return true;
+        break;
+
+    default:
+        return false;
+        break;
+    }
 
 }
 

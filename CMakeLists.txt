@@ -64,7 +64,7 @@ add_executable(${PROJECT_NAME}
         src/sensor.cpp
         src/FreeRTOSTimers.cpp
         src/MQTT.cpp
-        src/websocket.cpp
+        src/websocket.cpp        
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.cpp
@@ -73,6 +73,8 @@ add_executable(${PROJECT_NAME}
         paho.mqtt.embedded-c/MQTTClient-C/src/FreeRTOS/MQTTFreeRTOS.cpp
         paho.mqtt.embedded-c/MQTTClient-C/src/MQTTClient.cpp
         )
+
+pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/uart_rx.pio)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         WIFI_SSID="PICONET"
@@ -102,6 +104,7 @@ target_link_libraries(${PROJECT_NAME}
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
         pico_mbedtls
+        hardware_pio
         hardware_uart
         hardware_flash
         FreeRTOS-Kernel-Heap4
