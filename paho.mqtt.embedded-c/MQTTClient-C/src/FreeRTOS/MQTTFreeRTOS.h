@@ -48,8 +48,6 @@ void MutexInit(Mutex*);
 int MutexLock(Mutex*);
 int MutexUnlock(Mutex*);
 
-int ThreadStart(TaskHandle_t task_handle, void (*fn)(void*), void* arg);
-
 int FreeRTOS_read(Network*, unsigned char*, int, int);
 int FreeRTOS_write(Network*, unsigned char*, int, int);
 void FreeRTOS_disconnect(Network*);

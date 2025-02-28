@@ -335,7 +335,19 @@ void MQTTRun(void *parm) {
 }
 
 int MQTTStartTask(MQTTClient *client) {
-    return ThreadStart(client->task_handle, &MQTTRun, client);
+    int rc = 0;
+    uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 5);
+    UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
+
+    rc = xTaskCreate(
+        &MQTTRun,              /* The function that implements the task. */
+        "MQTTTask",      /* Just a text name for the task to aid debugging. */
+        usTaskStackSize, /* The stack size is defined in FreeRTOSIPConfig.h. */
+        client,             /* The task parameter, not used in this case. */
+        uxTaskPriority,  /* The priority assigned to the task is defined in FreeRTOSConfig.h. */
+        &client->task_handle);    /* The task handle is not used. */
+
+    return rc;
 }
 
 int waitfor(MQTTClient *c, int packet_type, Timer *timer) {

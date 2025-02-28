@@ -107,7 +107,7 @@ bool Serial::init(irq_handler_t handler) {
         static_assert(PIO0_IRQ_1 == PIO0_IRQ_0 + 1 && PIO1_IRQ_1 == PIO1_IRQ_0 + 1, "");
         pio_irq = (pio_hw == pio0) ? PIO0_IRQ_0 : PIO1_IRQ_0;
         if (irq_get_exclusive_handler(pio_irq)) {
-            pio_irq = (pio_irq == PIO0_IRQ_0 ? PIO0_IRQ_1 : PIO1_IRQ_1);
+            pio_irq = static_cast<decltype(pio_irq)>(static_cast<int>(pio_irq) + 1);
             if (irq_get_exclusive_handler(pio_irq)) {
                 panic("All IRQs are in use");
             }

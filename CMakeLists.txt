@@ -85,6 +85,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         ARDUINOJSON_ENABLE_STD_STREAM=0
         PICO_CXX_DISABLE_ALLOCATION_OVERRIDES=1
         #LWIP_DEBUG=1        
+        PICO_MAX_SHARED_IRQ_HANDLERS=8
         )
 
 

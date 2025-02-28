@@ -180,10 +180,18 @@ static void main_task(__unused void *params) {
     my_uart2.init([]() {my_uart2.on_uart_rx(); });
     my_uart2.set_timeout(pdMS_TO_TICKS(100));
     my_uart2.set_delimiter('\n');
-    static Sensor s2(my_uart2, &(get_client_settings()->sensor_settings)[2]);
+    static Sensor s2(my_uart2, &(get_client_settings()->sensor_settings)[1]);
     s2.init();
 
-     mqtt_init();
+    static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
+    my_uart3.init([]() {my_uart3.on_uart_rx(); });
+    my_uart3.set_timeout(pdMS_TO_TICKS(100));
+    my_uart3.set_delimiter('\n');
+    static Sensor s3(my_uart3, &(get_client_settings()->sensor_settings)[2]);
+    s3.init();
+
+
+    mqtt_init();
     
     ws_server_t ws_server;
     ws_server.msg_handler = ws_message_handler;

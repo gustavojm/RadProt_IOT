@@ -129,8 +129,8 @@
 #define LWIP_SO_RCVTIMEO 1
 #define LWIP_SO_SNDTIMEO 1
 
-#define MEMP_NUM_NETCONN 16
-#define MEMP_NUM_PBUF 16
-#define MEMP_NUM_NETBUF 16
+#define MEMP_NUM_NETCONN 20
+#define MEMP_NUM_PBUF 20
+#define MEMP_NUM_NETBUF 20
 
 #endif /* __LWIPOPTS_H__ */

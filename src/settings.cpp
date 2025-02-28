@@ -82,7 +82,7 @@ const client_settings_t s_Client_Settings = {
                                                                 .is_num = true,
                                                                 .scale = 0.1,
                                                                 .avg_cnt = 0,
-                                                                .topic = "12345" 
+                                                                .topic = "123" 
                                                             }, { 
                                                                 .enabled = true,
                                                                 .name = "H3AVG",
@@ -91,7 +91,7 @@ const client_settings_t s_Client_Settings = {
                                                                 .is_num = true,
                                                                 .scale = 0.1,
                                                                 .avg_cnt = 5,
-                                                                .topic = "r/12345" 
+                                                                .topic = "r/123" 
                                                             }
                                                           },                                                                
 									  },
@@ -104,7 +104,7 @@ const client_settings_t s_Client_Settings = {
                                                                   .is_num = true,
                                                                   .scale = 0.1,
                                                                   .avg_cnt = 0,
-                                                                  .topic = "12345" 
+                                                                  .topic = "456" 
                                                               }, { 
                                                                   .enabled = true,
                                                                   .name = "H3AVG",
@@ -113,7 +113,7 @@ const client_settings_t s_Client_Settings = {
                                                                   .is_num = true,
                                                                   .scale = 0.1,
                                                                   .avg_cnt = 5,
-                                                                  .topic = "r/12345" 
+                                                                  .topic = "r/456" 
                                                               }
                                                             },                                                                
                                         },
@@ -126,7 +126,7 @@ const client_settings_t s_Client_Settings = {
                                                                       .is_num = true,
                                                                       .scale = 0.1,
                                                                       .avg_cnt = 0,
-                                                                      .topic = "12345" 
+                                                                      .topic = "789" 
                                                                   }, { 
                                                                       .enabled = true,
                                                                       .name = "H3AVG",
@@ -135,7 +135,7 @@ const client_settings_t s_Client_Settings = {
                                                                       .is_num = true,
                                                                       .scale = 0.1,
                                                                       .avg_cnt = 5,
-                                                                      .topic = "r/12345" 
+                                                                      .topic = "r/789" 
                                                                   }
                                                                 },                                                                
                                         }                                                                                

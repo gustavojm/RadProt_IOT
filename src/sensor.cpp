@@ -59,9 +59,14 @@ void Sensor::read_task() {
                 if (pub_settings.enabled && pub_settings.end >= pub_settings.start &&
                     pub_settings.start < sizeof serial_buffer && pub_settings.end < sizeof serial_buffer) {
                     size_t len = pub_settings.end - pub_settings.start;
-                    char *data = strndup(&serial_buffer[pub_settings.start], len);
-                    if (data) {
-                        // printf("****** %s ******\n", data);
+
+
+                    char *data = new char[len];
+                    if (data != NULL) {
+                        memcpy(data, &serial_buffer[pub_settings.start], len);
+                        data[len] = '\0'; // Ensure null-termination
+
+                        printf("****** %s ******\n", data);
 
                         if (pub_settings.is_num) {
                             errno = 0; /* To distinguish success/failure after call */
@@ -108,7 +113,7 @@ void Sensor::read_task() {
                             sendToEndpoints(pub_settings.topic, data, strlen(data), 0, false);
                         }
 
-                        free(data); // allocated by strndup
+                        delete[] data; // allocated by strndup
                     } else {
                         printf("strndup: Out of Memory\n");
                     }
