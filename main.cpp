@@ -169,27 +169,35 @@ static void main_task(__unused void *params) {
 
     httpd_init(settings->hostname, settings->domain_name);
 
-    static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
-    my_uart0.init([]() {my_uart0.on_uart_rx(); });
-    my_uart0.set_timeout(pdMS_TO_TICKS(100));
-    my_uart0.set_delimiter('\n');
-    static Sensor s0(my_uart0, &(get_client_settings()->sensor_settings)[0]);
-    s0.init();
 
-    static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
-    my_uart2.init([]() {my_uart2.on_uart_rx(); });
-    my_uart2.set_timeout(pdMS_TO_TICKS(100));
-    my_uart2.set_delimiter('\n');
-    static Sensor s2(my_uart2, &(get_client_settings()->sensor_settings)[1]);
-    s2.init();
+    auto client_settings = get_client_settings();
 
-    static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
-    my_uart3.init([]() {my_uart3.on_uart_rx(); });
-    my_uart3.set_timeout(pdMS_TO_TICKS(100));
-    my_uart3.set_delimiter('\n');
-    static Sensor s3(my_uart3, &(get_client_settings()->sensor_settings)[2]);
-    s3.init();
+    if (client_settings->sensor_settings[0].enabled) {
+        static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
+        my_uart0.init([]() {my_uart0.on_uart_rx(); });
+        my_uart0.set_timeout(pdMS_TO_TICKS(100));
+        my_uart0.set_delimiter('\n');
+        static Sensor s0(my_uart0);
+        s0.init();
+    }
 
+    if (client_settings->sensor_settings[1].enabled) {
+        static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
+        my_uart2.init([]() {my_uart2.on_uart_rx(); });
+        my_uart2.set_timeout(pdMS_TO_TICKS(100));
+        my_uart2.set_delimiter('\n');
+        static Sensor s2(my_uart2);
+        s2.init();
+    }
+
+    if (client_settings->sensor_settings[2].enabled) {
+        static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
+        my_uart3.init([]() {my_uart3.on_uart_rx(); });
+        my_uart3.set_timeout(pdMS_TO_TICKS(100));
+        my_uart3.set_delimiter('\n');
+        static Sensor s3(my_uart3);
+        s3.init();
+    }
 
     mqtt_init();
     

@@ -158,15 +158,15 @@
         }
 
         .ws-div {
-		font-family: monospace;
-		font-size: 1.1em;
-		white-space: pre-wrap;
-		/* Preserves whitespace and wraps lines */
-		padding: 10px;
-		border: 1px solid #ccc;
-		height: 500px;
-		overflow-y: scroll;
-	}
+            font-family: monospace;
+            font-size: 1.1em;
+            white-space: pre-wrap;
+            /* Preserves whitespace and wraps lines */
+            padding: 10px;
+            border: 1px solid #ccc;
+            height: 200px;
+            overflow-y: scroll;
+        }
 
         /* Small screen: Make rows clickable */
         @media (max-width: 600px) {
@@ -252,9 +252,9 @@
                                 <tr>
                                     <th style="text-align: center;" class="hide-on-small">#</th>
                                     <th style="text-align: center;">SSID</th>
-                                    <th style="text-align: center;">RSSI</th>
+                                    <th style="text-align: center; min-width: 7em;">RSSI</th>
                                     <th style="text-align: center;" class="hide-on-small">Channel</th>
-                                    <th style="text-align: center;" class="hide-on-small">BSSID</th>
+                                    <!-- <th style="text-align: center;" class="hide-on-small">BSSID</th> -->
                                     <th style="text-align: center;">🔒</th>
                                     <th style="text-align: center;" class="hide-on-small">Security</th>
                                 </tr>
@@ -314,14 +314,17 @@
                         <button type="submit">Save and Restart</button>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
-                        <br>          <!-- Space to show the slide dots -->
+                        <br> <!-- Space to show the slide dots -->
                     </div>
 
                 </form>
             </div>
             <div class="slide" id="slide_2">
                 <h2>Readings</h2>
+                <div id="readings_div"></div>
+                <h2>Log</h2>
                 <div id="ws_div" class="ws-div"></div>
+                <br> <!-- Space to show the slide dots -->
             </div>
         </div>
         <div class="pagination">
@@ -411,8 +414,7 @@
                             <td class="hide-on-small">${index + 1}</td>            
                             <td><a data-auth_mode="${item.auth_mode}" href="#" onclick='select_wifi_net(event)'>${item.ssid}</a></td>
                             <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
-                            <td class="hide-on-small" style="text-align: center;">${item.chann}</td>
-                            <td class="hide-on-small">${item.bssid}</td>
+                            <td class="hide-on-small" style="text-align: center;">${item.chann}</td>                            
                             <td>${item.auth_mode > 0 ? "🔒" : ""}</td>
                             <td class="hide-on-small" style="text-align: center;">${getAuthModeText(item.auth_mode)}</td>                                    
                         `;
@@ -539,6 +541,21 @@
         }
     }
 
+    function toggle_numeric_settings(checkbox, sensor_num, publish_setting_num) {
+        let scale_input_id = checkbox.name.replace("is_num", "scale");
+        let avg_cnt_input_id = checkbox.name.replace("is_num", "avg_cnt");
+        for (i = 0; i < 2; i++) {   // Modal edit duplicates the inputs...
+            if (checkbox.checked == true) {
+                document.getElementsByName(scale_input_id)[i].disabled = false;
+                document.getElementsByName(avg_cnt_input_id)[i].disabled = false;
+            } else {
+                document.getElementsByName(scale_input_id)[i].disabled = true;
+                document.getElementsByName(avg_cnt_input_id)[i].disabled = true;
+            }
+        }
+    }
+
+
     function toggle_ip_settings(checkbox) {
         const settings_form = document.getElementById('settings_form');
         if (checkbox.checked) {
@@ -616,9 +633,9 @@
                                         <td><input name="s_s[${index_sensor}]p_s[${index}].name" size="6" value="${item.name}"></td>
                                         <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" style="width: 3em" value="${item.start}"></td>
                                         <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" style="width: 3em" value="${item.end}"></td>
-                                        <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""}></td>
-                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 3em" value="${item.scale}"></td>
-                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 3em" value="${item.avg_cnt}"></td>
+                                        <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""} onchange="toggle_numeric_settings(this, ${index_sensor}, ${index})"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 3em" ${item.is_num ? "" : "disabled"} value="${item.scale}"></td>
+                                        <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 3em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
                                         <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
                                        `;
 
@@ -637,6 +654,52 @@
                 for (let i = 0; i < elements_to_show.length; i++) {
                     elements_to_show[i].style.display = "table-cell";
                 }
+            }
+        });
+
+
+        const readings_div = document.querySelector("#readings_div");
+        settings_json.sensor_settings.forEach((item, index_sensor) => {
+            if (item.enabled) {
+                const readings_sensor_div = document.createElement("div");
+
+                readings_sensor_div.innerHTML = `#${index_sensor + 1}`;
+
+                const readings_table = document.createElement("table");
+                readings_table.innerHTML = `
+                                            <thead>
+                                                <tr>
+                                                    <th style="text-align: center;">#</th>
+                                                    <th style="text-align: center;">Name</th>
+                                                    <th style="text-align: center;">Value</th>
+                                                    <th style="text-align: center;">Topic</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        `;
+
+                readings_table.id = `publish_settings_${index_sensor}`;
+
+                settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
+                    if (item.enabled) {
+                        const detail_row = document.createElement("tr");
+
+                        detail_row.innerHTML = `
+                                            <td>${index}</td>
+                                            <td>${item.name}</td>
+                                            <td id="s_s[${index_sensor}]p_s[${index}].reading"></td>
+                                            <td>${item.topic}</td>
+                                        `;
+
+                        let tbody = readings_table.querySelector("tbody")
+                        tbody.appendChild(detail_row);
+
+                        readings_sensor_div.appendChild(readings_table);
+                    }
+                });
+
+                readings_div.appendChild(readings_sensor_div);
+                readings_div.appendChild(document.createElement("hr"));
             }
         });
     }
@@ -674,60 +737,62 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        //wifi_networks_get();
+        if (window.location.protocol != 'file:') {
+            wifi_networks_get();
+            settings_get();
+        } else {
+            let networks_string = '\
+            [{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
+            {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
+            {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
+            {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode": 4, "bssid":"00:6b:f1:c0:94:66"},\
+            {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode": 5, "bssid":"00:6b:f1:c0:94:68"},\
+            {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode": 3, "bssid":"00:6b:f1:c0:94:6b"},\
+            {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
+            wifi_networks_populate(JSON.parse(networks_string));
 
-        let networks_string = '\
-        [{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
-        {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
-        {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
-        {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode": 4, "bssid":"00:6b:f1:c0:94:66"},\
-        {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode": 5, "bssid":"00:6b:f1:c0:94:68"},\
-        {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode": 3, "bssid":"00:6b:f1:c0:94:6b"},\
-        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
-        wifi_networks_populate(JSON.parse(networks_string));
+            let settings_string = '\{"mac_address" : "99:99:99:99:99:99",\
+                    "initial_config" : true,\
+                    "wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
+                    "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
+                    "sensor_settings":\
+                    [{"baudrate":9600, "enabled": true, "publish_settings": \
+                    [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},\
+                    {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
+                    {"baudrate":0, "enabled": false,"publish_settings":\
+                    [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
+                    {"baudrate":0, "enabled": false, "publish_settings":\
+                    [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                    {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
+                }';
+            settings_populate(JSON.parse(settings_string));
+        }
 
-        //settings_get();
-
-        let settings_string = '\{"mac_address" : "99:99:99:99:99:99",\
-                                 "initial_config" : true,\
-                                 "wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
-                                 "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
-                                 "sensor_settings":\
-                                 [{"baudrate":9600, "enabled": true, "publish_settings": \
-                                 [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},\
-                                 {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
-                                 {"baudrate":0, "enabled": false,"publish_settings":\
-                                 [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
-                                 {"baudrate":0, "enabled": false, "publish_settings":\
-                                 [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
-                                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
-                                }';
-        settings_populate(JSON.parse(settings_string));
     });
 
     sensors_templates = {
@@ -788,8 +853,13 @@
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].start")[0].value = publish_setting.start;
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].end")[0].value = publish_setting.end;
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].is_num")[0].checked = publish_setting.is_num;
+
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].value = publish_setting.scale;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].disabled = !publish_setting.is_num;
+
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].value = publish_setting.avg_cnt;
+                        document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].disabled = !publish_setting.is_num;
+
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].topic")[0].value = publish_setting.topic;
                     });
                 }
@@ -940,6 +1010,16 @@
     class WebSocketClient {
         constructor(path = "", maxReconnectAttempts = 10) {
             this.path = path;
+
+            if (window.location.protocol === 'file:') {
+                const params = new URLSearchParams(window.location.search);
+                this.host = params.get('ws_host');
+                if (!this.host) {
+                    alert("Pass Websocket server ip address as url parameter. \nExample: ?ws_host=192.168.167.56");
+                }                
+            }else {
+                this.host = window.location.host;
+            }            
             this.port = 8765
             this.maxReconnectAttempts = maxReconnectAttempts;
             this.reconnectAttempts = 0;
@@ -949,8 +1029,7 @@
 
         connect() {
             const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-            const wsUrl = `${protocol}${window.location.host}:${this.port}${this.path}`;
-            //const wsUrl = `${protocol}192.168.137.124:8765${this.path}`;
+            const wsUrl = `${protocol}${this.host}:${this.port}${this.path}`;
 
             console.log("Connecting to", wsUrl);
             this.socket = new WebSocket(wsUrl);
@@ -995,17 +1074,22 @@
         }
 
         handleMessage(data) {
-            ws_addEntry(data);
+            let dataJSON = JSON.parse(data);
+            let reading_td = document.getElementById(`s_s[${dataJSON.s_s}]p_s[${dataJSON.p_s}].reading`);
+            reading_td.innerHTML = dataJSON.reading;
+
+            let entry = dataJSON["reading"] + "->" + dataJSON["topic"];
+            ws_addEntry(entry);
         }
     }
 
     function ws_addEntry(entry) {
         div = document.createElement("div");
-		div.innerHTML = entry;
-		ws_div = document.getElementById('ws_div');
-        ws_div.append(div);
-		ws_div.scrollTop = ws_div.scrollHeight;
-	}
+        div.innerHTML = entry;
+        ws_div = document.getElementById('ws_div');
+        ws_div.prepend(div);
+        //ws_div.scrollTop = ws_div.scrollHeight;
+    }
 
     // Start WebSocket client
     const wsClient = new WebSocketClient();

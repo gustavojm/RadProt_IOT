@@ -169,6 +169,6 @@ void __not_in_flash_func(write_client_settings)(void *param) {
     
 }
 
-ArduinoJson::JsonDocument get_client_settings_json() {
+ArduinoJson::MyJsonDocument get_client_settings_json() {
     return s_Client_Settings.settings.to_json();
 };

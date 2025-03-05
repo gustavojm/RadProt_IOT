@@ -11,7 +11,7 @@
 
 class Serial {
 public:
-    Serial(unsigned int uart_nro, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size);
+    Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size);
     ~Serial();
 
     // Delete the copy constructor
@@ -32,7 +32,7 @@ public:
     void set_receiving_task_handle(TaskHandle_t handle);
 
     int read_from_receive_buffer(char *buffer, size_t buffer_size);
-    unsigned int uart_nro;
+    unsigned int uart_num;
     
 private:
     uint gpio_tx;

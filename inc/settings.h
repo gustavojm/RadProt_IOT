@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hardware/flash.h"
-#include <ArduinoJson.h>
+#include <arduinojson_cust_alloc.h>
 #include <sys/types.h>
 #include <lwip/ip_addr.h>
 #include <cstring>
@@ -64,8 +64,8 @@ struct publish_settings_entry{
     int avg_cnt;
     char topic[10];
 
-    ArduinoJson::JsonDocument to_json() const {
-        ArduinoJson::JsonDocument json;
+    ArduinoJson::MyJsonDocument to_json() const {
+        ArduinoJson::MyJsonDocument json;
         json["enabled"] = enabled;
         json["name"] = name;
         json["start"] = start;
@@ -86,8 +86,8 @@ struct sensor_settings_entry {
     bool enabled;
     publish_settings_entry publish_settings[MAX_PUBLISH_SETTINGS];
 
-    ArduinoJson::JsonDocument to_json() const {
-        ArduinoJson::JsonDocument json;
+    ArduinoJson::MyJsonDocument to_json() const {
+        ArduinoJson::MyJsonDocument json;
         json["baudrate"] = baudrate;
         json["enabled"] = enabled;
         auto publish_settings_array = json["publish_settings"].to<ArduinoJson::JsonArray>();
@@ -110,8 +110,8 @@ struct wifi_settings {
     ip_addr_t gw;
     ip_addr_t dns;
 
-    ArduinoJson::JsonDocument to_json() const {
-        ArduinoJson::JsonDocument json;
+    ArduinoJson::MyJsonDocument to_json() const {
+        ArduinoJson::MyJsonDocument json;
         json["ssid"] = ssid;
         json["password"] = password;
         json["auth_mode"] = auth_mode;
@@ -131,8 +131,8 @@ struct mqtt_settings {
     char username[32];
     char password[32];    
 
-    ArduinoJson::JsonDocument to_json() const {
-        ArduinoJson::JsonDocument json;
+    ArduinoJson::MyJsonDocument to_json() const {
+        ArduinoJson::MyJsonDocument json;
         json["broker"] = broker;
         json["port"] = port;
         json["username"] = username;
@@ -148,8 +148,8 @@ struct client_settings {
     mqtt_settings mqtt;
     sensor_settings_entry sensor_settings[MAX_SERIAL_SENSORS];
 
-    ArduinoJson::JsonDocument to_json() const {
-        ArduinoJson::JsonDocument json;
+    ArduinoJson::MyJsonDocument to_json() const {
+        ArduinoJson::MyJsonDocument json;
         json["wifi"] = wifi.to_json();
         json["mqtt"] = mqtt.to_json();
     
@@ -174,4 +174,4 @@ const client_settings *get_client_settings();
 
 void __not_in_flash_func(write_client_settings)(void *param);
 
-ArduinoJson::JsonDocument get_client_settings_json();
+ArduinoJson::MyJsonDocument get_client_settings_json();

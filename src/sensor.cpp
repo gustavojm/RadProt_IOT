@@ -2,13 +2,15 @@
 
 #define SENSOR_READ_LED_GPIO 15
 
+int Sensor::next_sensor_num = 0;
+
 static void sensor_read_led_off(TimerHandle_t xTimer) {
     gpio_put(SENSOR_READ_LED_GPIO, false);
 };
 
 void Sensor::init() {
     TaskHandle_t sensor_task_handle;
-    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, 1024, this, 1, &sensor_task_handle);
+    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, 2048, this, 1, &sensor_task_handle);
     uart.set_receiving_task_handle(sensor_task_handle);
 
     gpio_init(SENSOR_READ_LED_GPIO);
@@ -29,14 +31,14 @@ struct avg_fields_t {
     float accum;
 };
 
-void Sensor::sendToEndpoints(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain) {
+void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain) {
     gpio_put(SENSOR_READ_LED_GPIO, true);
 
-    if (sendToMqttQueue(topic, payload, payload_length, qos, retain) != pdPASS) {
+    if (sendToMqttQueue(topic, reading, reading_length, qos, retain) != pdPASS) {
         printf("mqttQueue is full\n");
     }
 
-    if (sendToWebsocketQueue(topic, payload, payload_length, qos, retain) != pdPASS) {
+    if (sendToWebsocketQueue(sensor_num, pub_setting_num, name, topic, reading, reading_length, qos, retain) != pdPASS) {
         printf("WebsocketQueue is full\n");
     }
     xTimerStart(sensor_read_led_off_timer, 0);
@@ -98,19 +100,19 @@ void Sensor::read_task() {
                                         average,
                                         pub_settings.topic);
                                     size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
-                                    sendToEndpoints(pub_settings.topic, payload_buffer, len, 0, false);
+                                    sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 0, false);
                                     avg_fields[i].accum = 0;
                                     avg_fields[i].avg_cnt_current = 0;
                                 }
                             } else {
                                 printf("Publishing %s number: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
                                 size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
-                                sendToEndpoints(pub_settings.topic, payload_buffer, len, 0, false);
+                                sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 0, false);
                             }
 
                         } else {
                             printf("Publishing %s : %f to: %s:\n", pub_settings.name, data, pub_settings.topic);
-                            sendToEndpoints(pub_settings.topic, data, strlen(data), 0, false);
+                            sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 0, false);
                         }
 
                         delete[] data; // allocated by strndup

@@ -11,7 +11,7 @@ void Serial::on_uart_rx() {
     }
     
     char c;
-    if (uart_nro < 2) {     // Hardware UARTS
+    if (uart_num < 2) {     // Hardware UARTS
         while (uart_is_readable(hardware_uart)) {
             // Notification for task to indicate that a uart reception has started. The task will start the reception with a deadline
             vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
@@ -44,11 +44,11 @@ void Serial::handle_received_char(char c, BaseType_t &xHigherPriorityTaskWoken) 
     }
 }
 
-Serial::Serial(unsigned int uart_nro, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
-    : uart_nro(uart_nro), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate), uart_buffer_size(uart_buffer_size),
+Serial::Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
+    : uart_num(uart_num), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate), uart_buffer_size(uart_buffer_size),
       uart_buffer(new char[uart_buffer_size]) {
-        hardware_uart = uart_nro == 0 ? uart0 : uart1;
-        hardware_uart_IRQ = uart_nro == 0 ? UART0_IRQ : UART1_IRQ;
+        hardware_uart = uart_num == 0 ? uart0 : uart1;
+        hardware_uart_IRQ = uart_num == 0 ? UART0_IRQ : UART1_IRQ;
 
         if (! uart_buffer) {
             printf("Serial Constructor, Out of Memory\n");
@@ -65,7 +65,7 @@ bool Serial::init(irq_handler_t handler) {
     uint pio_irq_index;
     pio_interrupt_source_t pis_sm_rx_fifo_not_empty;
 
-    switch (uart_nro) {
+    switch (uart_num) {
     case 0:
     case 1:       
         uart_init(hardware_uart, baud_rate);

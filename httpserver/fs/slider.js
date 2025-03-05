@@ -63,7 +63,7 @@ class TouchSlider {
             this.startX = e.pageX;
             this.isDragging = true;
             this.slider.style.transition = 'none';
-            e.preventDefault();
+            //e.preventDefault();       
         });
 
         this.slider.addEventListener('mousemove', (e) => {
