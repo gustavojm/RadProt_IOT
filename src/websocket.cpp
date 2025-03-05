@@ -106,7 +106,7 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
         client = &(ws->ws_clients[iClient]);
         if (client->established) {
             //netconn_set_sendtimeout(client->accepted_sock, 500);
-            err_t err = netconn_write((netconn *) client->accepted_sock, ws->send_buf, packet_size, NETCONN_NOCOPY);
+            err_t err = netconn_write((netconn *) client->accepted_sock, ws->send_buf, packet_size, NETCONN_COPY);
             if (err != ERR_OK) {
                 printf("Write failed with err %d (\"%s\")\n", err, lwip_strerr(err));
             }
@@ -150,7 +150,7 @@ static void ws_client_task(void *arg) {
                 char *ws_key_accept = create_ws_key_accept((char *)inbuf_ptr);
                 sprintf((char *)server_ptr->send_buf, "%s%s%s", head_ws, ws_key_accept, "\r\n\r\n");
                 netconn_write(
-                    (netconn *)client->accepted_sock, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), NETCONN_NOCOPY);
+                    (netconn *)client->accepted_sock, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), NETCONN_COPY);
             }
             // If is a message
             else if (is_fin_msg(inbuf_ptr)) {
