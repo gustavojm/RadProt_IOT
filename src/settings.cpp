@@ -21,7 +21,7 @@ s_Settings = { .settings = {
                    .ssid = WIFI_SSID,
                    .password = WIFI_PASSWORD,
                    .hostname = "config",
-                   .domain_name = "rad-prot.local",
+                   .domain_name = "radprot.local",
                    .dns_ignores_network_suffix = true,
                } };
 

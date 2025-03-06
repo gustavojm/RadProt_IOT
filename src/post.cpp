@@ -142,6 +142,12 @@ err_t httpd_process_post_data(struct http_state *hs) {
             const client_settings *current_settings = get_client_settings();
 
             if (initial_config) {
+                if (strcmp(post_data["settings"]["password"], "") == 0) {
+                    responseJson["error"] = "Define a Password to Protect Settings";
+                    save_settings = false;                
+                };
+
+                if (post_data["settings"]["password"])
                 strncpy(
                         (char *)cs.settings.password,
                         post_data["settings"]["password"],
