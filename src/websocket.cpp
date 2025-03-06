@@ -28,8 +28,7 @@ static char *create_ws_key_accept(char *inbuf) {
     strncpy(concat_key, key, len);
     strcat(concat_key, WS_GUID);
     mbedtls_sha1((uint8_t *)concat_key, 60, (uint8_t *)hash);
-    mbedtls_base64_encode((uint8_t *)hash_base64, 64, &baselen, (uint8_t *)hash, 20);
-
+    mbedtls_base64_encode((uint8_t *)hash_base64, 64, &baselen, (uint8_t *)hash, 20);    
     return hash_base64;
 }
 
@@ -116,7 +115,6 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
 }
 
 int sendToWebsocketQueue(int sensor_num, int pub_setting_num, const char *publish_name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain) {
-    volatile int debug_break = 0;
     WebsocketPublishMessage msg;  
 
     ArduinoJson::MyJsonDocument json;

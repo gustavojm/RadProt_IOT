@@ -3,9 +3,9 @@
 #include <pico/stdlib.h>
 #include <stdarg.h>
 
+#include <lwip/dns.h>
 #include <lwip/ip4_addr.h>
 #include <lwip/netif.h>
-#include <lwip/dns.h>
 
 #include <FreeRTOS.h>
 #include <semphr.h>
@@ -16,20 +16,20 @@
 #include "httpd.h"
 #include "settings.h"
 
+#include "MQTT.h"
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
-#include "serial.h"
-#include "MQTT.h"
 #include "sensor.h"
-#include <pico/multicore.h>
+#include "serial.h"
 #include <pico/flash.h>
+#include <pico/multicore.h>
 
 #include "debug_printf.h"
 #include "websocket.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 #define RECONNECT_DELAY_MS 5000 // 5 seconds
-#define MAX_RETRIES 5           // Maximum retry attempts
+#define MAX_RETRIES        5    // Maximum retry attempts
 
 void connect_to_wifi() {
     int retries = 0;
@@ -39,10 +39,10 @@ void connect_to_wifi() {
         const client_settings *client_settings = get_client_settings();
 
         // Attempt to connect to Wi-Fi
-        if (cyw43_arch_wifi_connect_timeout_ms(client_settings->wifi.ssid, client_settings->wifi.password, client_settings->wifi.auth_mode,
-                                               30000) == 0) {
-        // if (cyw43_arch_wifi_connect_timeout_ms("Redmi", "peperina", CYW43_AUTH_WPA2_MIXED_PSK,
-        //     30000) == 0) {        
+        if (cyw43_arch_wifi_connect_timeout_ms(
+                client_settings->wifi.ssid, client_settings->wifi.password, client_settings->wifi.auth_mode, 30000) == 0) {
+            // if (cyw43_arch_wifi_connect_timeout_ms("Redmi", "peperina", CYW43_AUTH_WPA2_MIXED_PSK,
+            //     30000) == 0) {
             if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
                 printf("Connected to Wi-Fi successfully!\n");
 
@@ -54,19 +54,19 @@ void connect_to_wifi() {
                     }
                 } else {
                     cyw43_arch_lwip_begin();
-                    dhcp_stop(cyw43_state.netif);     // turn off DHCP
-                    netif_set_addr(cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
-                    dns_setserver(0, &client_settings->wifi.dns);   // Set primary DNS    
+                    dhcp_stop(cyw43_state.netif); // turn off DHCP
+                    netif_set_addr(
+                        cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
+                    dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS
                     char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
                     cyw43_arch_lwip_end();
                     printf("Static IP set to: %s\n", ip_addr);
-                } 
+                }
 
                 printf("Connected! IP Address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
 
                 return;
             }
-
         }
 
         printf("Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
@@ -76,7 +76,6 @@ void connect_to_wifi() {
 
     printf("Failed to connect after %d attempts. Giving up.\n", MAX_RETRIES);
 }
-
 
 static void set_secondary_ip_address(int address) {
     /************************************ !!! WARNING !!! ************************************
@@ -97,13 +96,12 @@ static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
     return 0;
 }
 
-
-void ws_message_handler (uint8_t *data, uint32_t len, ws_type_t type) {    
+void ws_message_handler(uint8_t *data, uint32_t len, ws_type_t type) {
     printf("Websocket received: %.*s", len, data);
 }
 
 static void main_task(__unused void *params) {
-    
+
     if (cyw43_arch_init()) {
         printf("failed to initialise\n");
         return;
@@ -137,74 +135,70 @@ static void main_task(__unused void *params) {
         printf("\n");
     }
 
-    // printf("MY MAC ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\n",
-    // itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);
-
     const config_server_settings *settings = get_config_server_settings();
 
-    // cyw43_arch_enable_ap_mode(
-    //     settings->ssid,
-    //     settings->password,
-    //     settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
+    if (initial_config) {
+        cyw43_arch_enable_ap_mode(
+            settings->ssid, settings->password, settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
 
-    // struct netif *netif = netif_default;
-    // ip4_addr_t addr = { .addr = settings->ip };
-    // ip4_addr_t mask = { .addr = settings->net_mask };
-    //ip4_addr_t gw = { .addr = settings->gw };
+        struct netif *netif = netif_default;
+        ip4_addr_t addr = { .addr = settings->ip };
+        ip4_addr_t mask = { .addr = settings->nm };
+        ip4_addr_t gw = { .addr = settings->ip};
 
-    //netif_set_addr(netif, &addr, &mask, &addr);
+        netif_set_addr(netif, &addr, &mask, &addr);
 
-    // Start the dhcp server
-    // static dhcp_server_t dhcp_server;
-    // dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, settings->domain_name);
-    // dns_server_init(
-    //     netif->ip_addr.addr,
-    //     settings->secondary_address,
-    //     settings->hostname,
-    //     settings->domain_name,
-    //     settings->dns_ignores_network_suffix);
-    // set_secondary_ip_address(settings->secondary_address);
+        // Start the dhcp server
+        static dhcp_server_t dhcp_server;
+        dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, settings->domain_name);
+        dns_server_init(
+            netif->ip_addr.addr,
+            settings->secondary_address,
+            settings->hostname,
+            settings->domain_name,
+            settings->dns_ignores_network_suffix);
+        set_secondary_ip_address(settings->secondary_address);
+    } else {
+        connect_to_wifi();
+        auto client_settings = get_client_settings();
 
-    connect_to_wifi();
+        if (client_settings->sensor_settings[0].enabled) {
+            static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
+            my_uart0.init([]() { my_uart0.on_uart_rx(); });
+            my_uart0.set_timeout(pdMS_TO_TICKS(100));
+            my_uart0.set_delimiter('\n');
+            static Sensor s0(my_uart0);
+            s0.init();
+        }
+    
+        if (client_settings->sensor_settings[1].enabled) {
+            static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
+            my_uart2.init([]() { my_uart2.on_uart_rx(); });
+            my_uart2.set_timeout(pdMS_TO_TICKS(100));
+            my_uart2.set_delimiter('\n');
+            static Sensor s2(my_uart2);
+            s2.init();
+        }
+    
+        if (client_settings->sensor_settings[2].enabled) {
+            static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
+            my_uart3.init([]() { my_uart3.on_uart_rx(); });
+            my_uart3.set_timeout(pdMS_TO_TICKS(100));
+            my_uart3.set_delimiter('\n');
+            static Sensor s3(my_uart3);
+            s3.init();
+        }
+    
+        mqtt_init();
+    
+        ws_server_t ws_server;
+        ws_server.msg_handler = ws_message_handler;
+    
+        ws_server_init(&ws_server);
+    
+    }
 
     httpd_init(settings->hostname, settings->domain_name);
-
-
-    auto client_settings = get_client_settings();
-
-    if (client_settings->sensor_settings[0].enabled) {
-        static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
-        my_uart0.init([]() {my_uart0.on_uart_rx(); });
-        my_uart0.set_timeout(pdMS_TO_TICKS(100));
-        my_uart0.set_delimiter('\n');
-        static Sensor s0(my_uart0);
-        s0.init();
-    }
-
-    if (client_settings->sensor_settings[1].enabled) {
-        static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
-        my_uart2.init([]() {my_uart2.on_uart_rx(); });
-        my_uart2.set_timeout(pdMS_TO_TICKS(100));
-        my_uart2.set_delimiter('\n');
-        static Sensor s2(my_uart2);
-        s2.init();
-    }
-
-    if (client_settings->sensor_settings[2].enabled) {
-        static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
-        my_uart3.init([]() {my_uart3.on_uart_rx(); });
-        my_uart3.set_timeout(pdMS_TO_TICKS(100));
-        my_uart3.set_delimiter('\n');
-        static Sensor s3(my_uart3);
-        s3.init();
-    }
-
-    mqtt_init();
-    
-    ws_server_t ws_server;
-    ws_server.msg_handler = ws_message_handler;
-    
-    ws_server_init(&ws_server);
 
     // Monitor connection and reconnect if necessary
     while (true) {
@@ -219,30 +213,28 @@ static void main_task(__unused void *params) {
     vTaskDelete(NULL);
 }
 
-void writeStringTask(void *params) {    
-    //flash_safe_execute_core_init();
+void writeStringTask(void *params) {
+    // flash_safe_execute_core_init();
 
     // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select    
+    // Set datasheet for more information on function select
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
     uart_init(uart1, 9600);
 
-    vTaskDelay(5*1000);
+    vTaskDelay(5 * 1000);
 
     while (1) {
         uart_init(uart1, 9600);
         vTaskDelay(500);
-        // Send out a string, with CR/LF conversions              
+        // Send out a string, with CR/LF conversions
         uart_puts(uart1, "Hel987.2233lo, UART!\n");
         vTaskDelay(500);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
         vTaskDelay(500);
         uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
         vTaskDelay(500);
-
     }
-
 }
 
 int main(void) {
@@ -250,11 +242,17 @@ int main(void) {
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
 
-    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 2, NULL, MAIN_TASK_PRIORITY, &task);    
+    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 2, NULL, MAIN_TASK_PRIORITY, &task);
 
     TaskHandle_t writeStringTask_handle;
     xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, MAIN_TASK_PRIORITY, &writeStringTask_handle);
     vTaskCoreAffinitySet(writeStringTask_handle, 1);
 
+    gpio_init(INITIAL_CONFIG_GPIO);
+    gpio_set_dir(INITIAL_CONFIG_GPIO, GPIO_IN);
+    gpio_pull_up(INITIAL_CONFIG_GPIO);
+
+    busy_wait_ms(10);
+    initial_config = !gpio_get(INITIAL_CONFIG_GPIO);
     vTaskStartScheduler();
 }

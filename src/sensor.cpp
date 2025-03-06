@@ -10,7 +10,7 @@ static void sensor_read_led_off(TimerHandle_t xTimer) {
 
 void Sensor::init() {
     TaskHandle_t sensor_task_handle;
-    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, 2048, this, 1, &sensor_task_handle);
+    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, 1024, this, 1, &sensor_task_handle);
     uart.set_receiving_task_handle(sensor_task_handle);
 
     gpio_init(SENSOR_READ_LED_GPIO);
@@ -68,7 +68,7 @@ void Sensor::read_task() {
                         memcpy(data, &serial_buffer[pub_settings.start], len);
                         data[len] = '\0'; // Ensure null-termination
 
-                        printf("****** %s ******\n", data);
+                        //printf("****** %s ******\n", data);
 
                         if (pub_settings.is_num) {
                             errno = 0; /* To distinguish success/failure after call */

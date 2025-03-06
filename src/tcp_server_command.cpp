@@ -13,8 +13,8 @@
 
 namespace json = ArduinoJson;
 
-json::JsonDocument tcp_server_command::led_toggle_cmd(json::JsonObject const pars) {
-    json::JsonDocument res;
+json::MyJsonDocument tcp_server_command::led_toggle_cmd(json::JsonObject const pars) {
+    json::MyJsonDocument res;
     bool status;
     if (status = cyw43_arch_gpio_get(CYW43_WL_GPIO_LED_PIN)) {
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
@@ -43,8 +43,8 @@ const tcp_server_command::cmd_entry tcp_server_command::cmds_table[] = {
  * @param   *pars   :JSON object containing the passed parameters to the called
  * function
  */
-json::JsonDocument tcp_server_command::cmd_execute(char const *cmd, json::JsonObject const pars) {
-    json::JsonDocument res;
+json::MyJsonDocument tcp_server_command::cmd_execute(char const *cmd, json::JsonObject const pars) {
+    json::MyJsonDocument res;
     for (unsigned int i = 0; i < (sizeof(cmds_table) / sizeof(cmds_table[0])); i++) {
         if (!strcmp(cmd, cmds_table[i].cmd_name)) {
             // return cmds_table[i].cmd_function(pars);
@@ -73,11 +73,11 @@ bool tcp_server_command::reply_fn(int conn_sock) {
             continue;
 
 
-        auto rx_JSON_value = json::JsonDocument();
+        auto rx_JSON_value = json::MyJsonDocument();
         //printf("%s", rx_buff);
         json::DeserializationError error = json::deserializeJson(rx_JSON_value, rx_buff);
 
-        auto tx_JSON_value = json::JsonDocument();
+        auto tx_JSON_value = json::MyJsonDocument();
         tx_buff = nullptr;
         int buff_len = 0;
 

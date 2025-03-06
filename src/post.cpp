@@ -81,10 +81,10 @@ int connect_auth_mode_to_scan_auth_mode(int connect_auth_mode) {
     return scan_auth_mode;
 }
 
-err_t httpd_process_post_data(struct http_state *hs) {
-    err_t ret;
+err_t httpd_process_post_data(struct http_state *hs) {    
+    auto responseJson = json::MyJsonDocument();
     if (hs->post_uri && !memcmp(hs->post_uri, "/settings_save.cgi", 19)) {        
-        auto post_data = json::JsonDocument();
+        auto post_data = json::MyJsonDocument();
         json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
         if (error) {
@@ -135,32 +135,50 @@ err_t httpd_process_post_data(struct http_state *hs) {
                         p_s["topic"],
                         sizeof cs.settings.sensor_settings->publish_settings->topic);
                 }
-            }
+            }                      
 
-            ret = ERR_OK;
+            bool save_settings = true;
 
-            auto body_JSON = json::JsonDocument();
+            const client_settings *current_settings = get_client_settings();
 
-            char *body = nullptr;
-            int body_len = 0;
-            body_len = json::measureJson(body_JSON); /* returns 0 on fail */
-            body = new char[body_len];
-            if (!(body)) {
-                printf("Out Of Memory");
-                body_len = 0;
+            if (initial_config) {
+                strncpy(
+                        (char *)cs.settings.password,
+                        post_data["settings"]["password"],
+                        sizeof cs.settings.password);
+
             } else {
-                json::serializeJson(body_JSON, body, body_len);
+                if (post_data["settings"]["password"] != current_settings->password) {
+                    responseJson["error"] = "Wrong Password";
+                    save_settings = false;
+                } else {
+                    responseJson["OK"] = "Rebooting";
+                }
             }
-            httpd_post_response(hs, body, body_len, "json");
+
+            char *response = nullptr;
+            int response_len = 0;
+            response_len = json::measureJson(responseJson); /* returns 0 on fail */
+            response = new char[response_len];
+            if (!(response)) {
+                printf("Out Of Memory");
+                response_len = 0;
+            } else {
+                json::serializeJson(responseJson, response, response_len);
+            }
+            httpd_post_response(hs, response, response_len, "json");
+
+            if (!save_settings) {
+                return ERR_OK;
+            }
 
             flash_safe_execute(write_client_settings, &cs, UINT32_MAX);
-
             watchdog_reboot(0, SRAM_END, 500);
         }
     }
 
     // if (hs->post_uri && !memcmp(hs->post_uri, "/settings.cgi", 14)) {
-    //     auto post_data = json::JsonDocument();
+    //     auto post_data = json::MyJsonDocument();
     //     json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
     //     if (error) {
@@ -171,7 +189,7 @@ err_t httpd_process_post_data(struct http_state *hs) {
     //     }
     //     ret = ERR_OK;
 
-    //     auto body_JSON = json::JsonDocument();
+    //     auto body_JSON = json::MyJsonDocument();
 
     //     char *body = nullptr;
     //     int body_len = 0;
@@ -187,11 +205,11 @@ err_t httpd_process_post_data(struct http_state *hs) {
     // }
 
     if (hs->post_uri && !memcmp(hs->post_uri, "/wifi_nets.cgi", 15)) {
-        auto body_JSON = json::JsonDocument();
+        auto body_JSON = json::MyJsonDocument();
         auto wifi_nets_array = body_JSON.to<json::JsonArray>();
 
         for (auto &wifi_net : wifi_networks) {
-            auto wifi_net_entry = json::JsonDocument();
+            auto wifi_net_entry = json::MyJsonDocument();
             wifi_net_entry["ssid"] = wifi_net.ssid;
             wifi_net_entry["rssi"] = wifi_net.rssi;
             wifi_net_entry["chann"] = wifi_net.channel;
@@ -237,8 +255,7 @@ err_t httpd_process_post_data(struct http_state *hs) {
         snprintf(mac_addr_str, sizeof mac_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x\n",
         itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);    
         body_JSON["mac_address"] =  mac_addr_str;
-        body_JSON["initial_config"] =  true;
-
+        body_JSON["initial_config"] = initial_config;
 
         char *body = nullptr;
         int body_len = 0;

@@ -13,6 +13,9 @@
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 
+inline const uint INITIAL_CONFIG_GPIO = 14;     // Pin 19
+inline volatile bool initial_config = false;
+
 // Define the map with string as key and array as value
 // Define comparison operator for cyw43_ev_scan_result_t
 inline bool operator<(const cyw43_ev_scan_result_t& lhs, const cyw43_ev_scan_result_t& rhs) {
@@ -30,7 +33,7 @@ inline etl::set<cyw43_ev_scan_result_t, MAX_WIFI_NETWORKS> wifi_networks;
 
 typedef struct {
     uint32_t ip;
-    uint32_t net_mask;
+    uint32_t nm;
     /* The secondary IP address is needed to support the "sign into network" mechanism.
      * Modern OSes will automatically show the 'sign into network' page if:
      *	1. The network has valid DHCP/DNS servers
@@ -146,6 +149,8 @@ struct client_settings {
   public:
     wifi_settings wifi;
     mqtt_settings mqtt;
+    unsigned char password[8];
+    
     sensor_settings_entry sensor_settings[MAX_SERIAL_SENSORS];
 
     ArduinoJson::MyJsonDocument to_json() const {

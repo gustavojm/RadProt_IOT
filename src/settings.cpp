@@ -15,7 +15,7 @@ const union {
 } __attribute__((aligned(FLASH_SECTOR_SIZE)))
 s_Settings = { .settings = {
                    .ip = 0x017BA8C0,
-                   .net_mask = 0x00FFFFFF,
+                   .nm = 0x00FFFFFF,
                    .secondary_address =
                        0x006433c6, // TEST-NET-2. See the comment before 'secondary_address' definition for details.
                    .ssid = WIFI_SSID,

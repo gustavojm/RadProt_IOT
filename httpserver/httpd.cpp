@@ -112,6 +112,7 @@
 #include <stdio.h>
 #include <stdlib.h> /* atoi */
 #include <string.h> /* memset */
+#include "settings.h"
 
 #if LWIP_TCP && LWIP_CALLBACK_API
 
@@ -1732,18 +1733,21 @@ static void http_continue(void *connection) {
 #endif /* LWIP_HTTPD_FS_ASYNC_READ */
 
 static bool host_name_matches(char *host) {
-    return true; // warning THIS IS TO SPEED UP DEBUGGING TODO REMOVE THIS ON PROD
-    int len = strlen(s_HTTPServerSettings.hostname);
-    if (strncasecmp(host, s_HTTPServerSettings.hostname, len))
+    if (initial_config) {       // Initial config means that we are using the captive portal
+        int len = strlen(s_HTTPServerSettings.hostname);
+        if (strncasecmp(host, s_HTTPServerSettings.hostname, len))
+            return false;
+
+        if (!host[len])
+            return true; // Host name without domain
+
+        if (host[len] == '.' && !strcasecmp(host + len + 1, s_HTTPServerSettings.domain_name))
+            return true; // Host name with domain
+
         return false;
-
-    if (!host[len])
-        return true; // Host name without domain
-
-    if (host[len] == '.' && !strcasecmp(host + len + 1, s_HTTPServerSettings.domain_name))
-        return true; // Host name with domain
-
-    return false;
+    } else {
+        return true;
+    }
 }
 
 /**

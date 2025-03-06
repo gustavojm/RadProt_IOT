@@ -357,6 +357,8 @@
 </body>
 
 <script>
+    var initial_config = false;
+
     function getWifiSignalBars(rssi) {
         if (rssi >= -30) {
             return "▆ ▆ ▆ ▆ ▆";
@@ -497,6 +499,13 @@
             });
         }
 
+        if (initial_config && nestedJson.settings.password != nestedJson.settings.password_confirm) {
+            alert("Passwords do not match");
+            return;
+        }
+        
+        nestedJson.settings.password_config = "";
+        
         // Step 3: Output the nested JSON        
         let xhr = new XMLHttpRequest();
         xhr.open("POST", '/settings_save.cgi', true);
@@ -504,10 +513,14 @@
         json = JSON.stringify(nestedJson, null, 2);
         xhr.send(json);
         xhr.onloadend = function () {
-            document.getElementById("reboot_popup").style.display = "block";
-            //alert(this.responseText);
+            dataJson = JSON.parse(this.responseText) 
+            if (dataJson["error"]) {
+                alert(dataJson["error"]);
+                return;
+            } else {
+                document.getElementById("reboot_popup").style.display = "block";
+            }
         };
-
     });
 
 
@@ -649,7 +662,8 @@
             sensors_div.appendChild(sensor_div);
             sensors_div.appendChild(document.createElement("hr"));
 
-            if (settings_json["initial_config"]) {
+            initial_config = settings_json["initial_config"];
+            if (initial_config) {
                 elements_to_show = document.getElementsByClassName("show-on-initial-config");
                 for (let i = 0; i < elements_to_show.length; i++) {
                     elements_to_show[i].style.display = "table-cell";
