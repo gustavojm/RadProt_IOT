@@ -107,7 +107,7 @@ int sendToMqttQueue(const char *topic, const char *payload, size_t payload_lengt
         xTimerStart(status_led_off_timer, 0);
         return ret;
     }
-    return -1;
+    return pdPASS;
 }
 
 void mqtt_init() {

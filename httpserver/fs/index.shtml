@@ -346,10 +346,7 @@
     <div id="reboot_popup" class="modal-overlay">
         <div class="modal-reset-content">
             <span id="closeModalBtn" class="close">&times;</span>
-            <p>The settings have been updated and the device is restarting.<br />Please disconnect from the Wi-Fi
-                network,
-                reconnect to it and proceed to the network login page.
-            </p>
+            <p>The settings have been updated and the device is restarting.</p>
         </div>
     </div>
 

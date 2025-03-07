@@ -18,7 +18,6 @@ class tcp_server_command : public tcp_server {
 
     bool reply_fn(int conn_sock) override;
 
-    // FredMemFn points to a member of Fred that takes (char,float)
     typedef json::MyJsonDocument (tcp_server_command::*cmd_function_ptr)(json::JsonObject pars);
 
     typedef struct {
