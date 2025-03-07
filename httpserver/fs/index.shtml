@@ -189,7 +189,7 @@
     <div class="slider-container">
         <div class="slider">
             <div class="slide">
-                <h2>MAC Address:<span id="mac_address"></span> </h2>
+                <h2>MAC Address: <span id="mac_address"></span> </h2>
 
                 <form action="" id="settings_form">
                     <div style="display: flex; justify-content: center; flex-direction: column;">
@@ -319,9 +319,9 @@
 
                 </form>
             </div>
-            <div class="slide" id="slide_2">
+            <div class="slide" id="slide_2" style="display: flex; flex-direction: column;">
                 <h2>Readings</h2>
-                <div id="readings_div"></div>
+                <div id="readings_div" style="display: flex; justify-content: center; flex-direction: column;"></div>
                 <h2>Log</h2>
                 <div id="ws_div" class="ws-div"></div>
                 <br> <!-- Space to show the slide dots -->
@@ -677,7 +677,7 @@
             if (item.enabled) {
                 const readings_sensor_div = document.createElement("div");
 
-                readings_sensor_div.innerHTML = `#${index_sensor + 1}`;
+                readings_sensor_div.innerHTML = `Serial Interface #${index_sensor + 1}`;
 
                 const readings_table = document.createElement("table");
                 readings_table.innerHTML = `
@@ -693,6 +693,7 @@
                                         `;
 
                 readings_table.id = `publish_settings_${index_sensor}`;
+                readings_table.style = "width: 100%; max-width: 400px; margin: auto;";
 
                 settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
                     if (item.enabled) {

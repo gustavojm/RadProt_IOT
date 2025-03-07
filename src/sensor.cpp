@@ -1,29 +1,11 @@
 #include "sensor.h"
 
-#define SENSOR_READ_LED_GPIO 15
-
 int Sensor::next_sensor_num = 0;
-
-static void sensor_read_led_off(TimerHandle_t xTimer) {
-    gpio_put(SENSOR_READ_LED_GPIO, false);
-};
 
 void Sensor::init() {
     TaskHandle_t sensor_task_handle;
     xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, 1024, this, 1, &sensor_task_handle);
     uart.set_receiving_task_handle(sensor_task_handle);
-
-    gpio_init(SENSOR_READ_LED_GPIO);
-    gpio_set_dir(SENSOR_READ_LED_GPIO, true);
-
-    sensor_read_led_off_timer = xTimerCreate(
-        "",                     /* Text name for the software timer - not used by FreeRTOS. */
-        pdMS_TO_TICKS(500),     /* How long will the led remain ON. */
-        pdFALSE,                /* Setting uxAutoRealod to pdFALSE creates a one-shot software timer. */
-        0,                      /* Timer id. */
-        sensor_read_led_off     /* Callback function to be used by the software timer being created. */
-    );
-
 }
 
 struct avg_fields_t {
@@ -32,18 +14,13 @@ struct avg_fields_t {
 };
 
 void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain) {
-    gpio_put(SENSOR_READ_LED_GPIO, true);
-
     if (sendToMqttQueue(topic, reading, reading_length, qos, retain) != pdPASS) {
         printf("mqttQueue is full\n");
     }
 
     if (sendToWebsocketQueue(sensor_num, pub_setting_num, name, topic, reading, reading_length, qos, retain) != pdPASS) {
         printf("WebsocketQueue is full\n");
-    }
-    xTimerStart(sensor_read_led_off_timer, 0);
-
-    
+    }      
 };
 
 void Sensor::read_task() {
@@ -59,7 +36,7 @@ void Sensor::read_task() {
             for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
                 const publish_settings_entry &pub_settings = settings->publish_settings[i];
                 if (pub_settings.enabled && pub_settings.end >= pub_settings.start &&
-                    pub_settings.start < sizeof serial_buffer && pub_settings.end < sizeof serial_buffer) {
+                    pub_settings.start < bytes_received && pub_settings.end < bytes_received) {
                     size_t len = pub_settings.end - pub_settings.start;
 
 

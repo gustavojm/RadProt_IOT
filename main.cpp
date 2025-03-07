@@ -36,7 +36,7 @@ void connect_to_wifi() {
 
     while (retries < MAX_RETRIES) {
         printf("Connecting to Wi-Fi... Attempt %d\n", retries + 1);
-        const client_settings *client_settings = get_client_settings();
+        const client_mode_settings *client_settings = get_client_mode_settings();
 
         // Attempt to connect to Wi-Fi
         if (cyw43_arch_wifi_connect_timeout_ms(
@@ -135,79 +135,98 @@ static void main_task(__unused void *params) {
         printf("\n");
     }
 
-    const config_server_settings *settings = get_config_server_settings();
+    const ap_mode_settings *ap_settings = get_ap_mode_settings();
+    const client_mode_settings *client_settings = get_client_mode_settings();
+
+    if (strcmp(client_settings->wifi.ssid, "") == 0) {       // If no WiFi network to connect is defined
+        initial_config = true;
+    }
 
     if (initial_config) {
+        uint8_t itf_sta_mac[6];
+        cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
+
+        char ssid[32];
+        snprintf(ssid, sizeof(ssid), "%s-%02X", ap_settings->ssid, itf_sta_mac[5]);
+
         cyw43_arch_enable_ap_mode(
-            settings->ssid, settings->password, settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
+            ssid, ap_settings->password, ap_settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);
 
         struct netif *netif = netif_default;
-        ip4_addr_t addr = { .addr = settings->ip };
-        ip4_addr_t mask = { .addr = settings->nm };
-        ip4_addr_t gw = { .addr = settings->ip};
+        ip4_addr_t addr = { .addr = ap_settings->ip };
+        ip4_addr_t mask = { .addr = ap_settings->nm };
+        ip4_addr_t gw = { .addr = ap_settings->ip};
 
         netif_set_addr(netif, &addr, &mask, &addr);
 
         // Start the dhcp server
         static dhcp_server_t dhcp_server;
-        dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, settings->domain_name);
+        dhcp_server_init(&dhcp_server, &netif->ip_addr, &netif->netmask, ap_settings->domain_name);
         dns_server_init(
             netif->ip_addr.addr,
-            settings->secondary_address,
-            settings->hostname,
-            settings->domain_name,
-            settings->dns_ignores_network_suffix);
-        set_secondary_ip_address(settings->secondary_address);
+            ap_settings->secondary_address,
+            ap_settings->hostname,
+            ap_settings->domain_name,
+            ap_settings->dns_ignores_network_suffix);
+        set_secondary_ip_address(ap_settings->secondary_address);
     } else {
-        connect_to_wifi();
-        auto client_settings = get_client_settings();
-
-        if (client_settings->sensor_settings[0].enabled) {
-            static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
-            my_uart0.init([]() { my_uart0.on_uart_rx(); });
-            my_uart0.set_timeout(pdMS_TO_TICKS(100));
-            my_uart0.set_delimiter('\n');
-            static Sensor s0(my_uart0);
-            s0.init();
-        }
-    
-        if (client_settings->sensor_settings[1].enabled) {
-            static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
-            my_uart2.init([]() { my_uart2.on_uart_rx(); });
-            my_uart2.set_timeout(pdMS_TO_TICKS(100));
-            my_uart2.set_delimiter('\n');
-            static Sensor s2(my_uart2);
-            s2.init();
-        }
-    
-        if (client_settings->sensor_settings[2].enabled) {
-            static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
-            my_uart3.init([]() { my_uart3.on_uart_rx(); });
-            my_uart3.set_timeout(pdMS_TO_TICKS(100));
-            my_uart3.set_delimiter('\n');
-            static Sensor s3(my_uart3);
-            s3.init();
-        }
-    
-        mqtt_init();
-    
-        ws_server_t ws_server;
-        ws_server.msg_handler = ws_message_handler;
-    
-        ws_server_init(&ws_server);
-    
+        connect_to_wifi();  
+        mqtt_init();    
     }
 
-    httpd_init(settings->hostname, settings->domain_name);
+    gpio_init(STATUS_LED_GPIO);
+    gpio_set_dir(STATUS_LED_GPIO, true);
 
-    // Monitor connection and reconnect if necessary
-    while (true) {
-        if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+    if (client_settings->sensor_settings[0].enabled) {
+        static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
+        my_uart0.init([]() { my_uart0.on_uart_rx(); });
+        my_uart0.set_timeout(pdMS_TO_TICKS(100));
+        my_uart0.set_delimiter('\n');
+        static Sensor s0(my_uart0);
+        s0.init();
+    }
 
-            printf("Wi-Fi disconnected! Attempting to reconnect...\n");
-            connect_to_wifi();
+    if (client_settings->sensor_settings[1].enabled) {
+        static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
+        my_uart2.init([]() { my_uart2.on_uart_rx(); });
+        my_uart2.set_timeout(pdMS_TO_TICKS(100));
+        my_uart2.set_delimiter('\n');
+        static Sensor s2(my_uart2);
+        s2.init();
+    }
+
+    if (client_settings->sensor_settings[2].enabled) {
+        static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
+        my_uart3.init([]() { my_uart3.on_uart_rx(); });
+        my_uart3.set_timeout(pdMS_TO_TICKS(100));
+        my_uart3.set_delimiter('\n');
+        static Sensor s3(my_uart3);
+        s3.init();
+    }
+
+    httpd_init(ap_settings->hostname, ap_settings->domain_name);
+    ws_server_t ws_server;
+    ws_server.msg_handler = ws_message_handler;
+
+    ws_server_init(&ws_server);
+
+    if (initial_config) {
+        while (true) {
+            gpio_put(STATUS_LED_GPIO, true);
+            vTaskDelay(pdMS_TO_TICKS(500));
+            gpio_put(STATUS_LED_GPIO, false);
+            vTaskDelay(pdMS_TO_TICKS(500));
         }
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
+    } else {
+        // Monitor connection and reconnect if necessary
+        while (true) {
+            if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+
+                printf("Wi-Fi disconnected! Attempting to reconnect...\n");
+                connect_to_wifi();
+            }
+            vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
+        }
     }
 
     vTaskDelete(NULL);

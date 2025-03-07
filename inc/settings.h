@@ -14,6 +14,8 @@
 #include <pico/stdlib.h>
 
 inline const uint INITIAL_CONFIG_GPIO = 14;     // Pin 19
+inline const uint STATUS_LED_GPIO = 15;         // Pin 20
+
 inline volatile bool initial_config = false;
 
 // Define the map with string as key and array as value
@@ -45,15 +47,15 @@ typedef struct {
      *		specifically the isDnsPrivateIpResponse() check and the "DNS response to the URL is private IP" error.
      */
     uint32_t secondary_address;
-    char ssid[32];
+    char ssid[28];
     char password[32];
     char hostname[32];
     char domain_name[32];
     uint32_t dns_ignores_network_suffix;
-} config_server_settings;
+} ap_mode_settings;
 
-const config_server_settings *get_config_server_settings();
-void write_config_server_settings(const config_server_settings *new_settings);
+const ap_mode_settings *get_ap_mode_settings();
+void write_ap_mode_settings(const ap_mode_settings *new_settings);
 
 const char *get_next_domain_name_component(const char *domain_name, int *position, int *length);
 
@@ -81,7 +83,6 @@ struct publish_settings_entry{
     }
     
 };
-
 
 struct sensor_settings_entry {
   public:
@@ -145,7 +146,7 @@ struct mqtt_settings {
     
 };
 
-struct client_settings {
+struct client_mode_settings {
   public:
     wifi_settings wifi;
     mqtt_settings mqtt;
@@ -168,15 +169,15 @@ struct client_settings {
     
 };
 
-union client_settings_t {
-    client_settings settings;
+union client_mode_settings_t {
+    client_mode_settings settings;
     char padding[FLASH_SECTOR_SIZE];
 } __attribute__((aligned(FLASH_SECTOR_SIZE)));
 
-static_assert(sizeof(client_settings_t) == FLASH_SECTOR_SIZE, "Size mismatch!");
+static_assert(sizeof(client_mode_settings_t) == FLASH_SECTOR_SIZE, "Size mismatch!");
 
-const client_settings *get_client_settings();
+const client_mode_settings *get_client_mode_settings();
 
-void __not_in_flash_func(write_client_settings)(void *param);
+void __not_in_flash_func(write_client_mode_settings)(void *param);
 
-ArduinoJson::MyJsonDocument get_client_settings_json();
+ArduinoJson::MyJsonDocument get_client_mode_settings_json();

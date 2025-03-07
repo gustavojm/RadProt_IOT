@@ -16,7 +16,7 @@ class Sensor {
         assert(next_sensor_num < MAX_SERIAL_SENSORS);
         
         sensor_num = next_sensor_num++;
-        settings = &(get_client_settings()->sensor_settings)[sensor_num];
+        settings = &(get_client_mode_settings()->sensor_settings)[sensor_num];
     };
 
     void init();
@@ -26,8 +26,7 @@ class Sensor {
     void sendToEndpoints(int sensor_num, int pub_setting_num, const char* name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain);
     
     Serial &uart;    
-    const sensor_settings_entry *settings;
-    TimerHandle_t sensor_read_led_off_timer;
+    const sensor_settings_entry *settings;    
     int sensor_num = 0;
 
     static int next_sensor_num;

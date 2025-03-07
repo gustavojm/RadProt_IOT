@@ -3,8 +3,10 @@
 #include "lwip/apps/mqtt_priv.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "timers.h"
 
 inline QueueHandle_t mqttQueue;
+inline TimerHandle_t status_led_off_timer;
 
 // Define maximum lengths for the MQTT topic and payload
 #define MQTT_MAX_TOPIC_LENGTH 128

@@ -10,7 +10,7 @@
 #include <pico/multicore.h>
 
 const union {
-    config_server_settings settings;
+    ap_mode_settings settings;
     char padding[FLASH_SECTOR_SIZE];
 } __attribute__((aligned(FLASH_SECTOR_SIZE)))
 s_Settings = { .settings = {
@@ -25,11 +25,11 @@ s_Settings = { .settings = {
                    .dns_ignores_network_suffix = true,
                } };
 
-const config_server_settings *get_config_server_settings() {
+const ap_mode_settings *get_ap_mode_settings() {
     return &s_Settings.settings;
 }
 
-void write_config_server_settings(const config_server_settings *new_settings) {
+void write_ap_mode_settings(const ap_mode_settings *new_settings) {
     portENTER_CRITICAL();
     flash_range_erase((uint32_t)&s_Settings - XIP_BASE, FLASH_SECTOR_SIZE);
     flash_range_program((uint32_t)&s_Settings - XIP_BASE, (const uint8_t *)new_settings, sizeof(*new_settings));
@@ -55,7 +55,7 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 }
 
 //constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
-const client_settings_t s_Client_Settings = {                
+const client_mode_settings_t s_Client_Settings = {                
                 .settings = { 
                 .wifi = {.ssid = "C14017750 7261",
                          .password = "malamala",
@@ -144,15 +144,15 @@ const client_settings_t s_Client_Settings = {
 					
 };
 
-const client_settings *get_client_settings() {
+const client_mode_settings *get_client_mode_settings() {
     return &s_Client_Settings.settings;
 }
 
-void __not_in_flash_func(write_client_settings)(void *param) {
-    const client_settings_t *new_settings = static_cast<const client_settings_t *>(param);
+void __not_in_flash_func(write_client_mode_settings)(void *param) {
+    const client_mode_settings_t *new_settings = static_cast<const client_mode_settings_t *>(param);
     uint32_t start = (uint32_t)&s_Client_Settings - XIP_BASE;
     printf("Start: %i\n", start );
-    printf("Size: %i\n", sizeof(client_settings_t));
+    printf("Size: %i\n", sizeof(client_mode_settings_t));
    
     // Disable interrupts on the current core
     uint32_t status = save_and_disable_interrupts();
@@ -169,6 +169,6 @@ void __not_in_flash_func(write_client_settings)(void *param) {
     
 }
 
-ArduinoJson::MyJsonDocument get_client_settings_json() {
+ArduinoJson::MyJsonDocument get_client_mode_settings_json() {
     return s_Client_Settings.settings.to_json();
 };

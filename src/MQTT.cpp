@@ -16,7 +16,6 @@
 #include "MQTTClient.h"
 #include "websocket.h"
 
-
 void messageArrived(MessageData *data) {
     printf(
         "Message arrived on topic %.*s: %.*s\n",
@@ -26,12 +25,16 @@ void messageArrived(MessageData *data) {
         data->message->payload);
 }
 
+static void status_led_off(TimerHandle_t xTimer) {
+    gpio_put(STATUS_LED_GPIO, false);
+};
+
 static void mqtt_task(void *pvParameters) {
     MQTTClient client;
     Network network;
     unsigned char sendbuf[80], readbuf[80];
     int rc = 0;
-    
+
     pvParameters = 0;
     NetworkInit(&network);
     MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
@@ -41,16 +44,16 @@ static void mqtt_task(void *pvParameters) {
     }
 
     while (true) {
-        const client_settings *client_settings = get_client_settings();    
+        const client_mode_settings *client_settings = get_client_mode_settings();
         if ((rc = NetworkConnect(&network, client_settings->mqtt.broker, client_settings->mqtt.port)) != 0) {
             printf("Error in network connection: %d\n", rc);
         }
 
         MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
         connectData.MQTTVersion = 3;
-        
+
         connectData.clientID.cstring = const_cast<char *>("RadProt_IOT");
-        //connectData.username.cstring = const_cast<char *>("Pepito");;
+        // connectData.username.cstring = const_cast<char *>("Pepito");;
 
         if ((rc = MQTTConnect(&client, &connectData)) != 0) {
             printf("Error connecting: %d\n", rc);
@@ -61,7 +64,7 @@ static void mqtt_task(void *pvParameters) {
         // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
         //     printf("Error MQTT subscribe: %d\n", rc);
         // }
-                   
+
         MqttPublishMessage msg;
 
         while (true) {
@@ -76,7 +79,7 @@ static void mqtt_task(void *pvParameters) {
 
                 if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0) {
                     printf("Error publishing: %d\n", rc);
-                    break;          // breaking inner loop will reconnect;
+                    break; // breaking inner loop will reconnect;
                 }
                 printf("---MQTT--->");
             }
@@ -86,17 +89,25 @@ static void mqtt_task(void *pvParameters) {
 }
 
 int sendToMqttQueue(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain) {
-    MqttPublishMessage msg;
+    if (mqttQueue) {
+        MqttPublishMessage msg;
 
-    // Copy topic and payload into the structure
-    snprintf(msg.topic, MQTT_MAX_TOPIC_LENGTH, "%s", topic);
-    snprintf(msg.payload, MQTT_MAX_PAYLOAD_LENGTH, "%s", payload);
-    msg.payload_length = payload_length;
-    msg.qos = qos;
-    msg.retain = retain;
-    
-    // Send the message to the FreeRTOS queue
-    return xQueueSend(mqttQueue, &msg, 0);
+        gpio_put(STATUS_LED_GPIO, true);
+
+        // Copy topic and payload into the structure
+        snprintf(msg.topic, MQTT_MAX_TOPIC_LENGTH, "%s", topic);
+        snprintf(msg.payload, MQTT_MAX_PAYLOAD_LENGTH, "%s", payload);
+        msg.payload_length = payload_length;
+        msg.qos = qos;
+        msg.retain = retain;
+
+        // Send the message to the FreeRTOS queue
+        int ret = xQueueSend(mqttQueue, &msg, 0);
+
+        xTimerStart(status_led_off_timer, 0);
+        return ret;
+    }
+    return -1;
 }
 
 void mqtt_init() {
@@ -110,7 +121,15 @@ void mqtt_init() {
             NULL,                       // Arguments needed by the Task (NULL because we don't have any)
             (configMAX_PRIORITIES - 2), // Task Priority - Higher the number the more priority [max is (configMAX_PRIORITIES
                                         // - 1) provided in FreeRTOSConfig.h]
-            NULL // Task Handle if available for managing the task
+            NULL                        // Task Handle if available for managing the task
+        );
+
+        status_led_off_timer = xTimerCreate(
+            "",                 /* Text name for the software timer - not used by FreeRTOS. */
+            pdMS_TO_TICKS(500), /* How long will the led remain ON. */
+            pdFALSE,            /* Setting uxAutoRealod to pdFALSE creates a one-shot software timer. */
+            0,                  /* Timer id. */
+            status_led_off      /* Callback function to be used by the software timer being created. */
         );
     }
 }

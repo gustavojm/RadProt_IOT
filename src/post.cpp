@@ -69,7 +69,7 @@ int connect_auth_mode_to_scan_auth_mode(int connect_auth_mode) {
 
     switch (connect_auth_mode) {
     case CYW43_AUTH_OPEN: scan_auth_mode = 0; break;
-    case CYW43_AUTH_WPA_TKIP_PSK: scan_auth_mode = 1 ; break;
+    case CYW43_AUTH_WPA_TKIP_PSK: scan_auth_mode = 1; break;
     case CYW43_AUTH_WPA2_AES_PSK: scan_auth_mode = 2; break;
     case CYW43_AUTH_WPA2_MIXED_PSK: scan_auth_mode = 3; break;
     case CYW43_AUTH_WPA3_SAE_AES_PSK: scan_auth_mode = 4; break;
@@ -81,28 +81,28 @@ int connect_auth_mode_to_scan_auth_mode(int connect_auth_mode) {
     return scan_auth_mode;
 }
 
-err_t httpd_process_post_data(struct http_state *hs) {    
+err_t httpd_process_post_data(struct http_state *hs) {
     auto responseJson = json::MyJsonDocument();
-    if (hs->post_uri && !memcmp(hs->post_uri, "/settings_save.cgi", 19)) {        
+    if (hs->post_uri && !memcmp(hs->post_uri, "/settings_save.cgi", 19)) {
         auto post_data = json::MyJsonDocument();
         json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
         if (error) {
             printf("Error json parse. %s", error.c_str());
         } else {
-            static client_settings_t cs;
-            cs.settings = *get_client_settings();
+            static client_mode_settings_t cs;
+            cs.settings = *get_client_mode_settings();
 
             strncpy(cs.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof cs.settings.wifi.ssid);
             strncpy(cs.settings.wifi.password, post_data["wifi"]["password"], sizeof cs.settings.wifi.password);
             cs.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
-            
+
             cs.settings.wifi.dhcp = post_data["wifi"]["dhcp"];
 
             ipaddr_aton(post_data["wifi"]["ip"], &cs.settings.wifi.ip);
             ipaddr_aton(post_data["wifi"]["nm"], &cs.settings.wifi.nm);
             ipaddr_aton(post_data["wifi"]["gw"], &cs.settings.wifi.gw);
-        
+
             strncpy(cs.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof cs.settings.mqtt.broker);
             cs.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
             strncpy(cs.settings.mqtt.username, post_data["mqtt"]["username"], sizeof cs.settings.mqtt.username);
@@ -135,24 +135,22 @@ err_t httpd_process_post_data(struct http_state *hs) {
                         p_s["topic"],
                         sizeof cs.settings.sensor_settings->publish_settings->topic);
                 }
-            }                      
+            }
 
             bool save_settings = true;
 
-            const client_settings *current_settings = get_client_settings();
+            const client_mode_settings *current_settings = get_client_mode_settings();
 
             if (initial_config) {
-                if (strcmp(post_data["settings"]["password"], "") == 0) {
+                if (strcmp(post_data["settings"]["password"], "") == 0 &&
+                    strcmp((char *)current_settings->password, "") == 0) {
                     responseJson["error"] = "Define a Password to Protect Settings";
-                    save_settings = false;                
+                    save_settings = false;
                 };
 
-                if (post_data["settings"]["password"])
-                strncpy(
-                        (char *)cs.settings.password,
-                        post_data["settings"]["password"],
-                        sizeof cs.settings.password);
-
+                if (post_data["settings"]["password"]) {
+                    strncpy((char *)cs.settings.password, post_data["settings"]["password"], sizeof cs.settings.password);
+                }
             } else {
                 if (post_data["settings"]["password"] != current_settings->password) {
                     responseJson["error"] = "Wrong Password";
@@ -178,7 +176,7 @@ err_t httpd_process_post_data(struct http_state *hs) {
                 return ERR_OK;
             }
 
-            flash_safe_execute(write_client_settings, &cs, UINT32_MAX);
+            flash_safe_execute(write_client_mode_settings, &cs, UINT32_MAX);
             watchdog_reboot(0, SRAM_END, 500);
         }
     }
@@ -251,16 +249,24 @@ err_t httpd_process_post_data(struct http_state *hs) {
     }
 
     if (hs->post_uri && !memcmp(hs->post_uri, "/settings_get.cgi", 18)) {
-        auto body_JSON = get_client_settings_json();
+        auto body_JSON = get_client_mode_settings_json();
 
         body_JSON["wifi"]["auth_mode"] = connect_auth_mode_to_scan_auth_mode(body_JSON["wifi"]["auth_mode"]);
 
         uint8_t itf_sta_mac[6];
         cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
         char mac_addr_str[18];
-        snprintf(mac_addr_str, sizeof mac_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x\n",
-        itf_sta_mac[0], itf_sta_mac[1], itf_sta_mac[2], itf_sta_mac[3], itf_sta_mac[4], itf_sta_mac[5]);    
-        body_JSON["mac_address"] =  mac_addr_str;
+        snprintf(
+            mac_addr_str,
+            sizeof mac_addr_str,
+            "%02X:%02X:%02X:%02X:%02X:%02X\n",
+            itf_sta_mac[0],
+            itf_sta_mac[1],
+            itf_sta_mac[2],
+            itf_sta_mac[3],
+            itf_sta_mac[4],
+            itf_sta_mac[5]);
+        body_JSON["mac_address"] = mac_addr_str;
         body_JSON["initial_config"] = initial_config;
 
         char *body = nullptr;
