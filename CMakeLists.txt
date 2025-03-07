@@ -17,7 +17,16 @@ pico_sdk_init()
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-project(PicoHTTPServer C CXX ASM)
+project(RadProt_IOT C CXX ASM)
+
+#
+# Static analyzers
+#
+# Currently supporting: Clang-Tidy, Cppcheck.
+
+option(${PROJECT_NAME}_ENABLE_CLANG_TIDY "Enable static analysis with Clang-Tidy." OFF)
+option(${PROJECT_NAME}_ENABLE_CPPCHECK "Enable static analysis with Cppcheck." OFF)
+include(cmake/StaticAnalyzers.cmake)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-volatile")
 
