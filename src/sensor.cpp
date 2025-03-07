@@ -82,13 +82,13 @@ void Sensor::read_task() {
                                     avg_fields[i].avg_cnt_current = 0;
                                 }
                             } else {
-                                printf("Publishing %s number: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
+                                printf("Publishing %s value: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
                                 size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
                                 sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 0, false);
                             }
 
                         } else {
-                            printf("Publishing %s : %f to: %s:\n", pub_settings.name, data, pub_settings.topic);
+                            printf("Publishing %s value: %s to: %s:\n", pub_settings.name, data, pub_settings.topic);
                             sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 0, false);
                         }
 

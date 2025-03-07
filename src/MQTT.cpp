@@ -81,7 +81,7 @@ static void mqtt_task(void *pvParameters) {
                     printf("Error publishing: %d\n", rc);
                     break; // breaking inner loop will reconnect;
                 }
-                printf("---MQTT--->");
+                printf("--MQTT-->\n");
             }
         }
     }
