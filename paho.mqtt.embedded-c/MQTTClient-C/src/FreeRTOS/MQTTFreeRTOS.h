@@ -54,6 +54,7 @@ void FreeRTOS_disconnect(Network*);
 
 void NetworkInit(Network*);
 int NetworkConnect(Network*, const char*, int);
+int NetworkConnectWithTimeout(Network* n, const char* addr, int port, int timeout_ms);
 /*int NetworkConnectTLS(Network*, char*, int, SlSockSecureFiles_t*, unsigned char, unsigned int, char);*/
 
 #if defined(__cplusplus)

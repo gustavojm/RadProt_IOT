@@ -57,13 +57,14 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
 
-        if (!n->my_socket) {
+        if (n->my_socket < 0) {
             printf("Invalid socket\n");
             return -1;
         }
 
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
             printf("Can't set socket RECV timeout\n");
+            return -1;
         }
         rc = lwip_recv(n->my_socket, buffer + recvLen, len - recvLen, 0);
         if (rc > 0)
@@ -88,7 +89,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
     do {
         int rc = 0;
 
-        if (!n->my_socket) {
+        if (n->my_socket < 0) {
             printf("Invalid socket\n");
             return -1;
         }
@@ -98,6 +99,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         timeout.tv_usec = timeout_ms * 1000;
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
             printf("Can't set socket SEND timeout\n");
+            return -1;
         }
         rc = lwip_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
         if (rc > 0)
@@ -164,6 +166,66 @@ int NetworkConnect(Network *n, const char *addr, int port) {
 
     return ERR_OK;
 }
+
+int NetworkConnectWithTimeout(Network* n, const char* addr, int port, int timeout_ms) {
+    struct sockaddr_in address;
+    int rc = -1;
+    int flags;
+    fd_set fdset;
+    struct timeval tv;
+    
+    // Standard address setup code
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = inet_addr(addr);
+    
+    // Create socket
+    if ((n->my_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        return -1;
+    
+    // Set non-blocking
+    flags = lwip_fcntl(n->my_socket, F_GETFL, 0);
+    lwip_fcntl(n->my_socket, F_SETFL, flags | O_NONBLOCK);
+    
+    // Attempt connection
+    rc = connect(n->my_socket, (struct sockaddr*)&address, sizeof(address));
+    
+    if (rc < 0 && errno == EINPROGRESS) {
+        // Wait for connection with timeout
+        FD_ZERO(&fdset);
+        FD_SET(n->my_socket, &fdset);
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
+        
+        rc = select(n->my_socket + 1, NULL, &fdset, NULL, &tv);
+        
+        if (rc == 0) {
+            // Timeout
+            lwip_close(n->my_socket);
+            return -1;
+        } else if (rc > 0) {
+            // Check for errors
+            int error;
+            socklen_t len = sizeof(error);
+            getsockopt(n->my_socket, SOL_SOCKET, SO_ERROR, &error, &len);
+            
+            if (error) {
+                lwip_close(n->my_socket);
+                return -1;
+            }
+        } else {
+            lwip_close(n->my_socket);
+            return -1;
+        }
+    }
+    
+    // Set back to blocking mode
+    lwip_fcntl(n->my_socket, F_SETFL, flags);
+    
+    return 0;
+}
+
 
 #if 0
 int NetworkConnectTLS(Network *n, char* addr, int port, SlSockSecureFiles_t* certificates, unsigned char sec_method, unsigned int cipher, char server_verify)

@@ -43,47 +43,56 @@ static void mqtt_task(void *pvParameters) {
         printf("Error MQTT start tasks: %d\n", rc);
     }
 
-    while (true) {
-        const client_mode_settings *client_settings = get_client_mode_settings();
-        if ((rc = NetworkConnect(&network, client_settings->mqtt.broker, client_settings->mqtt.port)) != 0) {
+    const client_mode_settings *client_settings = get_client_mode_settings();
+
+    while (true) {        
+        printf("HERE \n");
+        if ((rc = NetworkConnectWithTimeout(&network, client_settings->mqtt.broker, client_settings->mqtt.port, 1000)) == 0) {
+
+            MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
+            connectData.MQTTVersion = 3;
+
+            connectData.clientID.cstring = const_cast<char *>("RadProt_IOT");
+            // connectData.username.cstring = const_cast<char *>("Pepito");;
+
+            if ((rc = MQTTConnect(&client, &connectData)) == 0) {
+                printf("MQTT Connected\n");
+
+                // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
+                //     printf("Error MQTT subscribe: %d\n", rc);
+                // }
+
+                MqttPublishMessage msg;
+
+                while (true) {
+                    if (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
+                        // Publish the message using your MQTT client library
+                        MQTTMessage message;
+
+                        message.qos = (enum QoS)msg.qos;
+                        message.retained = 0;
+                        message.payload = msg.payload;
+                        message.payloadlen = strlen(msg.payload);
+
+                        if ((rc = MQTTPublish(&client, msg.topic, &message)) == 0) {
+                            gpio_put(STATUS_LED_GPIO, true);
+                            xTimerStart(status_led_off_timer, 0);
+                            printf("--MQTT-->\n");
+                        } else {
+                            printf("Error publishing: %d\n", rc);
+                            goto close_socket;
+                            // break;
+                        }
+                    }
+                }
+            } else {
+                printf("Error connecting: %d\n", rc);
+            }
+        } else {
             printf("Error in network connection: %d\n", rc);
         }
-
-        MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
-        connectData.MQTTVersion = 3;
-
-        connectData.clientID.cstring = const_cast<char *>("RadProt_IOT");
-        // connectData.username.cstring = const_cast<char *>("Pepito");;
-
-        if ((rc = MQTTConnect(&client, &connectData)) != 0) {
-            printf("Error connecting: %d\n", rc);
-        } else {
-            printf("MQTT Connected\n");
-        }
-
-        // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
-        //     printf("Error MQTT subscribe: %d\n", rc);
-        // }
-
-        MqttPublishMessage msg;
-
-        while (true) {
-            if (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
-                // Publish the message using your MQTT client library
-                MQTTMessage message;
-
-                message.qos = (enum QoS)msg.qos;
-                message.retained = 0;
-                message.payload = msg.payload;
-                message.payloadlen = strlen(msg.payload);
-
-                if ((rc = MQTTPublish(&client, msg.topic, &message)) != 0) {
-                    printf("Error publishing: %d\n", rc);
-                    break; // breaking inner loop will reconnect;
-                }
-                printf("--MQTT-->\n");
-            }
-        }
+    close_socket:
+        network.disconnect(&network);
     }
     /* do not return */
 }
@@ -91,8 +100,6 @@ static void mqtt_task(void *pvParameters) {
 int sendToMqttQueue(const char *topic, const char *payload, size_t payload_length, uint8_t qos, bool retain) {
     if (mqttQueue) {
         MqttPublishMessage msg;
-
-        gpio_put(STATUS_LED_GPIO, true);
 
         // Copy topic and payload into the structure
         snprintf(msg.topic, MQTT_MAX_TOPIC_LENGTH, "%s", topic);
@@ -103,8 +110,6 @@ int sendToMqttQueue(const char *topic, const char *payload, size_t payload_lengt
 
         // Send the message to the FreeRTOS queue
         int ret = xQueueSend(mqttQueue, &msg, 0);
-
-        xTimerStart(status_led_off_timer, 0);
         return ret;
     }
     return pdPASS;

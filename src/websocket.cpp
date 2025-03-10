@@ -240,8 +240,7 @@ void ws_server_task(void *arg) {
             }
         }
 
-        while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS ) {
-            
+        while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS ) {            
             ws_msg_t ws_msg;
             ws_msg.message = (uint8_t *) &msg.payload;
             ws_msg.msg_size = msg.payload_length;

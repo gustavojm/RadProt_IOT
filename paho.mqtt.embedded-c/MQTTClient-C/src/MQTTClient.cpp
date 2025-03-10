@@ -556,7 +556,7 @@ int MQTTPublish(MQTTClient *c, const char *topicName, MQTTMessage *message) {
         message->payloadlen);
     if (len <= 0)
         goto exit;
-    if ((rc = sendPacket(c, len, &timer)) != SUCCESS) // send the subscribe packet
+    if ((rc = sendPacket(c, len, &timer)) != SUCCESS) // send the publish packet
         goto exit;                                    // there was a problem
 
     if (message->qos == QOS1) {
