@@ -3,7 +3,6 @@
 #include "mbedtls/base64.h"
 #include "mbedtls/sha1.h"
 #include <string.h>
-#include "arduinojson_cust_alloc.h"
 
 const char *head_ws = "HTTP/1.1 101 Switching Protocols\n\
 Upgrade: websocket\n\
@@ -112,23 +111,6 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
             }
         }
     }
-}
-
-int sendToWebsocketQueue(int sensor_num, int pub_setting_num, const char *publish_name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain) {
-    WebsocketPublishMessage msg;  
-
-    ArduinoJson::MyJsonDocument json;
-    json["s_s"] = sensor_num;
-    json["p_s"] = pub_setting_num;
-    json["p_s_name"] = publish_name;
-    json["reading"] = reading;
-    json["topic"] = topic;
-
-    size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
-    msg.payload_length = len;
-
-    // Send the message to the FreeRTOS queue
-    return xQueueSend(websocketQueue, &msg, 0);
 }
 
 static void ws_client_task(void *arg) {

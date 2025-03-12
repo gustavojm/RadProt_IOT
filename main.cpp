@@ -223,6 +223,7 @@ static void main_task(__unused void *params) {
             if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
 
                 printf("Wi-Fi disconnected! Attempting to reconnect...\n");
+                netif_set_link_down(cyw43_state.netif);
                 connect_to_wifi();
             }
             vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second

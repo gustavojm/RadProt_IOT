@@ -6,6 +6,7 @@
 
 #include "MQTT.h"
 #include "websocket.h"
+#include "arduinojson_cust_alloc.h"
 
 #include "timers.h"
 

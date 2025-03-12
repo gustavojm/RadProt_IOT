@@ -61,13 +61,13 @@ const client_mode_settings_t s_Client_Settings = {
                          .password = "malamala",
                          .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
                          .dhcp = true,
-                         .ip = 0xC889A8C0,        // 192.168.137.200                           
+                         .ip = 0xC889A8C0,        // 192.168.137.200
                          .nm = 0x00FFFFFF,  // 255.255.255.0
                          .gw = 0x0189A8C0,        // 192.168.137.1
                          .dns = 0x0189A8C0        // 192.168.137.1
                         },
 
-                .mqtt = {.broker = "192.168.137.243",
+                .mqtt = {.broker = "192.168.137.158",
                          .port = 1883,
                          .username = "jorgito",
                          .password = "pass_",

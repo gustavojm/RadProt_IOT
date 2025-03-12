@@ -83,7 +83,8 @@
         "thread": "c",
         "condition_variable": "cpp",
         "async_context_freertos.h": "c",
-        "cyw43_driver.h": "c"
+        "cyw43_driver.h": "c",
+        "istream": "cpp"
     },
     "cortex-debug.variableUseNaturalFormat": false,
 }

@@ -18,7 +18,18 @@ void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* na
         printf("mqttQueue is full\n");
     }
 
-    if (sendToWebsocketQueue(sensor_num, pub_setting_num, name, topic, reading, reading_length, qos, retain) != pdPASS) {
+    ArduinoJson::MyJsonDocument json;
+    json["s_s"] = sensor_num;
+    json["p_s"] = pub_setting_num;
+    json["p_s_name"] = name;
+    json["reading"] = reading;
+    json["topic"] = topic;
+
+    WebsocketPublishMessage msg;
+    size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
+    msg.payload_length = len;
+    
+    if (xQueueSend(websocketQueue, &msg, 0) != pdPASS) {
         printf("WebsocketQueue is full\n");
     }      
 };
@@ -77,19 +88,19 @@ void Sensor::read_task() {
                                         average,
                                         pub_settings.topic);
                                     size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
-                                    sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 0, false);
+                                    sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
                                     avg_fields[i].accum = 0;
                                     avg_fields[i].avg_cnt_current = 0;
                                 }
                             } else {
                                 printf("Publishing %s value: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
                                 size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
-                                sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 0, false);
+                                sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
                             }
 
                         } else {
                             printf("Publishing %s value: %s to: %s:\n", pub_settings.name, data, pub_settings.topic);
-                            sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 0, false);
+                            sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 1, false);
                         }
 
                         delete[] data; // allocated by strndup
