@@ -51,61 +51,55 @@ void Sensor::read_task() {
                     size_t len = pub_settings.end - pub_settings.start;
 
 
-                    char *data = new char[len];
-                    if (data != NULL) {
-                        memcpy(data, &serial_buffer[pub_settings.start], len);
-                        data[len] = '\0'; // Ensure null-termination
+                    char data[SERIAL_BUFFERS_SIZE];
+                    memcpy(data, &serial_buffer[pub_settings.start], len);
+                    data[len] = '\0'; // Ensure null-termination
 
-                        //printf("****** %s ******\n", data);
+                    //printf("****** %s ******\n", data);
 
-                        if (pub_settings.is_num) {
-                            errno = 0; /* To distinguish success/failure after call */
-                            char *endptr;
-                            float val = strtof(data, &endptr);
-                            /* Check for various possible errors. */
-                            if (errno != 0) {
-                                printf("strtof");
-                            }
-
-                            if (endptr == data) {
-                                printf("No digits were found in serial buffer: %s\n", serial_buffer);
-                            }
-
-                            /* If we got here, strtol() successfully parsed a number. */
-                            // printf("strtof() returned %f\n", val);
-
-                            val = val * pub_settings.scale;
-
-                            if (pub_settings.avg_cnt > 0) {
-                                avg_fields[i].accum += val;
-                                avg_fields[i].avg_cnt_current++;
-
-                                if (avg_fields[i].avg_cnt_current == pub_settings.avg_cnt) {
-                                    float average = avg_fields[i].accum / pub_settings.avg_cnt;
-                                    printf(
-                                        "Publishing %s average: %f to: %s\n",
-                                        pub_settings.name,
-                                        average,
-                                        pub_settings.topic);
-                                    size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
-                                    sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
-                                    avg_fields[i].accum = 0;
-                                    avg_fields[i].avg_cnt_current = 0;
-                                }
-                            } else {
-                                printf("Publishing %s value: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
-                                size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
-                                sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
-                            }
-
-                        } else {
-                            printf("Publishing %s value: %s to: %s:\n", pub_settings.name, data, pub_settings.topic);
-                            sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 1, false);
+                    if (pub_settings.is_num) {
+                        errno = 0; /* To distinguish success/failure after call */
+                        char *endptr;
+                        float val = strtof(data, &endptr);
+                        /* Check for various possible errors. */
+                        if (errno != 0) {
+                            printf("strtof");
                         }
 
-                        delete[] data; // allocated by strndup
+                        if (endptr == data) {
+                            printf("No digits were found in serial buffer: %s\n", serial_buffer);
+                        }
+
+                        /* If we got here, strtol() successfully parsed a number. */
+                        // printf("strtof() returned %f\n", val);
+
+                        val = val * pub_settings.scale;
+
+                        if (pub_settings.avg_cnt > 0) {
+                            avg_fields[i].accum += val;
+                            avg_fields[i].avg_cnt_current++;
+
+                            if (avg_fields[i].avg_cnt_current == pub_settings.avg_cnt) {
+                                float average = avg_fields[i].accum / pub_settings.avg_cnt;
+                                printf(
+                                    "Publishing %s average: %f to: %s\n",
+                                    pub_settings.name,
+                                    average,
+                                    pub_settings.topic);
+                                size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
+                                sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
+                                avg_fields[i].accum = 0;
+                                avg_fields[i].avg_cnt_current = 0;
+                            }
+                        } else {
+                            printf("Publishing %s value: %f to: %s\n", pub_settings.name, val, pub_settings.topic);
+                            size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
+                            sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
+                        }
+
                     } else {
-                        printf("strndup: Out of Memory\n");
+                        printf("Publishing %s value: %s to: %s:\n", pub_settings.name, data, pub_settings.topic);
+                        sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 1, false);
                     }
                 }
             }
