@@ -39,11 +39,11 @@ typedef struct {
 } ws_msg_t;
 
 typedef struct ws_client {
+    int socket;                // Socket file descriptor instead of netconn*
+    bool established;
     TaskHandle_t task_handle;
-    volatile struct netconn *accepted_sock;
+    uint8_t recv_buf[WS_RECV_BUFFER_SIZE];
     ws_server_t *server_ptr;
-    uint8_t recv_buf[WS_RECV_BUFFER_SIZE] = {};
-    volatile bool established = false;
 } ws_client_t;
 
 struct ws_server {

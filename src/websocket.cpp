@@ -3,6 +3,8 @@
 #include "mbedtls/base64.h"
 #include "mbedtls/sha1.h"
 #include <string.h>
+#include <lwip/sockets.h>
+#include <lwip/netdb.h>
 
 const char *head_ws = "HTTP/1.1 101 Switching Protocols\n\
 Upgrade: websocket\n\
@@ -104,10 +106,15 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
     for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
         client = &(ws->ws_clients[iClient]);
         if (client->established) {
-            //netconn_set_sendtimeout(client->accepted_sock, 500);
-            err_t err = netconn_write((netconn *) client->accepted_sock, ws->send_buf, packet_size, NETCONN_COPY);
-            if (err != ERR_OK) {
-                printf("Write failed with err %d (\"%s\")\n", err, lwip_strerr(err));
+            // Set send timeout using setsockopt
+            struct timeval timeout;
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 500000; // 500 ms
+            setsockopt(client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+            
+            int bytes_sent = send(client->socket, ws->send_buf, packet_size, 0);
+            if (bytes_sent < 0) {
+                printf("Write failed with err %d (\"%s\")\n", errno, strerror(errno));
             }
         }
     }
@@ -116,29 +123,21 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
 static void ws_client_task(void *arg) {
     ws_client_t *client = (ws_client_t *)arg;
     ws_server_t *server_ptr = client->server_ptr;
-
-    struct netbuf *inbuf = NULL;
-    uint16_t size_inbuf = 0;
-    uint8_t *inbuf_ptr = NULL;
-
+    
     while (true) {
         // The created task is in standby mode
         // until an incoming connection unblocks it
         vTaskSuspend(NULL);
 
-        err_t err;
-        while ((err = netconn_recv((netconn *)client->accepted_sock, &inbuf)) == ERR_OK) {
-            memset(client->recv_buf, 0x00, WS_RECV_BUFFER_SIZE);
-            netbuf_data(inbuf, (void **)&inbuf_ptr, &size_inbuf);
-            memcpy(client->recv_buf, (void *)inbuf_ptr, size_inbuf);
-            inbuf_ptr = client->recv_buf;
+        int recv_bytes;
+        while ((recv_bytes = recv(client->socket, client->recv_buf, WS_RECV_BUFFER_SIZE, 0)) > 0) {
+            uint8_t *inbuf_ptr = client->recv_buf;
 
             // If is handshake
             if (strncmp((char *)inbuf_ptr, "GET /", 5) == 0) {
                 char *ws_key_accept = create_ws_key_accept((char *)inbuf_ptr);
                 sprintf((char *)server_ptr->send_buf, "%s%s%s", head_ws, ws_key_accept, "\r\n\r\n");
-                netconn_write(
-                    (netconn *)client->accepted_sock, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), NETCONN_COPY);
+                send(client->socket, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), 0);
             }
             // If is a message
             else if (is_fin_msg(inbuf_ptr)) {
@@ -163,14 +162,15 @@ static void ws_client_task(void *arg) {
                 }
                 server_ptr->msg_handler(payload, len, (ws_type_t)inbuf_ptr[0]);
             }
-            netbuf_delete(inbuf);
-        } 
+            
+            // Clear buffer for next read
+            memset(client->recv_buf, 0, WS_RECV_BUFFER_SIZE);
+        }
         
-        printf("Receive failed with err %d (\"%s\") closing socket\n", err, lwip_strerr(err));
+        printf("Receive failed with err %d (\"%s\") closing socket\n", errno, strerror(errno));
 
         client->established = false;
-        netconn_close((netconn *)client->accepted_sock);
-        netconn_delete((netconn *)client->accepted_sock);
+        lwip_close(client->socket);
     }
 }
 
@@ -198,38 +198,90 @@ void ws_server_task(void *arg) {
     ws_server_t *ws = (ws_server_t *)arg;
     ws_client_t *client;
 
-    struct netconn *ws_con = netconn_new(NETCONN_TCP);
-    if (ws_con == NULL)
+    // Create server socket
+    int server_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (server_sock < 0) {
+        printf("Failed to create socket\n");
         vTaskDelete(NULL);
-    if (netconn_bind(ws_con, NULL, WS_PORT) != ERR_OK)
+    }
+    
+    // Set socket options
+    int opt = 1;
+    if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        printf("setsockopt failed\n");
+        lwip_close(server_sock);
         vTaskDelete(NULL);
-    netconn_listen(ws_con);
-
+    }
+    
+    // Prepare server address
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(WS_PORT);
+    
+    // Bind socket
+    if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        printf("Socket bind failed\n");
+        lwip_close(server_sock);
+        vTaskDelete(NULL);
+    }
+    
+    // Listen for connections
+    if (listen(server_sock, WS_MAX_CLIENTS) < 0) {
+        printf("Listen failed\n");
+        lwip_close(server_sock);
+        vTaskDelete(NULL);
+    }
+    
     memset((void *)ws->send_buf, 0x00, WS_SEND_BUFFER_SIZE);
 
     ws_create_clients_tasks(ws);
+    
+    // Set up timeout for accept
+    struct timeval timeout;
+    fd_set readfds;
 
     while (true) {
         for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
             client = &ws->ws_clients[iClient];
             if (!client->established) {
-                netconn_set_recvtimeout(ws_con, 100);
-                if (netconn_accept(ws_con, (netconn **)&client->accepted_sock) == ERR_OK) {
-                    // Resume the task that will handle the processing
-                    client->established = true;
-                    vTaskResume(client->task_handle);
+                // Set timeout for accept
+                FD_ZERO(&readfds);
+                FD_SET(server_sock, &readfds);
+                timeout.tv_sec = 0;
+                timeout.tv_usec = 100000; // 100 ms
+                
+                // Check for connection with timeout
+                int activity = select(server_sock, &readfds, NULL, NULL, &timeout);
+                
+                if (activity > 0 && FD_ISSET(server_sock, &readfds)) {
+                    struct sockaddr_in client_addr;
+                    socklen_t addr_len = sizeof(client_addr);
+                    
+                    // Accept new connection
+                    int client_sock = accept(server_sock, (struct sockaddr *)&client_addr, &addr_len);
+                    
+                    if (client_sock >= 0) {
+                        // Store socket in client structure
+                        client->socket = client_sock;
+                        client->established = true;
+                        
+                        // Resume the task that will handle the processing
+                        vTaskResume(client->task_handle);
+                    }
                 }
             }
         }
 
-        while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS ) {            
+        while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS) {
             ws_msg_t ws_msg;
             ws_msg.message = (uint8_t *) &msg.payload;
             ws_msg.msg_size = msg.payload_length;
             ws_msg.msg_type = WS_TYPE_STRING;
             ws_send_message(ws, &ws_msg);
             printf("---WS--->\n");
-        }        
+        }
     }
 }
 
