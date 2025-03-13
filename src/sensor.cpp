@@ -19,6 +19,21 @@ void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* na
     }
 
     ArduinoJson::MyJsonDocument json;
+
+    static size_t old_mem_free;
+    static size_t old_mem_min_free;
+
+    size_t mem_free = xPortGetFreeHeapSize();
+    size_t mem_min_free = xPortGetMinimumEverFreeHeapSize();
+    
+    if (old_mem_free != mem_free || old_mem_min_free != mem_min_free) {
+        json["mem"]["total"] = configTOTAL_HEAP_SIZE;
+        json["mem"]["free"] = mem_free;
+        json["mem"]["min_free"] = mem_min_free;
+    }       
+    old_mem_free = mem_free;
+    old_mem_min_free = mem_min_free;
+
     json["s_s"] = sensor_num;
     json["p_s"] = pub_setting_num;
     json["p_s_name"] = name;

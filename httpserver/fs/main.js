@@ -1,0 +1,768 @@
+var initial_config = false;
+
+function getWifiSignalBars(rssi) {
+    if (rssi >= -30) {
+        return "▆ ▆ ▆ ▆ ▆";
+    } else if (rssi >= -50) {
+        return "▆ ▆ ▆ ▆";
+    } else if (rssi >= -60) {
+        return "▆ ▆ ▆";
+    } else if (rssi >= -70) {
+        return "▆ ▆";
+    } else {
+        return "▆";
+    }
+}
+
+function getAuthModeText(mode) {
+    switch (mode) {
+        case 0:
+            return "OPEN"
+            break;
+
+        case 1:
+            return "WPA TKIP PSK"
+            break;
+
+        case 2:
+            return "WPA AES PSK"
+            break;
+
+        case 3:
+            return "WPA2/WPA MIXED PSK"
+            break;
+
+        case 4:
+            return "WPA3 AES"
+            break;
+
+        case 5:
+            return "WPA2/WPA3"
+            break;
+
+
+        default:
+            break;
+    }
+
+}
+
+function wifi_networks_populate(networks_json) {
+    const wifi_tableBody = document.querySelector("#wifiTable tbody");
+
+    networks_json.forEach((item, index) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+                        <td class="hide-on-small">${index + 1}</td>            
+                        <td><a data-auth_mode="${item.auth_mode}" href="#" onclick='select_wifi_net(event)'>${item.ssid}</a></td>
+                        <td style="color: green;">${getWifiSignalBars(item.rssi)}</td>
+                        <td class="hide-on-small" style="text-align: center;">${item.chann}</td>                            
+                        <td>${item.auth_mode > 0 ? "🔒" : ""}</td>
+                        <td class="hide-on-small" style="text-align: center;">${getAuthModeText(item.auth_mode)}</td>                                    
+                    `;
+
+        wifi_tableBody.appendChild(row);
+    });
+}
+
+function wifi_networks_get() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", '/wifi_nets.cgi', true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    // Use onreadystatechange instead of onload
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) { // Request is complete
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // Check if responseText is not empty
+                if (xhr.responseText) {
+                    try {
+                        // Parse the JSON response
+                        const networks_json = JSON.parse(xhr.responseText);
+                        wifi_networks_populate(networks_json);
+
+                    } catch (error) {
+                        console.error("Failed to parse JSON:", error);
+                    }
+                } else {
+                    console.error("Response is empty");
+                }
+            } else {
+                console.error("Request failed with status:", xhr.status);
+            }
+        }
+    };
+
+    xhr.send();
+}
+
+function select_wifi_net(event) {
+
+    const settings_form = document.getElementById('settings_form');
+    settings_form.elements["wifi.ssid"].value = event.target.text;
+    settings_form.elements["wifi.auth_mode"].value = event.target.dataset.auth_mode;
+}
+
+document.getElementById('settings_form').addEventListener('submit', function (event) {
+    event.preventDefault(); // Prevent the form from submitting
+
+    ip_inputs = document.querySelectorAll(".ip-addr");
+
+    for (let i = 0; i < ip_inputs.length; i++) {
+        if (!isValidIP(ip_inputs[i].value)) {
+            ip_inputs[i].focus();
+            return;
+        }
+    };
+
+    // Step 1: Get the flattened JSON
+    const formData = new FormData(event.target);
+    const flatJson = Object.fromEntries(formData);
+
+    // Step 2: Convert the flat JSON to nested JSON
+    const nestedJson = {};
+
+    for (const key in flatJson) {
+        const keys = key.split(/\[|\]|\./).filter(Boolean); // Split key into parts
+        let current = nestedJson;
+
+        keys.forEach((k, i) => {
+            if (i === keys.length - 1) {
+                current[k] = flatJson[key]; // Set the value
+            } else {
+                if (!current[k]) {
+                    // Create an object or array based on the next key
+                    current[k] = isNaN(keys[i + 1]) ? {} : [];
+                }
+                current = current[k]; // Move deeper into the structure
+            }
+        });
+    }
+
+    if (initial_config && nestedJson.settings.password != nestedJson.settings.password_confirm) {
+        alert("Passwords do not match");
+        return;
+    }
+
+    nestedJson.settings.password_config = "";
+
+    // Step 3: Output the nested JSON        
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", '/settings_save.cgi', true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    json = JSON.stringify(nestedJson, null, 2);
+    xhr.send(json);
+    xhr.onloadend = function () {
+        dataJSON = JSON.parse(this.responseText)
+        if (dataJSON["error"]) {
+            alert(dataJSON["error"]);
+            return;
+        } else {
+            document.getElementById("reboot_popup").style.display = "block";
+        }
+    };
+});
+
+
+function apply_settings() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", '/settings_save.cgi', true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    json = JSON.stringify(Object.fromEntries(new FormData(document.getElementById("settings_form"))));
+    xhr.send(json);
+    xhr.onloadend = function () {
+        document.getElementById("reboot_popup").style.display = "block";
+        //alert(this.responseText);
+    };
+}
+
+function uint32ToIp(uint32) {
+    return [
+        uint32 & 0xFF,
+        (uint32 >>> 8) & 0xFF,
+        (uint32 >>> 16) & 0xFF,
+        (uint32 >>> 24) & 0xFF
+    ].join(".");
+}
+
+function toggle_serial_settings(checkbox, div_id) {
+    const div = document.getElementById("publish_settings_" + div_id);
+    if (checkbox.checked == true) {
+        div.style.display = "block";
+    } else {
+        div.style.display = "none";
+    }
+}
+
+function toggle_numeric_settings(checkbox, sensor_num, publish_setting_num) {
+    let scale_input_id = checkbox.name.replace("is_num", "scale");
+    let avg_cnt_input_id = checkbox.name.replace("is_num", "avg_cnt");
+    for (i = 0; i < 2; i++) {   // Modal edit duplicates the inputs...
+        if (checkbox.checked == true) {
+            document.getElementsByName(scale_input_id)[i].disabled = false;
+            document.getElementsByName(avg_cnt_input_id)[i].disabled = false;
+        } else {
+            document.getElementsByName(scale_input_id)[i].disabled = true;
+            document.getElementsByName(avg_cnt_input_id)[i].disabled = true;
+        }
+    }
+}
+
+
+function toggle_ip_settings(checkbox) {
+    const settings_form = document.getElementById('settings_form');
+    if (checkbox.checked) {
+        settings_form.elements["wifi.ip"].disabled = true;
+        settings_form.elements["wifi.nm"].disabled = true;
+        settings_form.elements["wifi.gw"].disabled = true;
+    } else {
+        settings_form.elements["wifi.ip"].disabled = false;
+        settings_form.elements["wifi.nm"].disabled = false;
+        settings_form.elements["wifi.gw"].disabled = false;
+    }
+}
+
+function settings_populate(settings_json) {
+    document.getElementById('mac_address').innerHTML = settings_json["mac_address"];
+
+    const settings_form = document.getElementById('settings_form');
+    settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
+    settings_form.elements["wifi.auth_mode"].value = settings_json["wifi"]["auth_mode"];
+    settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
+    settings_form.elements["wifi.dhcp"].checked = settings_json["wifi"]["dhcp"];
+    toggle_ip_settings(settings_form.elements["wifi.dhcp"]);
+
+    settings_form.elements["wifi.ip"].value = uint32ToIp(settings_json["wifi"]["ip"]);
+    settings_form.elements["wifi.nm"].value = uint32ToIp(settings_json["wifi"]["nm"]);
+    settings_form.elements["wifi.gw"].value = uint32ToIp(settings_json["wifi"]["gw"]);
+
+    settings_form.elements["mqtt.broker"].value = settings_json["mqtt"]["broker"];
+    settings_form.elements["mqtt.port"].value = settings_json["mqtt"]["port"];
+    settings_form.elements["mqtt.username"].value = settings_json["mqtt"]["username"];
+    settings_form.elements["mqtt.password"].value = settings_json["mqtt"]["password"];
+
+    const sensors_div = document.querySelector("#sensors_div");
+    settings_json.sensor_settings.forEach((item, index_sensor) => {
+        const sensor_div = document.createElement("div");
+
+        sensor_div.innerHTML = `
+                                #${index_sensor + 1} 
+                                Enabled:
+                                <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
+                                Baud:
+                                <input type="number" name="s_s[${index_sensor}].baud" style="width: 6em" value="${item.baudrate}">
+                               `;
+
+
+        const publish_settings_table = document.createElement("table");
+        publish_settings_table.innerHTML = `
+                                                <thead>
+                                                    <tr>
+                                                        <th style="text-align: center;">#</th>
+                                                        <th style="text-align: center;">Enabled</th>
+                                                        <th style="text-align: center;">Name</th>
+                                                        <th style="text-align: center;" class="hide-on-small">Start</th>
+                                                        <th style="text-align: center;" class="hide-on-small">End</th>
+                                                        <th style="text-align: center;" class="hide-on-small">Numeric</th>
+                                                        <th style="text-align: center;" class="hide-on-small">Scale</th>
+                                                        <th style="text-align: center;" class="hide-on-small">Average</th>
+                                                        <th style="text-align: center;">Topic</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            `;
+
+        publish_settings_table.id = `publish_settings_${index_sensor}`;
+        //publish_settings_table.style.width = "100%";
+        publish_settings_table.style.display = item.enabled ? "block" : "none";
+        publish_settings_table.classList = ["table-modal"];
+
+        settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
+            const detail_row = document.createElement("tr");
+
+            detail_row.innerHTML = `
+                                    <td>${index}</td>
+                                    <td style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
+                                    <td><input name="s_s[${index_sensor}]p_s[${index}].name" size="6" value="${item.name}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" style="width: 3em" value="${item.start}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" style="width: 3em" value="${item.end}"></td>
+                                    <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""} onchange="toggle_numeric_settings(this, ${index_sensor}, ${index})"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 3em" ${item.is_num ? "" : "disabled"} value="${item.scale}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 3em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
+                                    <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
+                                   `;
+
+            let tbody = publish_settings_table.querySelector("tbody")
+            tbody.appendChild(detail_row);
+
+            sensor_div.appendChild(publish_settings_table);
+        });
+
+
+        sensors_div.appendChild(sensor_div);
+        sensors_div.appendChild(document.createElement("hr"));
+
+        initial_config = settings_json["initial_config"];
+        if (initial_config) {
+            elements_to_show = document.getElementsByClassName("show-on-initial-config");
+            for (let i = 0; i < elements_to_show.length; i++) {
+                elements_to_show[i].style.display = "table-cell";
+            }
+        }
+    });
+
+
+    const readings_div = document.querySelector("#readings_div");
+    settings_json.sensor_settings.forEach((item, index_sensor) => {
+        if (item.enabled) {
+            const readings_sensor_div = document.createElement("div");
+
+            readings_sensor_div.innerHTML = `Serial Interface #${index_sensor + 1}`;
+
+            const readings_table = document.createElement("table");
+            readings_table.innerHTML = `
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align: center;">#</th>
+                                                <th style="text-align: center;">Name</th>
+                                                <th style="text-align: center;">Value</th>
+                                                <th style="text-align: center;">Topic</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    `;
+
+            readings_table.id = `publish_settings_${index_sensor}`;
+            readings_table.style = "width: 100%; max-width: 400px; margin: auto;";
+
+            settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
+                if (item.enabled) {
+                    const detail_row = document.createElement("tr");
+
+                    detail_row.innerHTML = `
+                                        <td>${index}</td>
+                                        <td>${item.name}</td>
+                                        <td id="s_s[${index_sensor}]p_s[${index}].reading"></td>
+                                        <td>${item.topic}</td>
+                                    `;
+
+                    let tbody = readings_table.querySelector("tbody")
+                    tbody.appendChild(detail_row);
+
+                    readings_sensor_div.appendChild(readings_table);
+                }
+            });
+
+            readings_div.appendChild(readings_sensor_div);
+            readings_div.appendChild(document.createElement("hr"));
+        }
+    });
+}
+
+
+function settings_get() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", '/settings_get.cgi', true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    // Use onreadystatechange instead of onload
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) { // Request is complete
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // Check if responseText is not empty
+                if (xhr.responseText) {
+                    try {
+                        // Parse the JSON response
+                        const settings_json = JSON.parse(xhr.responseText);
+                        settings_populate(settings_json)
+
+                    } catch (error) {
+                        console.error("Failed to parse JSON:", error);
+                    }
+                } else {
+                    console.error("Response is empty");
+                }
+            } else {
+                console.error("Request failed with status:", xhr.status);
+            }
+        }
+    };
+
+    xhr.send();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    if (window.location.protocol != 'file:') {
+        wifi_networks_get();
+        settings_get();
+    } else {
+        let networks_string = '\
+        [{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
+        {"ssid":"CNE_Dosimetria","rssi":-50,"chann":11, "auth_mode":0, "bssid":"00:6b:f1:c0:94:62"},\
+        {"ssid":"CNE_Telefonia","rssi":-53,"chann":11, "auth_mode":2, "bssid":"00:6b:f1:c0:94:63"},\
+        {"ssid":"CNE_CDP","rssi":-91,"chann":11, "auth_mode": 4, "bssid":"00:6b:f1:c0:94:66"},\
+        {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode": 5, "bssid":"00:6b:f1:c0:94:68"},\
+        {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode": 3, "bssid":"00:6b:f1:c0:94:6b"},\
+        {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
+        wifi_networks_populate(JSON.parse(networks_string));
+
+        let settings_string = '\{"mac_address" : "99:99:99:99:99:99",\
+                "initial_config" : true,\
+                "wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
+                "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
+                "sensor_settings":\
+                [{"baudrate":9600, "enabled": true, "publish_settings": \
+                [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},\
+                {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
+                {"baudrate":0, "enabled": false,"publish_settings":\
+                [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]},\
+                {"baudrate":0, "enabled": false, "publish_settings":\
+                [{"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
+                {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
+            }';
+        settings_populate(JSON.parse(settings_string));
+    }
+
+});
+
+sensors_templates = {
+    "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
+
+    "femto-TECH THFS-400": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                             {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         ]\
+                         }\
+                     ]',
+
+    "GRAETZ WS05C-3": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         ]},\
+                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         ]},\
+                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
+                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         ]\
+                         }\
+                        ]'
+};
+
+function reset_sensors_settings() {
+    settings_form = document.getElementById("settings_form");
+    inputs = settings_form.querySelectorAll('input[name^="s_s"]');
+    inputs.forEach((input, index_input) => {
+        if (input.type === "checkbox") {
+            input.checked = false;
+        } else {
+            input.value = "";
+        }
+    });
+}
+
+function template_populate(template_name) {
+    reset_sensors_settings();
+
+    if (template_name != "") {
+        template_json = JSON.parse(sensors_templates[template_name]);
+
+        settings_form = document.getElementById("settings_form");
+        template_json.forEach((sensor_setting, index_sensor) => {
+            checkbox = document.getElementsByName("s_s[" + index_sensor + "].enabled")[0];
+            checkbox.checked = sensor_setting.enabled
+            toggle_serial_settings(checkbox, index_sensor);
+
+            document.getElementsByName("s_s[" + index_sensor + "].baud")[0].value = sensor_setting.baudrate;
+            if (sensor_setting["publish_settings"]) {
+                sensor_setting["publish_settings"].forEach((publish_setting, index_publish) => {
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].enabled")[0].checked = publish_setting.enabled;
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].name")[0].value = publish_setting.name;
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].start")[0].value = publish_setting.start;
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].end")[0].value = publish_setting.end;
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].is_num")[0].checked = publish_setting.is_num;
+
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].value = publish_setting.scale;
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].scale")[0].disabled = !publish_setting.is_num;
+
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].value = publish_setting.avg_cnt;
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].avg_cnt")[0].disabled = !publish_setting.is_num;
+
+                    document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].topic")[0].value = publish_setting.topic;
+                });
+            }
+        });
+    }
+}
+
+const modal_reboot = document.getElementById("reboot_popup");
+const closeModalBtn = document.getElementById("closeModalBtn");
+
+
+// When the user clicks on the close button, close the modal
+closeModalBtn.addEventListener("click", () => {
+    modal_reboot.style.display = "none";
+});
+
+// When the user clicks anywhere outside the modal, close it
+window.addEventListener("click", (event) => {
+    if (event.target === modal_reboot) {
+        modal_reboot.style.display = "none";
+    }
+});
+
+function isValidIP(ip) {
+    const ipPattern = /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
+    return ipPattern.test(ip);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    ip_inputs = document.querySelectorAll(".ip-addr");
+    ip_inputs.forEach(ip_input => {
+        ip_input.addEventListener("input", () => {
+            if (isValidIP(ip_input.value)) {
+                ip_input.style.border = "2px solid green";
+            } else {
+                ip_input.style.border = "2px solid red";
+            }
+        });
+    });
+
+});
+
+function handleRowClick(event) {
+    const modalContent = document.getElementById("modal_content");
+    const modalForm = document.getElementById("modal-form");
+    
+    if (window.innerWidth > 600) {
+        return; // Don't open modal on large screens
+    }
+
+    const row = event.currentTarget.parentNode.parentNode;    
+    let headers = Array.from(document.querySelectorAll("#publish_settings_0 thead th")).map(th => th.innerText);
+
+    modalForm.innerHTML = ''; // Clear previous content
+
+    const tds = row.querySelectorAll("td");
+    tds.forEach((td, index) => {
+        let label = document.createElement("label");
+        label.innerText = headers[index];
+        let clonedInput
+        if (td.firstChild) {
+            clonedInput = td.firstChild.cloneNode(true);
+            clonedInput.classList = []; // Remove the hide-on-small class
+            clonedInput.readOnly = false
+        } else {
+            elem = document.createElement("div");
+            elem.innerHTML = td.innerHTML;
+            clonedInput = elem;
+        }
+
+        modalForm.appendChild(label);
+        modalForm.appendChild(clonedInput);
+    });
+
+    // Save button
+    let saveButton = document.createElement("button");
+    saveButton.innerText = "OK";
+    saveButton.type = "button";
+    saveButton.onclick = function () {
+        const modalInputs = modalForm.querySelectorAll("input");
+        modalInputs.forEach((modalInput, index) => {
+            if (modalInput.type === 'checkbox') {
+                tds[index + 1].firstChild.checked = modalInput.checked; // +1 because first element is not an input
+            } else {
+                tds[index + 1].firstChild.value = modalInput.value; // +1 because first element is not an input
+            }
+        });
+        closeFormModal();
+    };
+
+    modalForm.appendChild(saveButton);
+
+    // Show modal
+    modalContent.style.display = "block";
+    const modalOverlay = document.getElementById("modal-overlay");
+    modalOverlay.style.display = "block";
+}
+
+function closeFormModal() {
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modalContent = document.getElementById("modal_content");
+    modalContent.style.display = "none";
+    modalOverlay.style.display = "none";
+}
+
+function updateEditingBehavior() {
+    const tables = document.querySelectorAll("[id^='publish_settings_']"); // Selects all tables with ID starting with "publish_settings_"
+    const isSmallScreen = window.innerWidth <= 600;
+
+    tables.forEach(table => {
+        tableRows = table.querySelectorAll("tbody tr");
+        tableRows.forEach(row => {
+            const inputs = row.querySelectorAll("input");
+        
+            inputs.forEach(input => {
+                input.removeEventListener("click", handleRowClick);
+                input.readOnly = isSmallScreen;
+                if (isSmallScreen) {
+                    input.addEventListener("click", handleRowClick);
+                }
+            });
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const modalOverlay = document.getElementById("modal-overlay");
+    modalOverlay.addEventListener("click", closeFormModal);
+
+    const closeModalFormBtn = document.getElementById("closeModalFormBtn");
+    closeModalFormBtn.addEventListener("click", closeFormModal);
+
+    window.addEventListener("resize", updateEditingBehavior);
+    updateEditingBehavior(); // Run on page load
+
+    templates_select = document.getElementById("templates_select");
+    for (name in sensors_templates) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.innerHTML = name;
+        templates_select.appendChild(opt);
+    };
+
+    // Initialize the slider
+    new TouchSlider();
+});
+
+class WebSocketClient {
+    constructor(path = "", maxReconnectAttempts = 10) {
+        this.path = path;
+
+        if (window.location.protocol === 'file:') {
+            const params = new URLSearchParams(window.location.search);
+            this.host = params.get('ws_host');
+            if (!this.host) {
+                alert("Pass Websocket server ip address as url parameter. \nExample: ?ws_host=192.168.167.56");
+            }
+        } else {
+            this.host = window.location.host;
+        }
+        this.port = 8765
+        this.maxReconnectAttempts = maxReconnectAttempts;
+        this.reconnectAttempts = 0;
+        this.socket = null;
+        this.connect();
+    }
+
+    connect() {
+        const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        const wsUrl = `${protocol}${this.host}:${this.port}${this.path}`;
+
+        console.log("Connecting to", wsUrl);
+        this.socket = new WebSocket(wsUrl);
+
+        this.socket.addEventListener("open", () => {
+            console.log("Connected to WebSocket server");
+            this.reconnectAttempts = 0; // Reset on successful connection
+            this.send({ type: "hello", message: "Hello, server!" });
+        });
+
+        this.socket.addEventListener("message", (event) => {
+            this.handleMessage(event.data);
+        });
+
+        this.socket.addEventListener("error", (error) => {
+            console.error("WebSocket error:", error);
+        });
+
+        this.socket.addEventListener("close", (event) => {
+            console.log(`WebSocket closed (code: ${event.code}, reason: ${event.reason})`);
+            this.reconnect();
+        });
+    }
+
+    send(data) {
+        if (this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(data));
+        } else {
+            console.warn("WebSocket is not open. Message not sent.");
+        }
+    }
+
+    reconnect() {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000); // Exponential backoff (max 30s)
+            console.log(`Reconnecting in ${delay / 1000} seconds...`);
+            setTimeout(() => this.connect(), delay);
+            this.reconnectAttempts++;
+        } else {
+            console.error("Max reconnect attempts reached. Giving up.");
+        }
+    }
+
+    handleMessage(data) {
+        let dataJSON = JSON.parse(data);
+        let reading_td = document.getElementById(`s_s[${dataJSON.s_s}]p_s[${dataJSON.p_s}].reading`);
+        reading_td.innerHTML = dataJSON.reading;
+
+        let entry = dataJSON["reading"] + "->" + dataJSON["topic"];
+
+        if (dataJSON.mem) {
+            let mem_free = (dataJSON.mem.free / dataJSON.mem.total * 100).toFixed(1);
+            let mem_free_text = ((dataJSON.mem.free / 1024).toFixed(1) || 0) + "k(" + mem_free + "%)"
+            if (isNaN(mem_free)) {
+                mem_free = 0;
+                mem_free_text = "---";
+            }
+
+            let mem_min_free = (dataJSON.mem.min_free / dataJSON.mem.total * 100).toFixed(1);
+            document.getElementById("mem_free").style = "width: " + mem_free + "%";
+            document.getElementById("mem_free_text").innerHTML = mem_free_text;
+            document.getElementById("mem_free_min_mark").style = "left: " + mem_min_free + "%";
+
+        }
+
+
+        ws_addEntry(entry);
+    }
+}
+
+function ws_addEntry(entry) {
+    div = document.createElement("div");
+    div.innerHTML = entry;
+    ws_div = document.getElementById('ws_div');
+    ws_div.prepend(div);
+    //ws_div.scrollTop = ws_div.scrollHeight;
+}
+
+// Start WebSocket client
+const wsClient = new WebSocketClient();

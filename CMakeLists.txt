@@ -65,8 +65,6 @@ add_executable(${PROJECT_NAME}
         httpserver/fs.cpp
         src/c_cpp_config.cpp
         src/settings.cpp
-        src/tcp_server.cpp
-        src/tcp_server_command.cpp
         src/hooks.cpp
         src/post.cpp
         hal/src/serial.cpp

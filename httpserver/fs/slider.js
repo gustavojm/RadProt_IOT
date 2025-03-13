@@ -47,7 +47,7 @@ class TouchSlider {
             }
         });
         
-        this.slider.addEventListener('touchend', () => {
+        this.slider.addEventListener('touchend', (event) =>  {
             if (!this.isDragging) return;
             this.handleEnd();
         });

@@ -327,8 +327,10 @@ void MQTTRun(void *parm) {
 
     while (1) {
         MutexLock(&c->mutex);
-        TimerCountdownMS(&timer, 50); /* Don't wait too long if no traffic is incoming */
-        cycle(c, &timer);
+        if (c->isconnected) {
+            TimerCountdownMS(&timer, 50); /* Don't wait too long if no traffic is incoming */
+            cycle(c, &timer);
+        }
         MutexUnlock(&c->mutex);
         vTaskDelay(100);
     }
@@ -356,6 +358,7 @@ int waitfor(MQTTClient *c, int packet_type, Timer *timer) {
     do {
         if (TimerIsExpired(timer))
             break; // we timed out
+
         rc = cycle(c, timer);
     } while (rc != packet_type && rc >= 0);
 

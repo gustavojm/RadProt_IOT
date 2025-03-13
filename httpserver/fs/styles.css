@@ -1,0 +1,212 @@
+.progress-bar {
+    width: 100%;
+    background-color: #ccc;
+    height: 20px;
+    position: relative;
+    /* Needed for absolute positioning of the text */
+}
+
+.progress-min-mark {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: red;
+    height: 100%;
+    width: 0.1%;
+}
+
+.progress {
+    height: 100%;
+    background-color: #4CAF50;
+    /* Change this color to your desired progress bar color */
+    transition: width 0.3s ease-in-out;
+    position: relative;
+    /* Needed for absolute positioning of the text */
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    /* Text color */
+}
+
+strong {
+    padding: 5px;
+}
+
+html,
+body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+html {
+    display: table;
+    margin: auto;
+}
+
+body {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+}
+
+form {
+    max-width: 400px;
+    margin: auto;
+    padding: 10px;
+}
+
+input,
+textarea,
+select {
+    /* width: 100%; */
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+}
+
+/* The Close Button */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-reset-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    /* Could be more or less, depending on screen size */
+    max-width: 500px;
+    /* Maximum width */
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 600px) {
+
+    /* Adjust breakpoint as needed */
+    .hide-on-small {
+        display: none;
+    }
+}
+
+/* For modal form */
+/* Basic Table Styling */
+table {
+    width: 100%;
+    /*border-collapse: collapse;*/
+    border: none;
+}
+
+th {
+    border: 1px solid #ddd;
+}
+
+td {
+    padding: 10px;
+    /* border: 1px solid #ddd; */
+    text-align: left;
+}
+
+th {
+    background: #f4f4f4;
+}
+
+.label {
+    text-align: right;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 400px;
+    z-index: 1000;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.modal label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+}
+
+.modal input {
+    /* width: 100%; */
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.modal button {
+    margin-top: 15px;
+    padding: 10px;
+    border: none;
+    background: #007BFF;
+    color: white;
+    cursor: pointer;
+    width: 100%;
+}
+
+.ws-div {
+    font-family: monospace;
+    font-size: 1.1em;
+    white-space: pre-wrap;
+    /* Preserves whitespace and wraps lines */
+    padding: 10px;
+    border: 1px solid #ccc;
+    height: 200px;
+    overflow-y: scroll;
+}
+
+/* Small screen: Make rows clickable */
+@media (max-width: 600px) {
+    td {
+        cursor: pointer;
+    }
+}
+
+.show-on-initial-config {
+    display: none;
+}
