@@ -255,6 +255,8 @@ err_t httpd_process_post_data(struct http_state *hs) {
                 }
                 printf("POST DATA: %*.s \n", response_len, response);
                 httpd_post_response(hs, response, response_len, "json");
+                delete[] response;
+                return ERR_OK;
             }
         }
     }
