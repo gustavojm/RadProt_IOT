@@ -190,6 +190,7 @@
 
 <script type="text/javascript">
     var initial_config = false;
+    const smallScreenLimit = 600
 
     function getWifiSignalBars(rssi) {
         if (rssi >= -30) {
@@ -500,9 +501,10 @@
                 for (let i = 0; i < elements_to_show.length; i++) {
                     elements_to_show[i].style.display = "table-cell";
                 }
-            }
+            }            
         });
 
+        updateEditingBehavior();
 
         const readings_div = document.querySelector("#readings_div");
         settings_json.sensor_settings.forEach((item, index_sensor) => {
@@ -753,11 +755,11 @@
         const modalContent = document.getElementById("modal_content");
         const modalForm = document.getElementById("modal-form");
 
-        if (window.innerWidth > 600) {
+        if (window.innerWidth > smallScreenLimit) {
             return; // Don't open modal on large screens
         }
 
-        const row = event.currentTarget.parentNode.parentNode;
+        const row = event.currentTarget;
         let headers = Array.from(document.querySelectorAll("#publish_settings_0 thead th")).map(th => th.innerText);
 
         modalForm.innerHTML = ''; // Clear previous content
@@ -814,20 +816,16 @@
 
     function updateEditingBehavior() {
         const tables = document.querySelectorAll("[id^='publish_settings_']"); // Selects all tables with ID starting with "publish_settings_"
-        const isSmallScreen = window.innerWidth <= 600;
+        const isSmallScreen = window.innerWidth <= smallScreenLimit;
 
         tables.forEach(table => {
             tableRows = table.querySelectorAll("tbody tr");
             tableRows.forEach(row => {
-                const inputs = row.querySelectorAll("input");
-
-                inputs.forEach(input => {
-                    input.removeEventListener("click", handleRowClick);
-                    input.readOnly = isSmallScreen;
-                    if (isSmallScreen) {
-                        input.addEventListener("click", handleRowClick);
-                    }
-                });
+                row.removeEventListener("click", handleRowClick);
+                //input.readOnly = isSmallScreen;
+                if (isSmallScreen) {
+                    row.addEventListener("click", handleRowClick);
+                }
             });
         });
     }
@@ -838,9 +836,6 @@
 
         const closeModalFormBtn = document.getElementById("closeModalFormBtn");
         closeModalFormBtn.addEventListener("click", closeFormModal);
-
-        window.addEventListener("resize", updateEditingBehavior);
-        updateEditingBehavior(); // Run on page load
 
         templates_select = document.getElementById("templates_select");
         for (name in sensors_templates) {
