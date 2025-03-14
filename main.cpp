@@ -253,7 +253,7 @@ void writeStringTask(void *params) {
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
         vTaskDelay(500);
         uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
-        vTaskDelay(500);
+        vTaskDelay(500);        
     }
 }
 

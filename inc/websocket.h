@@ -40,7 +40,7 @@ typedef struct {
 
 typedef struct ws_client {
     int socket;                // Socket file descriptor instead of netconn*
-    bool established;
+    bool established = false;
     TaskHandle_t task_handle;
     uint8_t recv_buf[WS_RECV_BUFFER_SIZE];
     ws_server_t *server_ptr;

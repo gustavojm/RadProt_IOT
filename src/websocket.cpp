@@ -112,7 +112,7 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
             timeout.tv_usec = 500000; // 500 ms
             setsockopt(client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
             
-            int bytes_sent = send(client->socket, ws->send_buf, packet_size, 0);
+            int bytes_sent = lwip_send(client->socket, ws->send_buf, packet_size, 0);
             if (bytes_sent < 0) {
                 printf("Write failed with err %d (\"%s\")\n", errno, strerror(errno));
             }
@@ -130,14 +130,14 @@ static void ws_client_task(void *arg) {
         vTaskSuspend(NULL);
 
         int recv_bytes;
-        while ((recv_bytes = recv(client->socket, client->recv_buf, WS_RECV_BUFFER_SIZE, 0)) > 0) {
+        while ((recv_bytes = lwip_recv(client->socket, client->recv_buf, WS_RECV_BUFFER_SIZE, 0)) > 0) {
             uint8_t *inbuf_ptr = client->recv_buf;
 
             // If is handshake
             if (strncmp((char *)inbuf_ptr, "GET /", 5) == 0) {
                 char *ws_key_accept = create_ws_key_accept((char *)inbuf_ptr);
                 sprintf((char *)server_ptr->send_buf, "%s%s%s", head_ws, ws_key_accept, "\r\n\r\n");
-                send(client->socket, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), 0);
+                lwip_send(client->socket, server_ptr->send_buf, strlen((char *)server_ptr->send_buf), 0);
             }
             // If is a message
             else if (is_fin_msg(inbuf_ptr)) {
@@ -204,15 +204,7 @@ void ws_server_task(void *arg) {
         printf("Failed to create socket\n");
         vTaskDelete(NULL);
     }
-    
-    // Set socket options
-    int opt = 1;
-    if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        printf("setsockopt failed\n");
-        lwip_close(server_sock);
-        vTaskDelete(NULL);
-    }
-    
+       
     // Prepare server address
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
@@ -221,14 +213,14 @@ void ws_server_task(void *arg) {
     server_addr.sin_port = htons(WS_PORT);
     
     // Bind socket
-    if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (lwip_bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         printf("Socket bind failed\n");
         lwip_close(server_sock);
         vTaskDelete(NULL);
     }
     
     // Listen for connections
-    if (listen(server_sock, WS_MAX_CLIENTS) < 0) {
+    if (lwip_listen(server_sock, WS_MAX_CLIENTS) < 0) {
         printf("Listen failed\n");
         lwip_close(server_sock);
         vTaskDelete(NULL);
@@ -253,14 +245,14 @@ void ws_server_task(void *arg) {
                 timeout.tv_usec = 100000; // 100 ms
                 
                 // Check for connection with timeout
-                int activity = select(server_sock, &readfds, NULL, NULL, &timeout);
-                
+                int activity = lwip_select(server_sock + 1, &readfds, NULL, NULL, &timeout);
+               
                 if (activity > 0 && FD_ISSET(server_sock, &readfds)) {
                     struct sockaddr_in client_addr;
                     socklen_t addr_len = sizeof(client_addr);
                     
                     // Accept new connection
-                    int client_sock = accept(server_sock, (struct sockaddr *)&client_addr, &addr_len);
+                    int client_sock = lwip_accept(server_sock, (struct sockaddr *)&client_addr, &addr_len);
                     
                     if (client_sock >= 0) {
                         // Store socket in client structure
@@ -281,7 +273,7 @@ void ws_server_task(void *arg) {
             ws_msg.msg_type = WS_TYPE_STRING;
             ws_send_message(ws, &ws_msg);
             printf("---WS--->\n");
-        }
+        }        
     }
 }
 
