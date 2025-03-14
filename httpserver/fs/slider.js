@@ -21,7 +21,7 @@ class TouchSlider {
             this.startY = e.touches[0].pageY;
             this.isDragging = true;
             this.isScrolling = false;
-        });
+        }, { passive: true });
         
         this.slider.addEventListener('touchmove', (e) => {
             if (!this.isDragging) return;
@@ -39,13 +39,13 @@ class TouchSlider {
             }
 
             if (!this.isScrolling && Math.abs(diffX) > 10) {
-                e.preventDefault();
+                //e.preventDefault();
                 const offset = -this.currentSlide * 100 + (diffX / window.innerWidth * 100);
                 if (offset <= 0 && offset >= -100) {
                     this.slider.style.transform = `translateX(${offset}vw)`;
                 }
             }
-        });
+        }, { passive: true });
         
         this.slider.addEventListener('touchend', (event) =>  {
             if (!this.isDragging) return;
