@@ -8,6 +8,7 @@
 #include "hardware/uart.h"
 #include "hardware/pio.h"
 #include "uart_rx.pio.h"
+#include "debug.h"
 
 class Serial {
 public:

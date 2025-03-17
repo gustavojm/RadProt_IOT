@@ -14,17 +14,17 @@ void wifi_networks_scan(bool active) {
     cyw43_wifi_scan_options_t scan_options = { 0 };
     int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, wifi_scan_cb);
     if (err == 0) {
-        printf("\nPerforming wifi scan\n");
+        lDebug(Info, "Performing wifi scan");
     } else {
-        printf("Failed to start scan: %d\n", err);
+        lDebug(Info, "Failed to start scan: %d", err);
     }
     while (active && cyw43_wifi_scan_active(&cyw43_state)) {
         vTaskDelay(1000);
     }
 
-    printf("WIFI Scan finished\n");
+    lDebug(Info, "WIFI Scan finished");
 
-    printf("Detected WIFI Networks: \n");
+    lDebug(Info, "Detected WIFI Networks: ");
 
     for (auto wifi_net : wifi_networks) {
         printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
@@ -42,7 +42,7 @@ void wifi_connect() {
     int retries = 0;
 
     while (retries < MAX_RETRIES) {
-        printf("Connecting to Wi-Fi... Attempt %d\n", retries + 1);
+        lDebug(Info, "Connecting to Wi-Fi... Attempt %d", retries + 1);
         const client_mode_settings *client_settings = get_client_mode_settings();
 
         // Attempt to connect to Wi-Fi
@@ -51,12 +51,12 @@ void wifi_connect() {
             // if (cyw43_arch_wifi_connect_timeout_ms("Redmi", "peperina", CYW43_AUTH_WPA2_MIXED_PSK,
             //     30000) == 0) {
             if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
-                printf("Connected to Wi-Fi successfully!\n");
+                lDebug(Info, "Connected to Wi-Fi successfully!");
 
                 if (client_settings->wifi.dhcp) {
                     // Wait for DHCP to assign an IP
                     while (netif_default->ip_addr.addr == 0) {
-                        printf("Waiting for DHCP...\n");
+                        lDebug(Info, "Waiting for DHCP...");
                         sleep_ms(1000);
                     }
                 } else {
@@ -67,21 +67,21 @@ void wifi_connect() {
                     dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS
                     char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
                     cyw43_arch_lwip_end();
-                    printf("Static IP set to: %s\n", ip_addr);
+                    lDebug(Info, "Static IP set to: %s", ip_addr);
                 }
 
-                printf("Connected! IP Address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
+                lDebug(Info, "Connected! IP Address: %s", ip4addr_ntoa(&netif_default->ip_addr));
 
                 return;
             }
         }
 
-        printf("Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
+        lDebug(Info, "Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
         vTaskDelay(pdMS_TO_TICKS(RECONNECT_DELAY_MS));
         retries++;
     }
 
-    printf("Failed to connect after %d attempts. Giving up.\n", MAX_RETRIES);
+    lDebug(Info, "Failed to connect after %d attempts. Giving up.\n", MAX_RETRIES);
 }
 
 

@@ -58,12 +58,12 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         timeout.tv_usec = timeout_ms * 1000;
 
         if (n->my_socket < 0) {
-            printf("Invalid socket\n");
+            lDebug(Info, "Invalid socket\n");
             return -1;
         }
 
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-            printf("Can't set socket RECV timeout\n");
+            lDebug(Info, "Can't set socket RECV timeout\n");
             return -1;
         }
         rc = lwip_recv(n->my_socket, buffer + recvLen, len - recvLen, 0);
@@ -90,7 +90,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         int rc = 0;
 
         if (n->my_socket < 0) {
-            printf("Invalid socket\n");
+            lDebug(Info, "Invalid socket\n");
             return -1;
         }
 
@@ -98,7 +98,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-            printf("Can't set socket SEND timeout\n");
+            lDebug(Info, "Can't set socket SEND timeout\n");
             return -1;
         }
         rc = lwip_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
@@ -130,24 +130,24 @@ ip_addr_t server;
 void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg) {
     server = *ipaddr;
     dnsFound = true; 
-    printf("Resolved hostname to: %s\n", ip4addr_ntoa(&server));
+    lDebug(Info, "Resolved hostname to: %s\n", ip4addr_ntoa(&server));
 }
 
 int NetworkConnect(Network *n, const char *addr, int port) {
     n->my_socket = lwip_socket(AF_INET, SOCK_STREAM, 0); 
     if (n->my_socket < 0) {
-        printf("Socket creation failed!\n");
+        lDebug(Info, "Socket creation failed!\n");
         return -1;
     }    
 
     if (!ipaddr_aton(addr, &server) == 1) {
         dns_gethostbyname(addr, &server, dns_found_cb, NULL);
-        printf("Waiting hostname resolution");
+        lDebug(Info, "Waiting hostname resolution");
         while (!dnsFound) {
-            printf(".");
+            lDebug(Info, ".");
             vTaskDelay(1000);
         }
-        printf("\n");
+        lDebug(Info, "\n");
     }
     
     struct sockaddr_in server_addr;
@@ -159,7 +159,7 @@ int NetworkConnect(Network *n, const char *addr, int port) {
 
     // Connect to the server
     if (lwip_connect(n->my_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        printf("Connection failed!\n");
+        lDebug(Info, "Connection failed!\n");
         lwip_close(n->my_socket);
         return -1;
     }

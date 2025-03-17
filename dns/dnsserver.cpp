@@ -9,7 +9,7 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
-#include "debug_printf.h"
+#include "debug.h"
 #include "settings.h"
 
 static struct
@@ -77,7 +77,7 @@ static const char *get_encoded_domain_name_component(const uint8_t *buffer, size
 
 static uint32_t get_address_for_encoded_domain(const uint8_t *buffer, size_t offset, size_t buffer_size)
 {
-	debug_printf("DNS server: ");
+	lDebug(Info, "DNS server: ");
 	bool match = false, loose_match = false;
 	
 	int domain_off = 0, domain_len = 0;
@@ -110,7 +110,7 @@ static uint32_t get_address_for_encoded_domain(const uint8_t *buffer, size_t off
 		else
 		{
 			uint32_t ip = (match || loose_match) ? s_DNSServerSettings.primary_ip : s_DNSServerSettings.secondary_ip ;
-			debug_printf(" -> %d.%d.%d.%d\n", (ip >> 0) & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+			lDebug(Info, " -> %d.%d.%d.%d", (ip >> 0) & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
 			return ip;
 		}
 	}
@@ -133,13 +133,13 @@ static void dns_server_thread(void *unused)
     
 	if (server_sock < 0)
 	{
-		debug_printf("Unable to create DNS server socket: error %d", errno);
+		lDebug(Info, "Unable to create DNS server socket: error %d", errno);
 		return;
 	}
 
 	if (bind(server_sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0)
 	{
-		debug_printf("Unable to bind DNS server socket: error %d\n", errno);
+		lDebug(Info, "Unable to bind DNS server socket: error %d", errno);
 		return;
 	}
 

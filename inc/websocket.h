@@ -4,6 +4,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "debug.h"
 
 #include "lwip/api.h"
 

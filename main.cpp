@@ -24,58 +24,11 @@
 #include <pico/flash.h>
 #include <pico/multicore.h>
 
-#include "debug_printf.h"
+#include "debug.h"
 #include "websocket.h"
+#include "wifi_fns.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
-#define RECONNECT_DELAY_MS 5000 // 5 seconds
-#define MAX_RETRIES        5    // Maximum retry attempts
-
-void connect_to_wifi() {
-    int retries = 0;
-
-    while (retries < MAX_RETRIES) {
-        printf("Connecting to Wi-Fi... Attempt %d\n", retries + 1);
-        const client_mode_settings *client_settings = get_client_mode_settings();
-
-        // Attempt to connect to Wi-Fi
-        if (cyw43_arch_wifi_connect_timeout_ms(
-                client_settings->wifi.ssid, client_settings->wifi.password, client_settings->wifi.auth_mode, 30000) == 0) {
-            // if (cyw43_arch_wifi_connect_timeout_ms("Redmi", "peperina", CYW43_AUTH_WPA2_MIXED_PSK,
-            //     30000) == 0) {
-            if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
-                printf("Connected to Wi-Fi successfully!\n");
-
-                if (client_settings->wifi.dhcp) {
-                    // Wait for DHCP to assign an IP
-                    while (netif_default->ip_addr.addr == 0) {
-                        printf("Waiting for DHCP...\n");
-                        sleep_ms(1000);
-                    }
-                } else {
-                    cyw43_arch_lwip_begin();
-                    dhcp_stop(cyw43_state.netif); // turn off DHCP
-                    netif_set_addr(
-                        cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
-                    dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS
-                    char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
-                    cyw43_arch_lwip_end();
-                    printf("Static IP set to: %s\n", ip_addr);
-                }
-
-                printf("Connected! IP Address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
-
-                return;
-            }
-        }
-
-        printf("Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
-        vTaskDelay(pdMS_TO_TICKS(RECONNECT_DELAY_MS));
-        retries++;
-    }
-
-    printf("Failed to connect after %d attempts. Giving up.\n", MAX_RETRIES);
-}
 
 static void set_secondary_ip_address(int address) {
     /************************************ !!! WARNING !!! ************************************
@@ -97,43 +50,19 @@ static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
 }
 
 void ws_message_handler(uint8_t *data, uint32_t len, ws_type_t type) {
-    printf("Websocket received: %.*s", len, data);
+    lDebug(Info, "Websocket received: %.*s", len, data);
 }
 
 static void main_task(__unused void *params) {
 
     if (cyw43_arch_init()) {
-        printf("failed to initialise\n");
+        lDebug(Info, "failed to initialise");
         return;
     }
 
     cyw43_arch_enable_sta_mode();
 
-    cyw43_wifi_scan_options_t scan_options = { 0 };
-    int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, wifi_scan_cb);
-    if (err == 0) {
-        printf("\nPerforming wifi scan\n");
-    } else {
-        printf("Failed to start scan: %d\n", err);
-    }
-    while (cyw43_wifi_scan_active(&cyw43_state)) {
-        vTaskDelay(1000);
-    }
-
-    printf("WIFI Scan finished\n");
-
-    printf("Detected WIFI Networks: \n");
-
-    for (auto wifi_net : wifi_networks) {
-        printf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
-        for (int i = 0; i < 6; i++) {
-            printf("%02x", wifi_net.bssid[i]);
-            if (i < 5) {
-                printf(":");
-            }
-        }
-        printf("\n");
-    }
+    wifi_networks_scan();
 
     const ap_mode_settings *ap_settings = get_ap_mode_settings();
     const client_mode_settings *client_settings = get_client_mode_settings();
@@ -170,7 +99,7 @@ static void main_task(__unused void *params) {
             ap_settings->dns_ignores_network_suffix);
         set_secondary_ip_address(ap_settings->secondary_address);
     } else {
-        connect_to_wifi();  
+        wifi_connect();  
         mqtt_init();    
     }
 
@@ -222,9 +151,9 @@ static void main_task(__unused void *params) {
         while (true) {
             if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
 
-                printf("Wi-Fi disconnected! Attempting to reconnect...\n");
+                lDebug(Info, "Wi-Fi disconnected! Attempting to reconnect...");
                 netif_set_link_down(cyw43_state.netif);
-                connect_to_wifi();
+                wifi_connect();
             }
             vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
         }
@@ -256,6 +185,7 @@ void writeStringTask(void *params) {
         vTaskDelay(500);        
     }
 }
+
 
 int main(void) {
     stdio_init_all();

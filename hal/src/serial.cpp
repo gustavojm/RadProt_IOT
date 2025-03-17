@@ -51,7 +51,7 @@ Serial::Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate
         hardware_uart_IRQ = uart_num == 0 ? UART0_IRQ : UART1_IRQ;
 
         if (! uart_buffer) {
-            printf("Serial Constructor, Out of Memory\n");
+            lDebug(Error, "Serial Constructor, Out of Memory");
         }        
 
 }

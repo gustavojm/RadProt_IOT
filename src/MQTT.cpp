@@ -17,8 +17,8 @@
 #include "websocket.h"
 
 void messageArrived(MessageData *data) {
-    printf(
-        "Message arrived on topic %.*s: %.*s\n",
+    lDebug(Info, 
+        "Message arrived on topic %.*s: %.*s",
         data->topicName->lenstring.len,
         data->topicName->lenstring.data,
         data->message->payloadlen,
@@ -40,13 +40,13 @@ static void mqtt_task(void *pvParameters) {
     MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
     if ((rc = MQTTStartTask(&client)) != pdPASS) {
-        printf("Error MQTT start tasks: %d\n", rc);
+        lDebug(Info, "Error MQTT start tasks: %d", rc);
     }
 
     const client_mode_settings *client_settings = get_client_mode_settings();
 
     while (true) {        
-        printf("HERE \n");
+        HERE;
         if ((rc = NetworkConnectWithTimeout(&network, client_settings->mqtt.broker, client_settings->mqtt.port, 1000)) == 0) {
 
             MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
@@ -56,10 +56,10 @@ static void mqtt_task(void *pvParameters) {
             // connectData.username.cstring = const_cast<char *>("Pepito");;
 
             if ((rc = MQTTConnect(&client, &connectData)) == 0) {
-                printf("MQTT Connected\n");
+                lDebug(Info, "MQTT Connected");
 
                 // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
-                //     printf("Error MQTT subscribe: %d\n", rc);
+                //     lDebug(Info, "Error MQTT subscribe: %d", rc);
                 // }
 
                 MqttPublishMessage msg;
@@ -77,19 +77,19 @@ static void mqtt_task(void *pvParameters) {
                         if ((rc = MQTTPublish(&client, msg.topic, &message)) == 0) {
                             gpio_put(STATUS_LED_GPIO, true);
                             xTimerStart(status_led_off_timer, 0);
-                            printf("--MQTT-->\n");
+                            lDebug(Info, "--MQTT-->");
                         } else {
-                            printf("Error publishing: %d\n", rc);
+                            lDebug(Info, "Error publishing: %d", rc);
                             goto close_socket;
                             // break;
                         }
                     }
                 }
             } else {
-                printf("Error connecting: %d\n", rc);
+                lDebug(Info, "Error connecting: %d", rc);
             }
         } else {
-            printf("Error in network connection: %d\n", rc);
+            lDebug(Info, "Error in network connection: %d", rc);
         }
     close_socket:
         network.disconnect(&network);

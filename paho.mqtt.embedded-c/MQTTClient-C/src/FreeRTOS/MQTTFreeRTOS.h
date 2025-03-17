@@ -25,6 +25,8 @@
 #include "lwip/dns.h"
 #include "FreeRTOSTimers.h"
 
+#include "debug.h"
+
 #if defined(__cplusplus)
  extern "C" {
 #endif

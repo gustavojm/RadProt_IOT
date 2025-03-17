@@ -5,6 +5,8 @@
 #include "queue.h"
 #include "timers.h"
 
+#include "debug.h"
+
 inline QueueHandle_t mqttQueue;
 inline TimerHandle_t status_led_off_timer;
 

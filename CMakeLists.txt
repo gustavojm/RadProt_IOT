@@ -73,6 +73,7 @@ add_executable(${PROJECT_NAME}
         src/MQTT.cpp
         src/wifi_fns.cpp
         src/websocket.cpp
+        src/debug.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.cpp

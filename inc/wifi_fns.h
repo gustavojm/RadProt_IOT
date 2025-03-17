@@ -7,6 +7,7 @@
 
 #include <lwip/dns.h>
 
+#include "debug.h"
 #include "settings.h"
 
 void wifi_networks_scan(bool active = true);
