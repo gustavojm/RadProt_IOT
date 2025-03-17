@@ -45,43 +45,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "wifi_fns.h"
+
 #include "post.h"
 
 namespace json = ArduinoJson;
 
-int scan_auth_mode_to_connect_auth_mode(int scan_auth_mode) {
-    uint32_t connect_auth_mode;
-
-    switch (scan_auth_mode) {
-    case 0: connect_auth_mode = CYW43_AUTH_OPEN; break;
-    case 1: connect_auth_mode = CYW43_AUTH_WPA_TKIP_PSK; break;
-    case 2: connect_auth_mode = CYW43_AUTH_WPA2_AES_PSK; break;
-    case 3: connect_auth_mode = CYW43_AUTH_WPA2_MIXED_PSK; break;
-    case 4: connect_auth_mode = CYW43_AUTH_WPA3_SAE_AES_PSK; break;
-    case 5: connect_auth_mode = CYW43_AUTH_WPA3_WPA2_AES_PSK; break;
-    default:
-        // Handle unknown auth type
-        connect_auth_mode = -1;
-    }
-    return connect_auth_mode;
-}
-
-int connect_auth_mode_to_scan_auth_mode(int connect_auth_mode) {
-    uint32_t scan_auth_mode;
-
-    switch (connect_auth_mode) {
-    case CYW43_AUTH_OPEN: scan_auth_mode = 0; break;
-    case CYW43_AUTH_WPA_TKIP_PSK: scan_auth_mode = 1; break;
-    case CYW43_AUTH_WPA2_AES_PSK: scan_auth_mode = 2; break;
-    case CYW43_AUTH_WPA2_MIXED_PSK: scan_auth_mode = 3; break;
-    case CYW43_AUTH_WPA3_SAE_AES_PSK: scan_auth_mode = 4; break;
-    case CYW43_AUTH_WPA3_WPA2_AES_PSK: scan_auth_mode = 5; break;
-    default:
-        // Handle unknown auth type
-        scan_auth_mode = -1;
-    }
-    return scan_auth_mode;
-}
 
 /* POST handlers functions */
 
@@ -193,6 +162,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
 }
 
 json::MyJsonDocument wifi_nets_fn(struct http_state *hs) {
+    printf(" iafdsipuofadsuipodafsuiopfdsauiopadfsuiop asdf uipodafs ioupsadf upiodsfauipo dsafi uposdfauip osdfaupio sdafpuio sdfapuio sdfupio sdfauiop sdfuiop sdfuisdfiuop sdaf");
     auto responseJson = json::MyJsonDocument();
     auto wifi_nets_array = responseJson.to<json::JsonArray>();
 
@@ -221,6 +191,12 @@ json::MyJsonDocument wifi_nets_fn(struct http_state *hs) {
     return responseJson;
 }
 
+json::MyJsonDocument wifi_nets_scan_fn(struct http_state *hs) {
+    wifi_networks_scan(false);
+
+    return wifi_nets_fn(hs);
+}
+    
 // @formatter:off
 const post_handler_entry post_handlers[] = {
     {
@@ -235,6 +211,11 @@ const post_handler_entry post_handlers[] = {
         "/wifi_nets.cgi",
         &wifi_nets_fn,
     },
+    {
+        "/wifi_nets_scan.cgi",
+        &wifi_nets_scan_fn,
+    },
+
 };
 
 err_t httpd_process_post_data(struct http_state *hs) {

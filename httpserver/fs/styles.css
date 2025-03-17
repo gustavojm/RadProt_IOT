@@ -210,3 +210,7 @@ th {
 .show-on-initial-config {
     display: none;
 }
+
+.hide-on-initial-config {
+    display: block;
+}

@@ -72,7 +72,7 @@
                     </div>
 
                     <div style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
-                        <strong>WiFi Networks:</strong><br>
+                        <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)" class="hide-on-initial-config">Refresh</a></div>
                         <table id="wifiTable" style="width: 100%;">
                             <thead>
                                 <tr>
@@ -242,6 +242,10 @@
     function wifi_networks_populate(networks_json) {
         const wifi_tableBody = document.querySelector("#wifiTable tbody");
 
+        while (wifi_tableBody.lastElementChild) {
+            wifi_tableBody.removeChild(wifi_tableBody.lastElementChild);
+        }
+
         networks_json.forEach((item, index) => {
             const row = document.createElement("tr");
 
@@ -258,9 +262,13 @@
         });
     }
 
-    function wifi_networks_get() {
+    function wifi_networks_get(scan) {
         let xhr = new XMLHttpRequest();
-        xhr.open("POST", '/wifi_nets.cgi', true);
+        if (scan) {
+            xhr.open("POST", '/wifi_nets_scan.cgi', true);
+        } else {
+            xhr.open("POST", '/wifi_nets.cgi', true);
+        }   
         xhr.setRequestHeader("Content-Type", "application/json");
 
         // Use onreadystatechange instead of onload
@@ -500,6 +508,11 @@
                 elements_to_show = document.getElementsByClassName("show-on-initial-config");
                 for (let i = 0; i < elements_to_show.length; i++) {
                     elements_to_show[i].style.display = "table-cell";
+                }
+
+                elements_to_hide = document.getElementsByClassName("hide-on-initial-config");
+                for (let i = 0; i < elements_to_hide.length; i++) {
+                    elements_to_hide[i].style.display = "none";
                 }
             }            
         });
