@@ -504,7 +504,7 @@
             }            
         });
 
-        updateEditingBehavior();
+        setModalEditing();
 
         const readings_div = document.querySelector("#readings_div");
         settings_json.sensor_settings.forEach((item, index_sensor) => {
@@ -814,18 +814,14 @@
         modalOverlay.style.display = "none";
     }
 
-    function updateEditingBehavior() {
+    function setModalEditing() {
         const tables = document.querySelectorAll("[id^='publish_settings_']"); // Selects all tables with ID starting with "publish_settings_"
         const isSmallScreen = window.innerWidth <= smallScreenLimit;
 
         tables.forEach(table => {
             tableRows = table.querySelectorAll("tbody tr");
             tableRows.forEach(row => {
-                row.removeEventListener("click", handleRowClick);
-                //input.readOnly = isSmallScreen;
-                if (isSmallScreen) {
-                    row.addEventListener("click", handleRowClick);
-                }
+                row.addEventListener("click", handleRowClick);
             });
         });
     }
