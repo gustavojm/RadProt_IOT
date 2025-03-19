@@ -142,12 +142,12 @@ int NetworkConnect(Network *n, const char *addr, int port) {
 
     if (!ipaddr_aton(addr, &server) == 1) {
         dns_gethostbyname(addr, &server, dns_found_cb, NULL);
-        lDebug(Info, "Waiting hostname resolution");
+        debugPrintf("Waiting hostname resolution");
         while (!dnsFound) {
-            lDebug(Info, ".");
+            debugPrintf(".");
             vTaskDelay(1000);
         }
-        lDebug(Info, "\n");
+        debugPrintf("\n");
     }
     
     struct sockaddr_in server_addr;
@@ -173,23 +173,36 @@ int NetworkConnectWithTimeout(Network* n, const char* addr, int port, int timeou
     int flags;
     fd_set fdset;
     struct timeval tv;
-    
-    // Standard address setup code
-    memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    address.sin_addr.s_addr = inet_addr(addr);
-    
+      
     // Create socket
-    if ((n->my_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((n->my_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        lDebug(Error, "Socket creation failed!\n");
         return -1;
-    
+    }    
+
+    if (!ipaddr_aton(addr, &server) == 1) {
+        dns_gethostbyname(addr, &server, dns_found_cb, NULL);
+        debugPrintf("Waiting hostname resolution");
+        while (!dnsFound) {
+            debugPrintf(".");
+            vTaskDelay(1000);
+        }
+        debugPrintf("\n");
+    }
+
     // Set non-blocking
     flags = lwip_fcntl(n->my_socket, F_GETFL, 0);
     lwip_fcntl(n->my_socket, F_SETFL, flags | O_NONBLOCK);
     
+    struct sockaddr_in server_addr;
+    // Configure server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_len = sizeof(struct sockaddr_in), server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = server.addr;
+
     // Attempt connection
-    rc = connect(n->my_socket, (struct sockaddr*)&address, sizeof(address));
+    rc = lwip_connect(n->my_socket, (struct sockaddr*)&server_addr, sizeof(server_addr));
     
     if (rc < 0 && errno == EINPROGRESS) {
         // Wait for connection with timeout
