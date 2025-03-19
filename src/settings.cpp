@@ -77,7 +77,7 @@ const client_mode_settings_t s_Client_Settings = {
                 .sensor_settings = { {.baudrate = 9600,
                                       .enabled = true,
                                       .publish_settings = { { .enabled = true,
-                                                                .name = "H3",
+                                                                .name = "GAMMA",
                                                                 .start = 3,
                                                                 .end = 9,
                                                                 .is_num = true,
@@ -86,7 +86,7 @@ const client_mode_settings_t s_Client_Settings = {
                                                                 .topic = "123" 
                                                             }, { 
                                                                 .enabled = true,
-                                                                .name = "H3AVG",
+                                                                .name = "GAMMAAVG",
                                                                 .start = 3,
                                                                 .end = 9,
                                                                 .is_num = true,
@@ -99,7 +99,7 @@ const client_mode_settings_t s_Client_Settings = {
                                       {.baudrate = 9600,
                                         .enabled = true,
                                         .publish_settings = { { .enabled = true,
-                                                                  .name = "H3",
+                                                                  .name = "GAMMA",
                                                                   .start = 3,
                                                                   .end = 9,
                                                                   .is_num = true,
@@ -108,7 +108,7 @@ const client_mode_settings_t s_Client_Settings = {
                                                                   .topic = "456" 
                                                               }, { 
                                                                   .enabled = true,
-                                                                  .name = "H3AVG",
+                                                                  .name = "GAMMAAVG",
                                                                   .start = 3,
                                                                   .end = 9,
                                                                   .is_num = true,
@@ -121,7 +121,7 @@ const client_mode_settings_t s_Client_Settings = {
                                         {.baudrate = 9600,
                                             .enabled = true,
                                             .publish_settings = { { .enabled = true,
-                                                                      .name = "H3",
+                                                                      .name = "GAMMA",
                                                                       .start = 3,
                                                                       .end = 9,
                                                                       .is_num = true,
@@ -130,7 +130,7 @@ const client_mode_settings_t s_Client_Settings = {
                                                                       .topic = "789" 
                                                                   }, { 
                                                                       .enabled = true,
-                                                                      .name = "H3AVG",
+                                                                      .name = "GAMMAAVG",
                                                                       .start = 3,
                                                                       .end = 9,
                                                                       .is_num = true,

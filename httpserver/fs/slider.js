@@ -16,7 +16,7 @@ class TouchSlider {
 
     initializeEvents() {
         // Touch Events
-        this.slider.addEventListener('touchstart', (e) => {
+        this.slider.addEventListener('touchstart', (e) => {            
             this.startX = e.touches[0].pageX;
             this.startY = e.touches[0].pageY;
             this.isDragging = true;
@@ -25,7 +25,9 @@ class TouchSlider {
         
         this.slider.addEventListener('touchmove', (e) => {
             if (!this.isDragging) return;
-            
+
+            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+           
             const currentX = e.touches[0].pageX;
             const currentY = e.touches[0].pageY;
             const diffX = currentX - this.startX;
@@ -47,8 +49,11 @@ class TouchSlider {
             }
         }, { passive: true });
         
-        this.slider.addEventListener('touchend', (event) =>  {
+        this.slider.addEventListener('touchend', (e) =>  {            
             if (!this.isDragging) return;
+
+            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+
             this.handleEnd();
         });
 
@@ -56,6 +61,8 @@ class TouchSlider {
         this.slider.addEventListener('mousedown', (e) => {
             // Only handle primary mouse button
             if (e.button !== 0) return;
+
+            //if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
             
             // Don't initiate slide if clicking inside scroll container
             if (e.target.closest('.scroll-container')) return;
@@ -68,6 +75,9 @@ class TouchSlider {
 
         this.slider.addEventListener('mousemove', (e) => {
             if (!this.isDragging) return;
+
+            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+
             e.preventDefault();
             
             const diffX = e.pageX - this.startX;
@@ -78,8 +88,18 @@ class TouchSlider {
             }
         });
 
-        this.slider.addEventListener('mouseup', () => this.handleEnd());
-        this.slider.addEventListener('mouseleave', () => this.handleEnd());
+        this.slider.addEventListener('mouseup', (e) => {            
+            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+            
+            this.handleEnd();
+        });
+        
+        
+        this.slider.addEventListener('mouseleave', (e) => {
+            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+
+            this.handleEnd();
+        });
 
         // Dot navigation
         this.dots.forEach((dot, index) => {

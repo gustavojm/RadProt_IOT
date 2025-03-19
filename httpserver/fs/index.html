@@ -488,8 +488,8 @@
                                     <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" style="width: 3em" value="${item.start}"></td>
                                     <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" style="width: 3em" value="${item.end}"></td>
                                     <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""} onchange="toggle_numeric_settings(this, ${index_sensor}, ${index})"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 3em" ${item.is_num ? "" : "disabled"} value="${item.scale}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 3em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 4em" step="0.001" ${item.is_num ? "" : "disabled"} value="${item.scale}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 4em" step="0.001" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
                                     <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
                                    `;
 
@@ -661,23 +661,23 @@
         "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
 
         "femto-TECH THFS-400": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
-                             {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
+                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
                          }\
                      ]',
 
         "GRAETZ WS05C-3": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
-                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
+                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]},\
                          {"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
-                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"456"},\
+                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/456"}\
                          ]},\
                          {"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"99999"},\
-                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/99999"}\
+                         [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"789"},\
+                             {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/789"}\
                          ]\
                          }\
                         ]'
@@ -780,20 +780,20 @@
         const tds = row.querySelectorAll("td");
         tds.forEach((td, index) => {
             let label = document.createElement("label");
-            label.innerText = headers[index];
+            label.innerText = headers[index] + (index == 0 ? "" : ":");
+            label.style = "padding-right: 10px;"
             let clonedInput
             if (td.firstChild) {
                 clonedInput = td.firstChild.cloneNode(true);
-                clonedInput.classList = []; // Remove the hide-on-small class
+                clonedInput.classList = []; // This removes the hide-on-small class
                 clonedInput.readOnly = false
-            } else {
-                elem = document.createElement("div");
-                elem.innerHTML = td.innerHTML;
-                clonedInput = elem;
             }
 
-            modalForm.appendChild(label);
-            modalForm.appendChild(clonedInput);
+            pair = document.createElement("div");
+            pair.appendChild(label);
+            pair.appendChild(clonedInput);
+            pair.style = "display: flex; justify-content: center; align-items: baseline;";
+            modalForm.appendChild(pair);
         });
 
         // Save button
