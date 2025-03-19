@@ -39,7 +39,6 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "stdarg.h"
 
 inline xSemaphoreHandle s_PrintfSemaphore;
 
@@ -49,7 +48,7 @@ inline xSemaphoreHandle s_PrintfSemaphore;
 #define lDebug(level, fmt, ...)
 #define debugWrite(data, size)
 #define HERE
-#define debugPrintf(const char *format, ...)
+#define debugPrintf(format, ...)
 #else
 
 enum debugLevels {
@@ -108,12 +107,13 @@ void debugClose(void);
  * @param level the level at which this information should be printed
  * @param fmt the formatting string (<b>MUST</b> be a literal
  */
-#define lDebug(level, fmt, ...)                                                                                             \
-    do {                                                                                                                    \
-        if (debugLevel <= level)                                                                                            \
-            xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);                                                               \
-        printf("%s %s[%d] %s() " fmt "\n", levelText(level), __FILE__, __LINE__, __func__, ##__VA_ARGS__);                  \
-        xSemaphoreGive(s_PrintfSemaphore);                                                                                  \
+#define lDebug(level, fmt, ...)                                                                                         \
+    do {                                                                                                                \
+        if (debugLevel <= level) {                                                                                      \
+            xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);                                                           \
+            printf("%s %s[%d] %s() " fmt "\n", levelText(level), __FILE__, __LINE__, __func__, ##__VA_ARGS__);          \
+            xSemaphoreGive(s_PrintfSemaphore);                                                                          \
+        }                                                                                                               \
     } while (0)
 
 inline void debugWrite(const void *data, int size) {
@@ -130,14 +130,11 @@ inline void debugWrite(const void *data, int size) {
 /** Prints the file name, line number, function name and "HERE" */
 #define HERE            debug("HERE")
 
-inline void debugPrintf(const char *format, ...) {
-	va_list args;
-	va_start(args, format);
-	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
-	vprintf(format, args);
-	va_end(args);
-	xSemaphoreGive(s_PrintfSemaphore);
-}
+#define debugPrintf(format, ...)                                                                                        \
+    do {                                                                                                                \
+        xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);                                                               \
+        printf(format, ##__VA_ARGS__);                                                                                  \
+        xSemaphoreGive(s_PrintfSemaphore);                                                                              \
+    } while (0)
 
-
-#endif
+#endif // defined(NDEBUG)
