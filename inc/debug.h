@@ -74,19 +74,14 @@ static inline const char *levelText(enum debugLevels level) {
  * controls how much debug output is produced. Higher values produce more
  * output. See the use in <tt>lDebug()</tt>.
  */
-extern enum debugLevels debugLevel;
+inline enum debugLevels debugLevel = Info;
 
 /**
  * The file where debug output is written. Defaults to <tt>stderr</tt>.
  * <tt>debugToFile()</tt> allows output to any file.
  */
-extern FILE *debugFile;
 
 void debugSetLevel(enum debugLevels lvl);
-
-void debugToFile(const char *fileName);
-
-void debugClose(void);
 
 /**
  * Expands a name into a string and a value.
@@ -116,14 +111,6 @@ void debugClose(void);
         }                                                                                                               \
     } while (0)
 
-inline void debugWrite(const void *data, int size) {
-    xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
-    for (int i = 0; i < size; i++) {
-        putchar(((char *)data)[i]); // Send each character to the default UART
-    }
-    xSemaphoreGive(s_PrintfSemaphore);
-}
-
 /** Simple alias for <tt>lDebug()</tt> */
 #define debug(fmt, ...) lDebug(Info, fmt, ##__VA_ARGS__)
 
@@ -136,5 +123,7 @@ inline void debugWrite(const void *data, int size) {
         printf(format, ##__VA_ARGS__);                                                                                  \
         xSemaphoreGive(s_PrintfSemaphore);                                                                              \
     } while (0)
+
+void debugWrite(const void *data, int size);
 
 #endif // defined(NDEBUG)

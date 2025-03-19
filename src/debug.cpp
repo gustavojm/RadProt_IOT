@@ -3,9 +3,6 @@
 #include "debug.h"
 
 #if !defined(NDEBUG)
-enum debugLevels debugLevel = Info;
-
-FILE *debugFile = NULL;
 
 /**
  * @brief 	sets debug level.
@@ -15,25 +12,12 @@ void debugSetLevel(enum debugLevels lvl) {
     debugLevel = lvl;
 }
 
-/**
- * @brief sends debugging output to a file.
- * @param fileName name of file to send output to
- */
-void debugToFile(const char *fileName) {
-    debugClose();
-
-    FILE *f = fopen(fileName, "w"); // "w+" ?
-
-    if (f)
-        debugFile = f;
-}
-
-/** Close the output file if it was set in <tt>toFile()</tt> */
-void debugClose(void) {
-    if (debugFile && (debugFile != stderr)) {
-        fclose(debugFile);
-        debugFile = stderr;
+void debugWrite(const void *data, int size) {
+	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
+    for (int i = 0; i < size; i++) {
+        putchar(((char *)data)[i]); // Send each character to the default UART
     }
+    xSemaphoreGive(s_PrintfSemaphore);
 }
 
 #endif // !defined(NDEBUG)
