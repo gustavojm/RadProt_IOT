@@ -488,8 +488,8 @@
                                     <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" style="width: 3em" value="${item.start}"></td>
                                     <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" style="width: 3em" value="${item.end}"></td>
                                     <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""} onchange="toggle_numeric_settings(this, ${index_sensor}, ${index})"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" style="width: 4em" step="0.001" ${item.is_num ? "" : "disabled"} value="${item.scale}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 4em" step="0.001" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" step="any" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${Math.round((item.scale + Number.EPSILON) * 10000) / 10000}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
                                     <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
                                    `;
 
@@ -619,8 +619,8 @@
                 "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
                 "sensor_settings":\
                 [{"baudrate":9600, "enabled": true, "publish_settings": \
-                [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":0,"topic":"12345"},\
-                {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":10,"avg_cnt":180,"topic":"r/12345"},\
+                [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"12345"},\
+                {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/12345"},\
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
