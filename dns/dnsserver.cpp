@@ -90,8 +90,8 @@ static uint32_t get_address_for_encoded_domain(const uint8_t *buffer, size_t off
 		if (component)
 		{
 			if (i)
-				debug_write(".", 1);
-			debug_write(component, len);
+				debugWrite(".", 1);
+			debugWrite(component, len);
 			
 			if (i == 0 && !strncasecmp(component, s_DNSServerSettings.host_name, len))
 			{
@@ -133,13 +133,13 @@ static void dns_server_thread(void *unused)
     
 	if (server_sock < 0)
 	{
-		lDebug(Info, "Unable to create DNS server socket: error %d", errno);
+		lDebug(Error, "Unable to create DNS server socket: error %d", errno);
 		return;
 	}
 
 	if (bind(server_sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0)
 	{
-		lDebug(Info, "Unable to bind DNS server socket: error %d", errno);
+		lDebug(Error, "Unable to bind DNS server socket: error %d", errno);
 		return;
 	}
 

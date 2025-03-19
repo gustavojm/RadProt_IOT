@@ -2,6 +2,7 @@
 
 #include "debug.h"
 
+#if !defined(NDEBUG)
 enum debugLevels debugLevel = Info;
 
 FILE *debugFile = NULL;
@@ -37,3 +38,5 @@ void debugClose(void)
 		debugFile = stderr;
 	}
 }
+
+#endif // !defined(NDEBUG)

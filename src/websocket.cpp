@@ -114,7 +114,7 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
             
             int bytes_sent = lwip_send(client->socket, ws->send_buf, packet_size, 0);
             if (bytes_sent < 0) {
-                lDebug(Info, "Write failed with err %d (\"%s\")", errno, strerror(errno));
+                lDebug(Error, "Write failed with err %d (\"%s\")", errno, strerror(errno));
             }
         }
     }
@@ -167,7 +167,7 @@ static void ws_client_task(void *arg) {
             memset(client->recv_buf, 0, WS_RECV_BUFFER_SIZE);
         }
         
-        lDebug(Info, "Receive failed with err %d (\"%s\") closing socket", errno, strerror(errno));
+        lDebug(Error, "Receive failed with err %d (\"%s\") closing socket", errno, strerror(errno));
 
         client->established = false;
         lwip_close(client->socket);
@@ -201,7 +201,7 @@ void ws_server_task(void *arg) {
     // Create server socket
     int server_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server_sock < 0) {
-        lDebug(Info, "Failed to create socket");
+        lDebug(Error, "Failed to create socket");
         vTaskDelete(NULL);
     }
        
@@ -214,14 +214,14 @@ void ws_server_task(void *arg) {
     
     // Bind socket
     if (lwip_bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        lDebug(Info, "Socket bind failed");
+        lDebug(Error, "Socket bind failed");
         lwip_close(server_sock);
         vTaskDelete(NULL);
     }
     
     // Listen for connections
     if (lwip_listen(server_sock, WS_MAX_CLIENTS) < 0) {
-        lDebug(Info, "Listen failed");
+        lDebug(Error, "Listen failed");
         lwip_close(server_sock);
         vTaskDelete(NULL);
     }

@@ -58,12 +58,12 @@ int FreeRTOS_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         timeout.tv_usec = timeout_ms * 1000;
 
         if (n->my_socket < 0) {
-            lDebug(Info, "Invalid socket\n");
+            lDebug(Error, "Invalid socket\n");
             return -1;
         }
 
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-            lDebug(Info, "Can't set socket RECV timeout\n");
+            lDebug(Error, "Can't set socket RECV timeout\n");
             return -1;
         }
         rc = lwip_recv(n->my_socket, buffer + recvLen, len - recvLen, 0);
@@ -90,7 +90,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         int rc = 0;
 
         if (n->my_socket < 0) {
-            lDebug(Info, "Invalid socket\n");
+            lDebug(Error, "Invalid socket\n");
             return -1;
         }
 
@@ -98,7 +98,7 @@ int FreeRTOS_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_ms * 1000;
         if (lwip_setsockopt(n->my_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-            lDebug(Info, "Can't set socket SEND timeout\n");
+            lDebug(Error, "Can't set socket SEND timeout\n");
             return -1;
         }
         rc = lwip_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
@@ -136,7 +136,7 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 int NetworkConnect(Network *n, const char *addr, int port) {
     n->my_socket = lwip_socket(AF_INET, SOCK_STREAM, 0); 
     if (n->my_socket < 0) {
-        lDebug(Info, "Socket creation failed!\n");
+        lDebug(Error, "Socket creation failed!\n");
         return -1;
     }    
 
@@ -159,7 +159,7 @@ int NetworkConnect(Network *n, const char *addr, int port) {
 
     // Connect to the server
     if (lwip_connect(n->my_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        lDebug(Info, "Connection failed!\n");
+        lDebug(Error, "Connection failed!\n");
         lwip_close(n->my_socket);
         return -1;
     }

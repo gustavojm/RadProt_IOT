@@ -28,9 +28,12 @@ option(${PROJECT_NAME}_ENABLE_CLANG_TIDY "Enable static analysis with Clang-Tidy
 option(${PROJECT_NAME}_ENABLE_CPPCHECK "Enable static analysis with Cppcheck." OFF)
 include(cmake/StaticAnalyzers.cmake)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-volatile")
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}
+                    -Wno-volatile 
+                    -ffile-prefix-map=${CMAKE_SOURCE_DIR}/=
+   )
 
-#list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
+list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 
 include(FetchContent)
 
@@ -95,6 +98,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         PICO_CXX_DISABLE_ALLOCATION_OVERRIDES=1
         #LWIP_DEBUG=1        
         PICO_MAX_SHARED_IRQ_HANDLERS=8
+        #NDEBUG
         )
 
 

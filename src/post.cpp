@@ -83,7 +83,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
     json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
     if (error) {
-        printf("Error json parse. %s", error.c_str());
+        lDebug(Error, "Error json parse. %s", error.c_str());
     } else {
         static client_mode_settings_t cs;
         cs.settings = *get_client_mode_settings();
@@ -104,11 +104,9 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         strncpy(cs.settings.mqtt.password, post_data["mqtt"]["password"], sizeof cs.settings.mqtt.password);
 
         int elems = post_data["s_s"].size();
-        printf("elements : %i \n", elems);
 
         for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
-            auto s_s = post_data["s_s"][i];
-            printf("BAUD RATE: %s", s_s["baud"]);
+            auto s_s = post_data["s_s"][i];        
             cs.settings.sensor_settings[i].baudrate = atoi(s_s["baud"]);
             cs.settings.sensor_settings[i].enabled = s_s["enabled"];
 
@@ -161,8 +159,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
     return responseJson;
 }
 
-json::MyJsonDocument wifi_nets_fn(struct http_state *hs) {
-    printf(" iafdsipuofadsuipodafsuiopfdsauiopadfsuiop asdf uipodafs ioupsadf upiodsfauipo dsafi uposdfauip osdfaupio sdafpuio sdfapuio sdfupio sdfauiop sdfuiop sdfuisdfiuop sdaf");
+json::MyJsonDocument wifi_nets_fn(struct http_state *hs) {    
     auto responseJson = json::MyJsonDocument();
     auto wifi_nets_array = responseJson.to<json::JsonArray>();
 
@@ -229,12 +226,12 @@ err_t httpd_process_post_data(struct http_state *hs) {
                 response_len = json::measureJson(responseJson); /* returns 0 on fail */
                 response = new char[response_len];
                 if (!(response)) {
-                    printf("Out Of Memory");
+                    lDebug(Error, "Out Of Memory");
                     response_len = 0;
                 } else {
                     json::serializeJson(responseJson, response, response_len);
                 }
-                printf("POST DATA: %*.s \n", response_len, response);
+                lDebug(Debug, "POST DATA: %*.s \n", response_len, response);
                 httpd_post_response(hs, response, response_len, "json");
                 delete[] response;
                 return ERR_OK;

@@ -15,7 +15,7 @@ struct avg_fields_t {
 
 void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain) {
     if (sendToMqttQueue(topic, reading, reading_length, qos, retain) != pdPASS) {
-        lDebug(Info, "mqttQueue is full");
+        lDebug(Warn, "mqttQueue is full");
     }
 
     ArduinoJson::MyJsonDocument json;
@@ -45,7 +45,7 @@ void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* na
     msg.payload_length = len;
     
     if (xQueueSend(websocketQueue, &msg, 0) != pdPASS) {
-        lDebug(Info, "WebsocketQueue is full");
+        lDebug(Warn, "WebsocketQueue is full");
     }      
 };
 
@@ -78,11 +78,11 @@ void Sensor::read_task() {
                         float val = strtof(data, &endptr);
                         /* Check for various possible errors. */
                         if (errno != 0) {
-                            lDebug(Info, "strtof");
+                            lDebug(Error, "strtof");
                         }
 
                         if (endptr == data) {
-                            lDebug(Info, "No digits were found in serial buffer: %s", serial_buffer);
+                            lDebug(Warn, "No digits were found in serial buffer: %s", serial_buffer);
                         }
 
                         /* If we got here, strtol() successfully parsed a number. */
@@ -119,7 +119,7 @@ void Sensor::read_task() {
                 }
             }
         } else {
-            lDebug(Info, "Read TIMED OUT");
+            lDebug(Warn, "Read TIMED OUT");
         }
     }
 }

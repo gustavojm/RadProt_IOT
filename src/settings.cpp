@@ -8,6 +8,7 @@
 #include "task.h"
 
 #include <pico/multicore.h>
+#include "debug.h"
 
 const union {
     ap_mode_settings settings;
@@ -151,8 +152,8 @@ const client_mode_settings *get_client_mode_settings() {
 void __not_in_flash_func(write_client_mode_settings)(void *param) {
     const client_mode_settings_t *new_settings = static_cast<const client_mode_settings_t *>(param);
     uint32_t start = (uint32_t)&s_Client_Settings - XIP_BASE;
-    printf("Start: %i\n", start );
-    printf("Size: %i\n", sizeof(client_mode_settings_t));
+    lDebug(Info, "Start: %i\n", start );
+    lDebug(Info, "Size: %i\n", sizeof(client_mode_settings_t));
    
     // Disable interrupts on the current core
     uint32_t status = save_and_disable_interrupts();

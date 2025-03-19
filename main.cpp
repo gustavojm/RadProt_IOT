@@ -56,7 +56,7 @@ void ws_message_handler(uint8_t *data, uint32_t len, ws_type_t type) {
 static void main_task(__unused void *params) {
 
     if (cyw43_arch_init()) {
-        lDebug(Info, "failed to initialise");
+        lDebug(Error, "failed to initialise");
         return;
     }
 
@@ -151,7 +151,7 @@ static void main_task(__unused void *params) {
         while (true) {
             if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
 
-                lDebug(Info, "Wi-Fi disconnected! Attempting to reconnect...");
+                lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
                 netif_set_link_down(cyw43_state.netif);
                 wifi_connect();
             }

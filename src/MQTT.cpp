@@ -40,7 +40,7 @@ static void mqtt_task(void *pvParameters) {
     MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
     if ((rc = MQTTStartTask(&client)) != pdPASS) {
-        lDebug(Info, "Error MQTT start tasks: %d", rc);
+        lDebug(Error, "Error MQTT start tasks: %d", rc);
     }
 
     const client_mode_settings *client_settings = get_client_mode_settings();
@@ -59,7 +59,7 @@ static void mqtt_task(void *pvParameters) {
                 lDebug(Info, "MQTT Connected");
 
                 // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
-                //     lDebug(Info, "Error MQTT subscribe: %d", rc);
+                //     lDebug(Error, "Error MQTT subscribe: %d", rc);
                 // }
 
                 MqttPublishMessage msg;
@@ -79,17 +79,17 @@ static void mqtt_task(void *pvParameters) {
                             xTimerStart(status_led_off_timer, 0);
                             lDebug(Info, "--MQTT-->");
                         } else {
-                            lDebug(Info, "Error publishing: %d", rc);
+                            lDebug(Error, "Error publishing: %d", rc);
                             goto close_socket;
                             // break;
                         }
                     }
                 }
             } else {
-                lDebug(Info, "Error connecting: %d", rc);
+                lDebug(Error, "Error connecting: %d", rc);
             }
         } else {
-            lDebug(Info, "Error in network connection: %d", rc);
+            lDebug(Error, "Error in network connection: %d", rc);
         }
     close_socket:
         network.disconnect(&network);

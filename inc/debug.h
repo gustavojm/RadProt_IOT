@@ -33,44 +33,43 @@
  * @author Fritz Sieker
  */
 
-#pragma once 
+#pragma once
 
 #include <stdio.h>
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "stdarg.h"
 
 inline xSemaphoreHandle s_PrintfSemaphore;
 
+#if defined(NDEBUG)
+#define vDebug(fmt, name)
+#define debug(fmt, ...)
+#define lDebug(level, fmt, ...)
+#define debugWrite(data, size)
+#define HERE
+#define debugPrintf(const char *format, ...)
+#else
+
 enum debugLevels {
     Debug,
-	Info,
-	Warn,
+    Info,
+    Warn,
     Error,
 };
 
-static inline const char * levelText(enum debugLevels level) {
-	const char *ret;
-	switch (level) {
-		case Debug:
-			ret = "Debug";
-			break;
-		case Info:
-			ret = "Info";
-			break;
-		case Warn:
-			ret = "Warn";
-			break;
-		case Error:
-			ret = "Error";
-			break;
-		default:
-			ret = "";
-			break;
-	}
-	return ret;
+static inline const char *levelText(enum debugLevels level) {
+    const char *ret;
+    switch (level) {
+    case Debug: ret = "Debug"; break;
+    case Info: ret = "Info"; break;
+    case Warn: ret = "Warn"; break;
+    case Error: ret = "Error"; break;
+    default: ret = ""; break;
+    }
+    return ret;
 }
-
 
 /**
  * controls how much debug output is produced. Higher values produce more
@@ -82,7 +81,7 @@ extern enum debugLevels debugLevel;
  * The file where debug output is written. Defaults to <tt>stderr</tt>.
  * <tt>debugToFile()</tt> allows output to any file.
  */
-extern FILE* debugFile;
+extern FILE *debugFile;
 
 void debugSetLevel(enum debugLevels lvl);
 
@@ -90,30 +89,18 @@ void debugToFile(const char *fileName);
 
 void debugClose(void);
 
-#ifdef DEBUG
-#define DEBUG_ENABLED 1  // debug code available at runtime
-#else
-/**
- * This macro controls whether all debugging code is optimized out of the
- * executable, or is compiled and controlled at runtime by the
- * <tt>debugLevel</tt> variable. The value (0/1) depends on whether
- * the macro <tt>DEBUG</tt> is defined during the compile.
- */
-#define DEBUG_ENABLED 0  // all debug code optimized out
-#endif
-
 /**
  * Expands a name into a string and a value.
  * @param name name of variable
  */
-#define debugV(name) #name,(name)
+#define debugV(name)      #name, (name)
 
 /**
  * @brief 	outputs the name and value of a single variable.
  * @param 	fmt 	: format to print the var
  * @param 	name 	: name of the variable to print
  */
-#define vDebug(fmt, name) debug("%s=(" fmt ")" , debugV(name))
+#define vDebug(fmt, name) debug("%s=(" fmt ")", debugV(name))
 
 /**
  * @brief prints this message if the variable <tt>debugLevel</tt> is greater
@@ -121,27 +108,36 @@ void debugClose(void);
  * @param level the level at which this information should be printed
  * @param fmt the formatting string (<b>MUST</b> be a literal
  */
-#define lDebug(level, fmt, ...) \
-  do { \
-       if (DEBUG_ENABLED && (debugLevel <= level)) \
-	   	 xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY); \
-         printf("%s %s[%d] %s() " fmt "\n", levelText(level), __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-		 xSemaphoreGive(s_PrintfSemaphore); \
-  } while(0)
+#define lDebug(level, fmt, ...)                                                                                             \
+    do {                                                                                                                    \
+        if (debugLevel <= level)                                                                                            \
+            xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);                                                               \
+        printf("%s %s[%d] %s() " fmt "\n", levelText(level), __FILE__, __LINE__, __func__, ##__VA_ARGS__);                  \
+        xSemaphoreGive(s_PrintfSemaphore);                                                                                  \
+    } while (0)
 
-
-inline void debug_write(const void *data, int size)
-{
-	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
-	for (int i = 0; i < size; i++) {
+inline void debugWrite(const void *data, int size) {
+    xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
+    for (int i = 0; i < size; i++) {
         putchar(((char *)data)[i]); // Send each character to the default UART
     }
-	xSemaphoreGive(s_PrintfSemaphore);	
-
+    xSemaphoreGive(s_PrintfSemaphore);
 }
 
 /** Simple alias for <tt>lDebug()</tt> */
 #define debug(fmt, ...) lDebug(Info, fmt, ##__VA_ARGS__)
 
 /** Prints the file name, line number, function name and "HERE" */
-#define HERE debug("HERE")
+#define HERE            debug("HERE")
+
+inline void debugPrintf(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
+	vprintf(format, args);
+	va_end(args);
+	xSemaphoreGive(s_PrintfSemaphore);
+}
+
+
+#endif
