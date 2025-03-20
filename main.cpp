@@ -107,7 +107,7 @@ static void main_task(__unused void *params) {
     gpio_set_dir(STATUS_LED_GPIO, true);
 
     if (client_settings->sensor_settings[0].enabled) {
-        static Serial my_uart0(0, 1, 2, 9600, SERIAL_BUFFERS_SIZE);
+        static Serial my_uart0(0, 1, 2, client_settings->sensor_settings[0].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart0.init([]() { my_uart0.on_uart_rx(); });
         my_uart0.set_timeout(pdMS_TO_TICKS(100));
         my_uart0.set_delimiter('\n');
@@ -116,7 +116,7 @@ static void main_task(__unused void *params) {
     }
 
     if (client_settings->sensor_settings[1].enabled) {
-        static Serial my_uart2(2, 2, 3, 9600, SERIAL_BUFFERS_SIZE);
+        static Serial my_uart2(2, 2, 3, client_settings->sensor_settings[1].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart2.init([]() { my_uart2.on_uart_rx(); });
         my_uart2.set_timeout(pdMS_TO_TICKS(100));
         my_uart2.set_delimiter('\n');
@@ -125,7 +125,7 @@ static void main_task(__unused void *params) {
     }
 
     if (client_settings->sensor_settings[2].enabled) {
-        static Serial my_uart3(3, 6, 7, 9600, SERIAL_BUFFERS_SIZE);
+        static Serial my_uart3(3, 6, 7, client_settings->sensor_settings[2].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart3.init([]() { my_uart3.on_uart_rx(); });
         my_uart3.set_timeout(pdMS_TO_TICKS(100));
         my_uart3.set_delimiter('\n');
@@ -162,16 +162,13 @@ static void main_task(__unused void *params) {
     vTaskDelete(NULL);
 }
 
+/** 
+ * Simulates sensor information sent periodically through UART
+ */
 void writeStringTask(void *params) {
-    // flash_safe_execute_core_init();
-
     // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
-    uart_init(uart1, 9600);
-
-    vTaskDelay(5 * 1000);
 
     while (1) {
         uart_init(uart1, 9600);

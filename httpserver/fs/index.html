@@ -97,7 +97,7 @@
                             </tr>
                             <tr>
                                 <td class="label">Port:</td>
-                                <td><input type="number" name="mqtt.port" style="width: 5em" value=""></td>
+                                <td><input type="number" name="mqtt.port" style="width: 5em" min="0" max="65535" value=""></td>
                             </tr>
                             <tr>
                                 <td class="label">User Name:</td>
@@ -423,6 +423,18 @@
         }
     }
 
+    function create_baud_option(sensor, baudrate) {
+        let res = "";
+        var baud_table = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200];
+
+        res += `<select name="s_s[${sensor}].baud">`;
+        baud_table.forEach((baud) => {
+            res += `<option value="${baud}" ${baud == baudrate ? "selected" : ""}>${baud}</option>`;
+        });
+        res += `</select>`;
+        return res;
+    }
+
     function settings_populate(settings_json) {
         document.getElementById('mac_address').innerHTML = settings_json["mac_address"];
 
@@ -450,8 +462,7 @@
                                 #${index_sensor + 1} 
                                 Enabled:
                                 <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
-                                Baud:
-                                <input type="number" name="s_s[${index_sensor}].baud" style="width: 6em" value="${item.baudrate}">
+                                Baud: ${create_baud_option(index_sensor, item.baudrate)}
                                `;
 
 
@@ -485,11 +496,11 @@
                                     <td>${index}</td>
                                     <td style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
                                     <td><input name="s_s[${index_sensor}]p_s[${index}].name" size="6" value="${item.name}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" style="width: 3em" value="${item.start}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" style="width: 3em" value="${item.end}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" min="0" style="width: 3em" value="${item.start}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" min="0" style="width: 3em" value="${item.end}"></td>
                                     <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""} onchange="toggle_numeric_settings(this, ${index_sensor}, ${index})"></td>
                                     <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" step="any" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${Math.round((item.scale + Number.EPSILON) * 10000) / 10000}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
+                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" min="0" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
                                     <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}"></td>
                                    `;
 
@@ -498,7 +509,6 @@
 
                 sensor_div.appendChild(publish_settings_table);
             });
-
 
             sensors_div.appendChild(sensor_div);
             sensors_div.appendChild(document.createElement("hr"));
@@ -761,7 +771,6 @@
                 }
             });
         });
-
     });
 
     function handleRowClick(event) {
@@ -801,15 +810,25 @@
         saveButton.innerText = "OK";
         saveButton.type = "button";
         saveButton.onclick = function () {
+            var can_save = true;
             const modalInputs = modalForm.querySelectorAll("input");
             modalInputs.forEach((modalInput, index) => {
                 if (modalInput.type === 'checkbox') {
                     tds[index + 1].firstChild.checked = modalInput.checked; // +1 because first element is not an input
                 } else {
-                    tds[index + 1].firstChild.value = modalInput.value; // +1 because first element is not an input
+                    if (modalInput.checkValidity()) {                        
+                        tds[index + 1].firstChild.value = modalInput.value; // +1 because first element is not an input
+                    } else {
+                        modalInput.reportValidity()
+                        can_save = false;                        
+                    }
+                    
                 }
             });
-            closeFormModal();
+
+            if (can_save) {
+                closeFormModal();
+            }                                    
         };
 
         modalForm.appendChild(saveButton);
@@ -888,7 +907,7 @@
             this.socket.addEventListener("open", () => {
                 console.log("Connected to WebSocket server");
                 this.reconnectAttempts = 0; // Reset on successful connection
-                this.send({ type: "hello", message: "Hello, server!" });
+                // this.send({ type: "hello", message: "Hello, server!" });
             });
 
             this.socket.addEventListener("message", (event) => {

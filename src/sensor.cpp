@@ -82,7 +82,8 @@ void Sensor::read_task() {
                         }
 
                         if (endptr == data) {
-                            lDebug(Warn, "No digits were found in serial buffer: %s", serial_buffer);
+                            //lDebug(Warn, "No digits were found in serial buffer: %s", serial_buffer);
+                            lDebug(Warn, "No digits were found in serial buffer");
                         }
 
                         /* If we got here, strtol() successfully parsed a number. */

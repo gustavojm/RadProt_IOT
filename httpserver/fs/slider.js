@@ -62,7 +62,7 @@ class TouchSlider {
             // Only handle primary mouse button
             if (e.button !== 0) return;
 
-            //if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
             
             // Don't initiate slide if clicking inside scroll container
             if (e.target.closest('.scroll-container')) return;
