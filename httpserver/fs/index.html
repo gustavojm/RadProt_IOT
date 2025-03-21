@@ -301,6 +301,10 @@
 
         const settings_form = document.getElementById('settings_form');
         settings_form.elements["wifi.ssid"].value = event.target.text;
+
+        if (event.target.dataset.auth_mode == 0) {
+            settings_form.elements["wifi.password"].value = "";           
+        }
         settings_form.elements["wifi.auth_mode"].value = event.target.dataset.auth_mode;
     }
 
