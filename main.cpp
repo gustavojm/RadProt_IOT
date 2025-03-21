@@ -169,9 +169,12 @@ void writeStringTask(void *params) {
     // Set the TX and RX pins by using the function select on the GPIO
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
+    int baud = 9600;
+    uart_init(uart1, baud);
+    vTaskDelay(1000);
 
-    while (1) {
-        uart_init(uart1, 9600);
+    while (true) {
+        uart_init(uart1, baud);
         vTaskDelay(500);
         // Send out a string, with CR/LF conversions
         uart_puts(uart1, "Hel987.2233lo, UART!\n");
@@ -193,7 +196,7 @@ int main(void) {
 
     TaskHandle_t writeStringTask_handle;
     xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, MAIN_TASK_PRIORITY, &writeStringTask_handle);
-    vTaskCoreAffinitySet(writeStringTask_handle, 1);
+    vTaskCoreAffinitySet(writeStringTask_handle, 1 << 1);       // It's a mask, not a number of core
 
     gpio_init(INITIAL_CONFIG_GPIO);
     gpio_set_dir(INITIAL_CONFIG_GPIO, GPIO_IN);
