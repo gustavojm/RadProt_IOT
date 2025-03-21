@@ -8,6 +8,13 @@
 
 #include "lwip/api.h"
 
+#include "FreeRTOSTimers.h"
+#include "mbedtls/base64.h"
+#include "mbedtls/sha1.h"
+#include <string.h>
+#include <lwip/sockets.h>
+#include <lwip/netdb.h>
+
 #define WS_PORT                    8765
 #define WS_MAX_CLIENTS             2
 #define WS_SEND_BUFFER_SIZE        1024

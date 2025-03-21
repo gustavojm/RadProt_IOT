@@ -10,6 +10,8 @@
 inline QueueHandle_t mqttQueue;
 inline TimerHandle_t status_led_off_timer;
 
+inline volatile bool mqtt_connection_status = false;
+
 // Define maximum lengths for the MQTT topic and payload
 #define MQTT_MAX_TOPIC_LENGTH 128
 #define MQTT_MAX_PAYLOAD_LENGTH 256

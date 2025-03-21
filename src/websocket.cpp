@@ -1,10 +1,5 @@
 #include "websocket.h"
-#include "FreeRTOSTimers.h"
-#include "mbedtls/base64.h"
-#include "mbedtls/sha1.h"
-#include <string.h>
-#include <lwip/sockets.h>
-#include <lwip/netdb.h>
+#include "MQTT.h"
 
 const char *head_ws = "HTTP/1.1 101 Switching Protocols\n\
 Upgrade: websocket\n\

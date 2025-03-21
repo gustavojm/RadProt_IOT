@@ -93,7 +93,7 @@
                         <table cellspacing="0" cellpadding="3" style="width:100%">
                             <tr>
                                 <td class="label">Broker:</td>
-                                <td><input type="text" name="mqtt.broker" value=""></td>
+                                <td><input type="text" name="mqtt.broker" value=""><span id="mqtt_connection_status"></span></td>
                             </tr>
                             <tr>
                                 <td class="label">Port:</td>
@@ -968,7 +968,9 @@
                 document.getElementById("mem_free_min_mark").style = "left: " + mem_min_free + "%";
 
             }
-
+            document.getElementById("mqtt_connection_status").innerHTML = dataJSON.mqtt.connected ? "🟢" : "❌";
+            document.getElementById("mqtt_connection_status").style = "padding:5px;"
+            document.getElementById("mqtt_connection_status").title = dataJSON.mqtt.connected ? "Connected" : "Disconnected";
 
             ws_addEntry(entry);
         }

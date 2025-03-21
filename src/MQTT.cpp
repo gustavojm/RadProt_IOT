@@ -57,6 +57,7 @@ static void mqtt_task(void *pvParameters) {
 
             if ((rc = MQTTConnect(&client, &connectData)) == 0) {
                 lDebug(Info, "MQTT Connected");
+                mqtt_connection_status = true;
 
                 // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
                 //     lDebug(Error, "Error MQTT subscribe: %d", rc);
@@ -87,9 +88,11 @@ static void mqtt_task(void *pvParameters) {
                 }
             } else {
                 lDebug(Error, "Error connecting: %d", rc);
+                mqtt_connection_status = false;
             }
         } else {
             lDebug(Error, "Error in network connection: %d", rc);
+            mqtt_connection_status = false;
         }
     close_socket:
         network.disconnect(&network);
