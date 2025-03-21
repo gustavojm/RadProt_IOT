@@ -52,7 +52,8 @@ static void mqtt_task(void *pvParameters) {
             connectData.MQTTVersion = 3;
 
             connectData.clientID.cstring = const_cast<char *>("RadProt_IOT");
-            // connectData.username.cstring = const_cast<char *>("Pepito");;
+            connectData.username.cstring = const_cast<char *>(client_settings->mqtt.username);
+            connectData.password.cstring = const_cast<char *>(client_settings->mqtt.password);
 
             if ((rc = MQTTConnect(&client, &connectData)) == 0) {
                 lDebug(Info, "MQTT Connected");
