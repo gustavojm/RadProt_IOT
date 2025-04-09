@@ -105,7 +105,7 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
             struct timeval timeout;
             timeout.tv_sec = 0;
             timeout.tv_usec = 500000; // 500 ms
-            setsockopt(client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+            lwip_setsockopt(client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
             
             int bytes_sent = lwip_send(client->socket, ws->send_buf, packet_size, 0);
             if (bytes_sent < 0) {
@@ -194,7 +194,7 @@ void ws_server_task(void *arg) {
     ws_client_t *client;
 
     // Create server socket
-    int server_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int server_sock = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server_sock < 0) {
         lDebug(Error, "Failed to create socket");
         vTaskDelete(NULL);
