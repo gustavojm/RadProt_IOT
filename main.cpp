@@ -107,7 +107,7 @@ static void main_task(__unused void *params) {
     gpio_set_dir(STATUS_LED_GPIO, true);
 
     if (client_settings->sensor_settings[0].enabled) {
-        static Serial my_uart0(0, 1, 2, client_settings->sensor_settings[0].baudrate, SERIAL_BUFFERS_SIZE);
+        static Serial my_uart0(0, 0, 1, client_settings->sensor_settings[0].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart0.init([]() { my_uart0.on_uart_rx(); });
         my_uart0.set_timeout(pdMS_TO_TICKS(100));
         my_uart0.set_delimiter('\n');
