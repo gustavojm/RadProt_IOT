@@ -89,36 +89,48 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
     uint8_t *outbuf_ptr = ws->send_buf;
     ws_client_t *client;
 
-    if (msg->msg_size + 7 > WS_SEND_BUFFER_SIZE)
+    if (msg->msg_size + 10 > WS_SEND_BUFFER_SIZE) // Increased safety margin
         return;
 
+    // Frame construction code remains the same...    
     memset(outbuf_ptr, 0x00, WS_SEND_BUFFER_SIZE);
     outbuf_ptr[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
     outbuf_ptr = ws_set_size_to_frame(msg->msg_size, &outbuf_ptr[1]);
     outbuf_ptr = ws_set_data_to_frame(msg->message, msg->msg_size, outbuf_ptr);
     size_t packet_size = outbuf_ptr - ws->send_buf;
-
+    
     for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
         client = &(ws->ws_clients[iClient]);
-        if (client->established) {
-            // Set send timeout using setsockopt
+        if (client->established && client->socket >= 0) {
+            // Set send timeout
             struct timeval timeout;
             timeout.tv_sec = 0;
             timeout.tv_usec = 500000; // 500 ms
-            lwip_setsockopt(client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
             
+            if (lwip_setsockopt(client->socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+                lDebug(Error, "Failed to set socket timeout for client %i", iClient);
+                continue;
+            }
+            
+            lDebug(Info, "Writing to client: %i", iClient);
             int bytes_sent = lwip_send(client->socket, ws->send_buf, packet_size, 0);
+            
             if (bytes_sent < 0) {
-                lDebug(Error, "Write failed with err %d (\"%s\")", errno, strerror(errno));
+                lDebug(Error, "Write failed to client: %i with err %d (\"%s\")", iClient, errno, strerror(errno));
+                // Clean up the failed connection
+                client->established = false;
+                lwip_close(client->socket);
+                client->socket = -1;
+            } else if (bytes_sent != packet_size) {
+                lDebug(Warn, "Partial send to client %i: sent %d of %d bytes", iClient, bytes_sent, packet_size);
             }
         }
     }
 }
-
 static void ws_client_task(void *arg) {
     ws_client_t *client = (ws_client_t *)arg;
     ws_server_t *server_ptr = client->server_ptr;
-    
+     
     while (true) {
         // The created task is in standby mode
         // until an incoming connection unblocks it
@@ -174,8 +186,10 @@ static void ws_create_clients_tasks(ws_server_t *ws) {
 
     for (int i = 0; i < WS_MAX_CLIENTS; i++) {
         client = &ws->ws_clients[i];        
-        client->server_ptr = ws;
-        xTaskCreate(ws_client_task, "ws_client", 256, (void *)client, (tskIDLE_PRIORITY + 2), &client->task_handle);
+        client->server_ptr = ws;        
+        if (xTaskCreate(ws_client_task, "ws_client", 2048, (void *)client, (tskIDLE_PRIORITY + 2), &client->task_handle) != pdPASS) {
+            lDebug(Error, "Failed to create websocket client task");
+        }
     }
 }
 
@@ -220,7 +234,7 @@ void ws_server_task(void *arg) {
         lwip_close(server_sock);
         vTaskDelete(NULL);
     }
-    
+        
     memset((void *)ws->send_buf, 0x00, WS_SEND_BUFFER_SIZE);
 
     ws_create_clients_tasks(ws);
@@ -274,6 +288,6 @@ void ws_server_task(void *arg) {
 
 void ws_server_init(ws_server_t *ws) {    
     TaskHandle_t ws_serverTask_handle;
-    xTaskCreate(ws_server_task, "ws_server", configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 1), &ws_serverTask_handle);
+    xTaskCreate(ws_server_task, "ws_server", 2 * configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 1), &ws_serverTask_handle);
     vTaskCoreAffinitySet(ws_serverTask_handle, 1);
 }

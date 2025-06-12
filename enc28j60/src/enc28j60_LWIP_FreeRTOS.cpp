@@ -43,7 +43,7 @@ static void netif_link_callback(struct netif *netif) {
     }
 }
 
-err_t enc28j60_driver_os_init() {
+err_t enc28j60_driver_os_init(ip4_addr_t ipaddr, ip4_addr_t netmask, ip4_addr_t gw) {
 
     static drivers::Spi spi0_{{.spi_handle = spi0, 
                                .CLK_gpio = 18, 
@@ -62,12 +62,7 @@ err_t enc28j60_driver_os_init() {
 
     if (!eth_driver.init(mac)) {
         hal::panic();
-    }
-
-    ip4_addr_t ipaddr, netmask, gw;
-    IP4_ADDR(&ipaddr, 10, 30, 113, 199);
-    IP4_ADDR(&netmask, 255, 255, 255, 0);
-    IP4_ADDR(&gw, 10, 30, 113, 1);
+    }    
 
     if (netif_add(&net_if, &ipaddr, &netmask, &gw, static_cast<void *>(&eth_driver),
                   drivers::enc28j60::eth_netif_init, tcpip_input) == nullptr) {
@@ -90,9 +85,9 @@ err_t enc28j60_driver_os_init() {
     // printf("netif DHCP STARTED\n");
 
     // tcpip_init allready called by cyw43 driver
-    //SemaphoreHandle_t init_sem = xSemaphoreCreateBinary();
-    //tcpip_init(tcpip_init_done, init_sem);
-    //xSemaphoreTake(init_sem, portMAX_DELAY);
+    // SemaphoreHandle_t init_sem = xSemaphoreCreateBinary();
+    // tcpip_init(tcpip_init_done, init_sem);
+    // xSemaphoreTake(init_sem, portMAX_DELAY);
 
     irq_loop_sem = xSemaphoreCreateBinary();
 

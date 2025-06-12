@@ -104,26 +104,50 @@ struct sensor_settings_entry {
     
 };
 
-struct wifi_settings {
-    char ssid[32];
-    char password[32];
-    int auth_mode;
+struct ipv4_settings {
     bool dhcp;
     ip_addr_t ip;
     ip_addr_t nm;
     ip_addr_t gw;
-    ip_addr_t dns;
+    ip_addr_t dns;  
+};
+
+struct ethernet_settings { 
+    bool enabled;    
+    ipv4_settings ipv4; 
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
+        json["enabled"] = enabled;
+        json["dhcp"] = ipv4.dhcp;
+        json["ip"] = ipv4.ip.addr;
+        json["nm"] = ipv4.nm.addr;
+        json["gw"] = ipv4.gw.addr;
+        json["dns"] = ipv4.dns.addr;
+        return json;
+    }
+
+};
+
+
+struct wifi_settings {
+    bool enabled;
+    char ssid[32];
+    char password[32];
+    int auth_mode;    
+    ipv4_settings ipv4;
+
+    ArduinoJson::MyJsonDocument to_json() const {
+        ArduinoJson::MyJsonDocument json;
+        json["enabled"] = enabled;
         json["ssid"] = ssid;
         json["password"] = password;
         json["auth_mode"] = auth_mode;
-        json["dhcp"] = dhcp;
-        json["ip"] = ip.addr;
-        json["nm"] = nm.addr;
-        json["gw"] = gw.addr;
-        json["dns"] = dns.addr;
+        json["dhcp"] = ipv4.dhcp;
+        json["ip"] = ipv4.ip.addr;
+        json["nm"] = ipv4.nm.addr;
+        json["gw"] = ipv4.gw.addr;
+        json["dns"] = ipv4.dns.addr;
         return json;
     }
     
@@ -146,9 +170,16 @@ struct mqtt_settings {
     
 };
 
+enum conn_mode {
+    WIFI,
+    ETHERNET
+};
+
 struct client_mode_settings {
   public:
     wifi_settings wifi;
+    ethernet_settings eth;
+
     mqtt_settings mqtt;
     unsigned char password[8];
     
@@ -157,6 +188,7 @@ struct client_mode_settings {
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
         json["wifi"] = wifi.to_json();
+        json["eth"] = eth.to_json();
         json["mqtt"] = mqtt.to_json();
     
         auto sensor_settings_array = json["sensor_settings"].to<ArduinoJson::JsonArray>();

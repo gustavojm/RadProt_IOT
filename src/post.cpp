@@ -92,11 +92,11 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         strncpy(cs.settings.wifi.password, post_data["wifi"]["password"], sizeof cs.settings.wifi.password);
         cs.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
 
-        cs.settings.wifi.dhcp = post_data["wifi"]["dhcp"];
+        cs.settings.wifi.ipv4.dhcp = post_data["wifi"]["dhcp"];
 
-        ipaddr_aton(post_data["wifi"]["ip"], &cs.settings.wifi.ip);
-        ipaddr_aton(post_data["wifi"]["nm"], &cs.settings.wifi.nm);
-        ipaddr_aton(post_data["wifi"]["gw"], &cs.settings.wifi.gw);
+        ipaddr_aton(post_data["wifi"]["ip"], &cs.settings.wifi.ipv4.ip);
+        ipaddr_aton(post_data["wifi"]["nm"], &cs.settings.wifi.ipv4.nm);
+        ipaddr_aton(post_data["wifi"]["gw"], &cs.settings.wifi.ipv4.gw);
 
         strncpy(cs.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof cs.settings.mqtt.broker);
         cs.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);

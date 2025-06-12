@@ -46,9 +46,11 @@ void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* na
     size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
     msg.payload_length = len;
     
-    if (xQueueSend(websocketQueue, &msg, 0) != pdPASS) {
-        lDebug(Warn, "WebsocketQueue is full");
-    }      
+    if (websocketQueue) {
+        if (xQueueSend(websocketQueue, &msg, 0) != pdPASS) {
+            lDebug(Warn, "WebsocketQueue is full");
+        }      
+    }
 };
 
 void Sensor::read_task() {

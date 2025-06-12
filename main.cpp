@@ -1,3 +1,6 @@
+#include "enc28j60.h"
+#include "enc28j60_LWIP_FreeRTOS.h"
+
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
@@ -53,6 +56,25 @@ void ws_message_handler(uint8_t *data, uint32_t len, ws_type_t type) {
     lDebug(Info, "Websocket received: %.*s", len, data);
 }
 
+
+void ethernet_connect() {
+    lDebug(Info, "Enabling Ethernet...");
+    const client_mode_settings *client_settings = get_client_mode_settings();
+
+    // Allways initialize after cyw43, to use the tcpip_thread created by it
+    ip4_addr_t ipaddr, netmask, gw;
+    IP4_ADDR(&ipaddr, 10, 30, 113, 199);
+    IP4_ADDR(&netmask, 255, 255, 255, 0);
+    IP4_ADDR(&gw, 10, 30, 113, 1);
+    
+    //enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
+    enc28j60_driver_os_init(ipaddr, netmask, gw);
+
+
+}
+
+
+
 static void main_task(__unused void *params) {
 
     if (cyw43_arch_init()) {
@@ -71,6 +93,12 @@ static void main_task(__unused void *params) {
         initial_config = true;
     }
 
+    ws_server_t ws_server;
+    ws_server.msg_handler = ws_message_handler;
+    httpd_init(ap_settings->hostname, ap_settings->domain_name);
+
+    ws_server_init(&ws_server);   
+
     if (initial_config) {
         uint8_t itf_sta_mac[6];
         cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
@@ -86,7 +114,7 @@ static void main_task(__unused void *params) {
         ip4_addr_t mask = { .addr = ap_settings->nm };
         ip4_addr_t gw = { .addr = ap_settings->ip};
 
-        netif_set_addr(netif, &addr, &mask, &addr);
+        netif_set_addr(netif, &addr, &mask, &gw);
 
         // Start the dhcp server
         static dhcp_server_t dhcp_server;
@@ -99,10 +127,17 @@ static void main_task(__unused void *params) {
             ap_settings->dns_ignores_network_suffix);
         set_secondary_ip_address(ap_settings->secondary_address);
     } else {
-        wifi_connect();  
-        mqtt_init();    
-    }
+        if (client_settings->wifi.enabled) {
+            wifi_connect();
+        }
+        
+        if (client_settings->eth.enabled) {
+            ethernet_connect();
+        }
 
+        //mqtt_init();    
+    }
+ 
     gpio_init(STATUS_LED_GPIO);
     gpio_set_dir(STATUS_LED_GPIO, true);
 
@@ -132,13 +167,7 @@ static void main_task(__unused void *params) {
         static Sensor s3(my_uart3);
         s3.init();
     }
-
-    httpd_init(ap_settings->hostname, ap_settings->domain_name);
-    ws_server_t ws_server;
-    ws_server.msg_handler = ws_message_handler;
-
-    ws_server_init(&ws_server);
-
+    
     if (initial_config) {
         while (true) {
             gpio_put(STATUS_LED_GPIO, true);
@@ -148,15 +177,15 @@ static void main_task(__unused void *params) {
         }
     } else {
         // Monitor connection and reconnect if necessary
-        while (true) {
-            if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+        // while (true) {
+        //     if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
 
-                lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
-                netif_set_link_down(cyw43_state.netif);
-                wifi_connect();
-            }
-            vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
-        }
+        //         lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
+        //         netif_set_link_down(cyw43_state.netif);
+        //         wifi_connect();
+        //     }
+        //     vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
+        // }
     }
 
     vTaskDelete(NULL);
@@ -192,7 +221,7 @@ int main(void) {
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
 
-    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 2, NULL, MAIN_TASK_PRIORITY, &task);
+    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 8, NULL, MAIN_TASK_PRIORITY, &task);
 
     TaskHandle_t writeStringTask_handle;
     xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, MAIN_TASK_PRIORITY, &writeStringTask_handle);

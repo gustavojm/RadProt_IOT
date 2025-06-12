@@ -50,7 +50,7 @@ void wifi_connect() {
         if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN) {
             lDebug(Info, "Connected to Wi-Fi successfully!");
 
-            if (client_settings->wifi.dhcp) {
+            if (client_settings->wifi.ipv4.dhcp) {
                 // Wait for DHCP to assign an IP
                 while (netif_default->ip_addr.addr == 0) {
                     lDebug(Info, "Waiting for DHCP...");
@@ -60,9 +60,9 @@ void wifi_connect() {
                 cyw43_arch_lwip_begin();
                 dhcp_stop(cyw43_state.netif); // turn off DHCP
                 netif_set_addr(
-                    cyw43_state.netif, &client_settings->wifi.ip, &client_settings->wifi.nm, &client_settings->wifi.gw);
-                dns_setserver(0, &client_settings->wifi.dns); // Set primary DNS
-                char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ip);
+                    cyw43_state.netif, &client_settings->wifi.ipv4.ip, &client_settings->wifi.ipv4.nm, &client_settings->wifi.ipv4.gw);
+                dns_setserver(0, &client_settings->wifi.ipv4.dns); // Set primary DNS
+                char *ip_addr = ip4addr_ntoa(&client_settings->wifi.ipv4.ip);
                 cyw43_arch_lwip_end();
                 lDebug(Info, "Static IP set to: %s", ip_addr);
             }

@@ -47,7 +47,7 @@ typedef struct {
 } ws_msg_t;
 
 typedef struct ws_client {
-    int socket;                // Socket file descriptor instead of netconn*
+    int socket = -1;                // Socket file descriptor instead of netconn*
     bool established = false;
     TaskHandle_t task_handle;
     uint8_t recv_buf[WS_RECV_BUFFER_SIZE];
@@ -55,7 +55,7 @@ typedef struct ws_client {
 } ws_client_t;
 
 struct ws_server {
-    ws_client_t ws_clients[WS_MAX_CLIENTS];
+    ws_client_t ws_clients[WS_MAX_CLIENTS] = {};
     uint8_t send_buf[WS_SEND_BUFFER_SIZE] = {};
     void (*msg_handler)(uint8_t *data, uint32_t len, ws_type_t type);
 };
@@ -68,4 +68,3 @@ typedef struct {
 
 void ws_server_init(ws_server_t *ws);
 void ws_send_message(ws_server_t *ws, ws_msg_t *msg);
-int sendToWebsocketQueue(int sensor_num, int pub_setting_num, const char *name, const char *topic, const char *payload, size_t payload_length);

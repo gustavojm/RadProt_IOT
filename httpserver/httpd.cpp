@@ -2648,15 +2648,11 @@ err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char 
     err_t ret;
     static int calls = 0;
     LWIP_ASSERT("NULL pbuf", p != NULL);
+    LWIP_ASSERT("INVALID total len", p->tot_len <= 0);
     
     int32_t already_received = hs->post_content_len - hs->post_content_len_left;
     void *start = &hs->post_content[already_received - p->tot_len];
-    if (hs->post_content_len_left > 0) {
-        memcpy(start, p->payload, p->tot_len);
-    } else {
-        memcpy(start, p->payload, p->tot_len);
-
-    }
+    memcpy(start, p->payload, p->tot_len);
 
     /* this function must ALWAYS free the pbuf it is passed or it will leak memory */
     pbuf_free(p);

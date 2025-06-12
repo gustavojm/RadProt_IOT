@@ -22,13 +22,16 @@
 #define LWIP_RAW 1
 #define TCP_WND (8 * TCP_MSS)
 //#define TCP_MSS 1460
-#define TCP_MSS 1460  // if the MTU is 1,500 bytes, then the MSS will be 1,460 bytes. 
+//#define TCP_MSS 1440  // if the MTU is 1,500 bytes, then the MSS will be 1,460 bytes. 
+
+#define TCP_MSS 1000  // if the MTU is 1,500 bytes, then the MSS will be 1,460 bytes. 
+
 #define TCP_SND_BUF (8 * TCP_MSS)
 #define TCP_SND_QUEUELEN ((4 * (TCP_SND_BUF) + (TCP_MSS - 1)) / (TCP_MSS))
 #define LWIP_NETIF_STATUS_CALLBACK 1
 #define LWIP_NETIF_LINK_CALLBACK 1
 #define LWIP_NETIF_HOSTNAME 1
-#define LWIP_NETCONN 1
+#define LWIP_NETCONN 0
 #define MEM_STATS 0
 #define SYS_STATS 0
 #define MEMP_STATS 0
@@ -63,7 +66,7 @@
 #define DEFAULT_ACCEPTMBOX_SIZE TCPIP_MBOX_SIZE
 
 // not necessary, can be done either way
-//#define LWIP_TCPIP_CORE_LOCKING_INPUT 0
+#define LWIP_TCPIP_CORE_LOCKING_INPUT 0
 #endif
 
 /* Threading options */
@@ -122,8 +125,6 @@
 // #define LWIP_HTTPD_SSI_MULTIPART 1
 
 #define MEMP_NUM_SYS_TIMEOUT        LWIP_NUM_SYS_TIMEOUT_INTERNAL + 8
-
-#define MQTT_DEBUG                  LWIP_DBG_OFF
 
 #define LWIP_POSIX_SOCKETS_IO_NAMES 0
 #define LWIP_SO_RCVTIMEO 1

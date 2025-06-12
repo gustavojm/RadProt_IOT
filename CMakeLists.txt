@@ -53,6 +53,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(etl)
 
+add_subdirectory(enc28j60)
+add_subdirectory(hal)
+
 add_custom_target(${name}-fs DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
 
 add_custom_target(makefsdata
@@ -71,6 +74,8 @@ add_executable(${PROJECT_NAME}
         src/hooks.cpp
         src/post.cpp
         hal/src/serial.cpp
+        hal/src/spi.cpp
+        hal/src/gpio.cpp        
         src/sensor.cpp
         src/FreeRTOSTimers.cpp
         src/MQTT.cpp
@@ -96,7 +101,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         ETL_NO_INITIALIZER_LIST
         ARDUINOJSON_ENABLE_STD_STREAM=0
         PICO_CXX_DISABLE_ALLOCATION_OVERRIDES=1
-        #LWIP_DEBUG=1        
+        LWIP_DEBUG=1        
         PICO_MAX_SHARED_IRQ_HANDLERS=8
         #NDEBUG
         )
@@ -107,6 +112,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         inc
         hal/inc
+        enc28j60/inc
         httpserver
         ${etl_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/paho.mqtt.embedded-c/MQTTClient-C/src
@@ -121,9 +127,12 @@ target_link_libraries(${PROJECT_NAME}
         hardware_pio
         hardware_uart
         hardware_flash
+        hardware_spi
         FreeRTOS-Kernel-Heap4
         ArduinoJson
         etl::etl        
+        enc28j60_driver
+        hal
         )
 
 if (TARGET Profiler)

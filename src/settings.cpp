@@ -1,14 +1,14 @@
 #include "settings.h"
-#include <portmacro.h>
-#include <string.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
+#include <portmacro.h>
+#include <string.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include <pico/multicore.h>
 #include "debug.h"
+#include <pico/multicore.h>
 
 const union {
     ap_mode_settings settings;
@@ -55,28 +55,41 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
         return NULL;
 }
 
-//constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
+// constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
 const client_mode_settings_t s_Client_Settings = {                
                 .settings = { 
-                .wifi = {.ssid = "C14017750 7261",
-                         .password = "malamala",
-                         .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
-                         .dhcp = true,
-                         .ip = 0xC889A8C0,        // 192.168.137.200
-                         .nm = 0x00FFFFFF,  // 255.255.255.0
-                         .gw = 0x0189A8C0,        // 192.168.137.1
-                         .dns = 0x0189A8C0        // 192.168.137.1
+                    .wifi = {
+                        .enabled = true,
+                        .ssid = "C14017750 7261",
+                        .password = "malamala",
+                        .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
+                        .ipv4 = {.dhcp = true,
+                                .ip = 0xC889A8C0,      // 192.168.137.200
+                                .nm = 0x00FFFFFF,      // 255.255.255.0
+                                .gw = 0x0189A8C0,      // 192.168.137.1
+                                .dns = 0x0189A8C0      // 192.168.137.1
+                                }
                         },
+                        .eth = {
+                            .enabled = true,
+                            .ipv4 = {.dhcp = true,
+                                    .ip = 0xC889A8C0,      // 192.168.137.200
+                                    .nm = 0x00FFFFFF,      // 255.255.255.0
+                                    .gw = 0x0189A8C0,      // 192.168.137.1
+                                    .dns = 0x0189A8C0      // 192.168.137.1
+                                    }
+                            },
+                            
 
-                .mqtt = {.broker = "192.168.137.158",
-                         .port = 1883,
-                         .username = "jorgito",
-                         .password = "pass_",
-                        },
+                    .mqtt = {.broker = "192.168.137.175",
+                            .port = 1883,
+                            .username = "jorgito",
+                            .password = "pass_",
+                            },
 
-                .sensor_settings = { {.baudrate = 9600,
-                                      .enabled = true,
-                                      .publish_settings = { { .enabled = true,
+                    .sensor_settings = { {.baudrate = 9600,
+                                        .enabled = true,
+                                        .publish_settings = { { .enabled = true,
                                                                 .name = "GAMMA",
                                                                 .start = 3,
                                                                 .end = 9,
@@ -84,7 +97,7 @@ const client_mode_settings_t s_Client_Settings = {
                                                                 .scale = 0.1,
                                                                 .avg_cnt = 0,
                                                                 .topic = "123" 
-                                                            }, { 
+                                                              }, { 
                                                                 .enabled = true,
                                                                 .name = "GAMMAAVG",
                                                                 .start = 3,
@@ -93,55 +106,55 @@ const client_mode_settings_t s_Client_Settings = {
                                                                 .scale = 0.1,
                                                                 .avg_cnt = 5,
                                                                 .topic = "r/123" 
-                                                            }
-                                                          },                                                                
-									  },
-                                      {.baudrate = 9600,
-                                        .enabled = true,
-                                        .publish_settings = { { .enabled = true,
-                                                                  .name = "GAMMA",
-                                                                  .start = 3,
-                                                                  .end = 9,
-                                                                  .is_num = true,
-                                                                  .scale = 0.1,
-                                                                  .avg_cnt = 0,
-                                                                  .topic = "456" 
-                                                              }, { 
-                                                                  .enabled = true,
-                                                                  .name = "GAMMAAVG",
-                                                                  .start = 3,
-                                                                  .end = 9,
-                                                                  .is_num = true,
-                                                                  .scale = 0.1,
-                                                                  .avg_cnt = 5,
-                                                                  .topic = "r/456" 
                                                               }
                                                             },                                                                
                                         },
                                         {.baudrate = 9600,
                                             .enabled = true,
                                             .publish_settings = { { .enabled = true,
-                                                                      .name = "GAMMA",
-                                                                      .start = 3,
-                                                                      .end = 9,
-                                                                      .is_num = true,
-                                                                      .scale = 0.1,
-                                                                      .avg_cnt = 0,
-                                                                      .topic = "789" 
-                                                                  }, { 
-                                                                      .enabled = true,
-                                                                      .name = "GAMMAAVG",
-                                                                      .start = 3,
-                                                                      .end = 9,
-                                                                      .is_num = true,
-                                                                      .scale = 0.1,
-                                                                      .avg_cnt = 5,
-                                                                      .topic = "r/789" 
-                                                                  }
+                                                                    .name = "GAMMA",
+                                                                    .start = 3,
+                                                                    .end = 9,
+                                                                    .is_num = true,
+                                                                    .scale = 0.1,
+                                                                    .avg_cnt = 0,
+                                                                    .topic = "456" 
+                                                                }, { 
+                                                                    .enabled = true,
+                                                                    .name = "GAMMAAVG",
+                                                                    .start = 3,
+                                                                    .end = 9,
+                                                                    .is_num = true,
+                                                                    .scale = 0.1,
+                                                                    .avg_cnt = 5,
+                                                                    .topic = "r/456" 
+                                                                }
                                                                 },                                                                
-                                        }                                                                                
-									} 
-				}
+                                            },
+                                            {.baudrate = 9600,
+                                                .enabled = true,
+                                                .publish_settings = { { .enabled = true,
+                                                                        .name = "GAMMA",
+                                                                        .start = 3,
+                                                                        .end = 9,
+                                                                        .is_num = true,
+                                                                        .scale = 0.1,
+                                                                        .avg_cnt = 0,
+                                                                        .topic = "789" 
+                                                                    }, { 
+                                                                        .enabled = true,
+                                                                        .name = "GAMMAAVG",
+                                                                        .start = 3,
+                                                                        .end = 9,
+                                                                        .is_num = true,
+                                                                        .scale = 0.1,
+                                                                        .avg_cnt = 5,
+                                                                        .topic = "r/789" 
+                                                                    }
+                                                                    },                                                                
+                                            }                                                                                
+                                        } 
+                }
 					
 };
 
@@ -152,9 +165,9 @@ const client_mode_settings *get_client_mode_settings() {
 void __not_in_flash_func(write_client_mode_settings)(void *param) {
     const client_mode_settings_t *new_settings = static_cast<const client_mode_settings_t *>(param);
     uint32_t start = (uint32_t)&s_Client_Settings - XIP_BASE;
-    lDebug(Info, "Start: %i\n", start );
+    lDebug(Info, "Start: %i\n", start);
     lDebug(Info, "Size: %i\n", sizeof(client_mode_settings_t));
-   
+
     // Disable interrupts on the current core
     uint32_t status = save_and_disable_interrupts();
 
@@ -163,11 +176,10 @@ void __not_in_flash_func(write_client_mode_settings)(void *param) {
     flash_range_program((uint32_t)&s_Client_Settings - XIP_BASE, (const uint8_t *)new_settings, FLASH_SECTOR_SIZE);
 
     // Re-enable interrupts on the current core
-    restore_interrupts(status);    
-    
+    restore_interrupts(status);
+
     // #define AIRCR_Register (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C)))
     // AIRCR_Register = 0x5FA0004;
-    
 }
 
 ArduinoJson::MyJsonDocument get_client_mode_settings_json() {
