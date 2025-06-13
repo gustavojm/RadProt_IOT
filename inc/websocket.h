@@ -28,6 +28,7 @@
 #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11\0"
 
 inline QueueHandle_t websocketQueue;
+inline volatile bool ws_restart_requested = false;
 
 typedef struct ws_server ws_server_t;
 
@@ -68,3 +69,6 @@ typedef struct {
 
 void ws_server_init(ws_server_t *ws);
 void ws_send_message(ws_server_t *ws, ws_msg_t *msg);
+void ws_request_restart(void);
+
+

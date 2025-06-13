@@ -12,7 +12,7 @@
 
 void wifi_networks_scan(bool active = true);
 
-void wifi_connect();
+bool wifi_connect();
 
 int scan_auth_mode_to_connect_auth_mode(int scan_auth_mode);
 

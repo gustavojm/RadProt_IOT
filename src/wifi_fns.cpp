@@ -1,8 +1,5 @@
 #include "wifi_fns.h"
 
-#define RECONNECT_DELAY_MS 5000 // 5 seconds
-#define MAX_RETRIES        5    // Maximum retry attempts
-
 static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
     if (result) {
         auto result_ins = wifi_networks.insert(*result);
@@ -38,7 +35,7 @@ void wifi_networks_scan(bool active) {
     }
 }
 
-void wifi_connect() {
+bool wifi_connect() {
     lDebug(Info, "Connecting to Wi-Fi...");
     const client_mode_settings *client_settings = get_client_mode_settings();
 
@@ -52,7 +49,7 @@ void wifi_connect() {
 
             if (client_settings->wifi.ipv4.dhcp) {
                 // Wait for DHCP to assign an IP
-                while (netif_default->ip_addr.addr == 0) {
+                while (cyw43_state.netif->ip_addr.addr == 0) {
                     lDebug(Info, "Waiting for DHCP...");
                     sleep_ms(1000);
                 }
@@ -67,14 +64,12 @@ void wifi_connect() {
                 lDebug(Info, "Static IP set to: %s", ip_addr);
             }
 
-            lDebug(Info, "Connected! IP Address: %s", ip4addr_ntoa(&netif_default->ip_addr));
+            lDebug(Info, "Connected! IP Address: %s", ip4addr_ntoa(&cyw43_state.netif->ip_addr));
 
-            return;
+            return true;
         }
     }
-
-    lDebug(Warn, "Failed to connect. Retrying in %d ms...\n", RECONNECT_DELAY_MS);
-    vTaskDelay(pdMS_TO_TICKS(RECONNECT_DELAY_MS));
+    return false;
 }
 
 

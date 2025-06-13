@@ -121,12 +121,14 @@ void ws_send_message(ws_server_t *ws, ws_msg_t *msg) {
                 client->established = false;
                 lwip_close(client->socket);
                 client->socket = -1;
+                ws_request_restart();
             } else if (bytes_sent != packet_size) {
                 lDebug(Warn, "Partial send to client %i: sent %d of %d bytes", iClient, bytes_sent, packet_size);
             }
         }
     }
 }
+
 static void ws_client_task(void *arg) {
     ws_client_t *client = (ws_client_t *)arg;
     ws_server_t *server_ptr = client->server_ptr;
@@ -177,6 +179,7 @@ static void ws_client_task(void *arg) {
         lDebug(Error, "Receive failed with err %d (\"%s\") closing socket", errno, strerror(errno));
 
         client->established = false;
+        client->socket = -1;
         lwip_close(client->socket);
     }
 }
@@ -207,87 +210,114 @@ void ws_server_task(void *arg) {
     ws_server_t *ws = (ws_server_t *)arg;
     ws_client_t *client;
 
-    // Create server socket
-    int server_sock = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (server_sock < 0) {
-        lDebug(Error, "Failed to create socket");
-        vTaskDelete(NULL);
-    }
-       
-    // Prepare server address
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(WS_PORT);
-    
-    // Bind socket
-    if (lwip_bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        lDebug(Error, "Socket bind failed");
-        lwip_close(server_sock);
-        vTaskDelete(NULL);
-    }
-    
-    // Listen for connections
-    if (lwip_listen(server_sock, WS_MAX_CLIENTS) < 0) {
-        lDebug(Error, "Listen failed");
-        lwip_close(server_sock);
-        vTaskDelete(NULL);
-    }
-        
-    memset((void *)ws->send_buf, 0x00, WS_SEND_BUFFER_SIZE);
-
     ws_create_clients_tasks(ws);
-    
-    // Set up timeout for accept
-    struct timeval timeout;
-    fd_set readfds;
 
-    while (true) {
-        for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
-            client = &ws->ws_clients[iClient];
-            if (!client->established) {
-                // Set timeout for accept
-                FD_ZERO(&readfds);
-                FD_SET(server_sock, &readfds);
-                timeout.tv_sec = 0;
-                timeout.tv_usec = 100000; // 100 ms
+    // while(true) {
+        // Create server socket
+        int server_sock = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (server_sock < 0) {
+            lDebug(Error, "Failed to create socket");
+            vTaskDelete(NULL);
+        }
+        
+        int opt = 1;
+        if (lwip_setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+            lDebug(Warn, "Failed to set SO_REUSEADDR");
+            // Continue anyway - not critical
+        }        
+
+        // Prepare server address
+        struct sockaddr_in server_addr;
+        memset(&server_addr, 0, sizeof(server_addr));
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = INADDR_ANY;
+        server_addr.sin_port = htons(WS_PORT);
+        
+        // Bind socket
+        if (lwip_bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+            lDebug(Error, "Socket bind failed");
+            lwip_close(server_sock);
+            vTaskDelete(NULL);
+        }
+        
+        // Listen for connections
+        if (lwip_listen(server_sock, WS_MAX_CLIENTS) < 0) {
+            lDebug(Error, "Listen failed");
+            lwip_close(server_sock);
+            vTaskDelete(NULL);
+        }
+            
+        memset((void *)ws->send_buf, 0x00, WS_SEND_BUFFER_SIZE);
+        
+        // Set up timeout for accept
+        struct timeval timeout;
+        fd_set readfds;
+
+        while (true) {
+            for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
+                client = &ws->ws_clients[iClient];
+                if (!client->established) {
+                    // Set timeout for accept
+                    FD_ZERO(&readfds);
+                    FD_SET(server_sock, &readfds);
+                    timeout.tv_sec = 0;
+                    timeout.tv_usec = 100000; // 100 ms
+                    
+                    // Check for connection with timeout
+                    int activity = lwip_select(server_sock + 1, &readfds, NULL, NULL, &timeout);
                 
-                // Check for connection with timeout
-                int activity = lwip_select(server_sock + 1, &readfds, NULL, NULL, &timeout);
-               
-                if (activity > 0 && FD_ISSET(server_sock, &readfds)) {
-                    struct sockaddr_in client_addr;
-                    socklen_t addr_len = sizeof(client_addr);
-                    
-                    // Accept new connection
-                    int client_sock = lwip_accept(server_sock, (struct sockaddr *)&client_addr, &addr_len);
-                    
-                    if (client_sock >= 0) {
-                        // Store socket in client structure
-                        client->socket = client_sock;
-                        client->established = true;
+                    if (activity > 0 && FD_ISSET(server_sock, &readfds)) {
+                        struct sockaddr_in client_addr;
+                        socklen_t addr_len = sizeof(client_addr);
                         
-                        // Resume the task that will handle the processing
-                        vTaskResume(client->task_handle);
+                        // Accept new connection
+                        int client_sock = lwip_accept(server_sock, (struct sockaddr *)&client_addr, &addr_len);
+                        
+                        if (client_sock >= 0) {
+                            // Store socket in client structure
+                            client->socket = client_sock;
+                            client->established = true;
+                            
+                            // Resume the task that will handle the processing
+                            vTaskResume(client->task_handle);
+                        }
                     }
                 }
             }
+
+            while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS) {
+                ws_msg_t ws_msg;
+                ws_msg.message = (uint8_t *) &msg.payload;
+                ws_msg.msg_size = msg.payload_length;
+                ws_msg.msg_type = WS_TYPE_STRING;
+                ws_send_message(ws, &ws_msg);
+                lDebug(Info, "---WS--->");
+            }        
+
+            // if (ws_restart_requested) {
+            //     ws_restart_requested = false;
+            //     break;
+            // }
         }
 
-        while (xQueueReceive(websocketQueue, &msg, 100) == pdPASS) {
-            ws_msg_t ws_msg;
-            ws_msg.message = (uint8_t *) &msg.payload;
-            ws_msg.msg_size = msg.payload_length;
-            ws_msg.msg_type = WS_TYPE_STRING;
-            ws_send_message(ws, &ws_msg);
-            lDebug(Info, "---WS--->");
-        }        
-    }
+        // for (int iClient = 0; iClient < WS_MAX_CLIENTS; iClient++) {
+        //     lDebug(Info, "Closing client %i", iClient);
+        //     client = &ws->ws_clients[iClient];
+        //     lwip_close(client->socket);
+        //     client->socket = -1;
+        //     client->established = false;
+        // }
+
+        // lwip_close(server_sock);
+    // }
 }
 
 void ws_server_init(ws_server_t *ws) {    
     TaskHandle_t ws_serverTask_handle;
     xTaskCreate(ws_server_task, "ws_server", 2 * configMINIMAL_STACK_SIZE, (void *)ws, (configMAX_PRIORITIES - 1), &ws_serverTask_handle);
     vTaskCoreAffinitySet(ws_serverTask_handle, 1);
+}
+
+void ws_request_restart(void) {
+    ws_restart_requested = true;
 }

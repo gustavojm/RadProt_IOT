@@ -66,11 +66,12 @@
 #define DEFAULT_ACCEPTMBOX_SIZE TCPIP_MBOX_SIZE
 
 // not necessary, can be done either way
-#define LWIP_TCPIP_CORE_LOCKING_INPUT 0
+#define LWIP_TCPIP_CORE_LOCKING_INPUT 1
 #endif
 
 /* Threading options */
 #define LWIP_TCPIP_CORE_LOCKING   1
+#define SO_REUSE                  1
 
 // not necessary, can be done either way
 #define LWIP_TCPIP_CORE_LOCKING_INPUT 1

@@ -32,6 +32,9 @@
 #include "wifi_fns.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
+#define WIFI_CONNECTION_MONITOR_DELAY_MS 1000 // 1 second
+#define WIFI_RECONNECT_DELAY_MS 5000 // 5 seconds
+
 
 static void set_secondary_ip_address(int address) {
     /************************************ !!! WARNING !!! ************************************
@@ -63,9 +66,9 @@ void ethernet_connect() {
 
     // Allways initialize after cyw43, to use the tcpip_thread created by it
     ip4_addr_t ipaddr, netmask, gw;
-    IP4_ADDR(&ipaddr, 10, 30, 113, 199);
+    IP4_ADDR(&ipaddr, 192, 168, 2, 25);
     IP4_ADDR(&netmask, 255, 255, 255, 0);
-    IP4_ADDR(&gw, 10, 30, 113, 1);
+    IP4_ADDR(&gw, 192, 168, 2, 1);
     
     //enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
     enc28j60_driver_os_init(ipaddr, netmask, gw);
@@ -135,7 +138,7 @@ static void main_task(__unused void *params) {
             ethernet_connect();
         }
 
-        //mqtt_init();    
+        mqtt_init();    
     }
  
     gpio_init(STATUS_LED_GPIO);
@@ -177,15 +180,20 @@ static void main_task(__unused void *params) {
         }
     } else {
         // Monitor connection and reconnect if necessary
-        // while (true) {
-        //     if (!(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+    //     while (true) {
+    //         if (client_settings->wifi.enabled && !(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
 
-        //         lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
-        //         netif_set_link_down(cyw43_state.netif);
-        //         wifi_connect();
-        //     }
-        //     vTaskDelay(pdMS_TO_TICKS(1000)); // Check connection status every second
-        // }
+    //             lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
+    //             netif_set_link_down(cyw43_state.netif);
+    //             while(!wifi_connect()) {
+    //                 vTaskDelay(pdMS_TO_TICKS(WIFI_RECONNECT_DELAY_MS));
+    //             }          
+    //             ws_request_restart();                     
+    //         }
+    //         vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECTION_MONITOR_DELAY_MS)); // Check connection status every second
+    //     }
+        
+        vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECTION_MONITOR_DELAY_MS)); // Check connection status every second
     }
 
     vTaskDelete(NULL);
@@ -216,7 +224,7 @@ void writeStringTask(void *params) {
 }
 
 
-int main(void) {
+    int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
