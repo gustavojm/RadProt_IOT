@@ -19,85 +19,133 @@
 
                 <form action="" id="settings_form">
                     <div style="display: flex; justify-content: center; flex-direction: column;">
-                        <strong>Connect to Router with these settings:</strong>
-                        <table cellspacing="0" cellpadding="3" style="width: 100%;">
-                            <tr>
-                                <td class="label">SSID:</td>
-                                <td><input type="text" name="wifi.ssid" value=""></td>
-                            </tr>
-                            <tr>
-                                <td class="label">Password:</td>
-                                <td><input type="password" name="wifi.password" value=""></td>
-                            </tr>
-                            <tr>
-                                <td class="label">Security:</td>
-                                <td>
-                                    <select name="wifi.auth_mode">
-                                        <option value="0" title="No authorisation required (open)">OPEN</option>
-                                        <option value="1" title="WPA authorisation">WPA TKIP PSK</option>
-                                        <option value="2" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
-                                        <option value="3" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA MIXED
-                                            PSK</option>
-                                        <option value="4" title="WPA3 AES authorisation">WPA3 AES</option>
-                                        <option value="5" title="WPA3 AES authorisation">WPA2/WPA3</option>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="label">DHCP:</td>
-                                <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)"></td>
-                            </tr>
-                            <tr>
-                                <td class="label">IP: </td>
-                                <td>
-                                    <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12"
-                                        class="ip-addr">
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="label">Netmask:</td>
-                                <td>
-                                    <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12"
-                                        class="ip-addr">
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="label">Gateway:</td>
-                                <td>
-                                    <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12"
-                                        class="ip-addr">
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+                        
+                        <strong>Connection Type:</strong>                        
+                        <div>
+                            <label><input type="radio" name="conn_type" value="WIFI" checked>WIFI</label>
+                            <label><input type="radio" name="conn_type" value="ETHERNET" checked>ETHERNET</label>
+                        </div> 
 
-                    <div style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
-                        <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)" class="hide-on-initial-config">Refresh</a></div>
-                        <table id="wifiTable" style="width: 100%;">
-                            <thead>
+                        <div id="wifi_settings">
+                            <strong>WIFI Network Settings:</strong>
+                            <table cellspacing="0" cellpadding="3" style="width: 100%;">
                                 <tr>
-                                    <th style="text-align: center;" class="hide-on-small">#</th>
-                                    <th style="text-align: center;">SSID</th>
-                                    <th style="text-align: center; min-width: 7em;">RSSI</th>
-                                    <th style="text-align: center;" class="hide-on-small">Channel</th>
-                                    <!-- <th style="text-align: center;" class="hide-on-small">BSSID</th> -->
-                                    <th style="text-align: center;">🔒</th>
-                                    <th style="text-align: center;" class="hide-on-small">Security</th>
+                                    <td class="label">SSID:</td>
+                                    <td><input type="text" name="wifi.ssid" value=""></td>
                                 </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                                <tr>
+                                    <td class="label">Password:</td>
+                                    <td><input type="password" name="wifi.password" value=""></td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Security:</td>
+                                    <td>
+                                        <select name="wifi.auth_mode">
+                                            <option value="0" title="No authorisation required (open)">OPEN</option>
+                                            <option value="1" title="WPA authorisation">WPA TKIP PSK</option>
+                                            <option value="2" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
+                                            <option value="3" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA
+                                                MIXED
+                                                PSK</option>
+                                            <option value="4" title="WPA3 AES authorisation">WPA3 AES</option>
+                                            <option value="5" title="WPA3 AES authorisation">WPA2/WPA3</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">DHCP:</td>
+                                    <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">IP: </td>
+                                    <td>
+                                        <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12"
+                                            class="ip-addr">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Netmask:</td>
+                                    <td>
+                                        <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12"
+                                            class="ip-addr">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Gateway:</td>
+                                    <td>
+                                        <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12"
+                                            class="ip-addr">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div
+                            style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
+                            <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)"
+                                    class="hide-on-initial-config">Refresh</a></div>
+                            <table id="wifiTable" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: center;" class="hide-on-small">#</th>
+                                        <th style="text-align: center;">SSID</th>
+                                        <th style="text-align: center; min-width: 7em;">RSSI</th>
+                                        <th style="text-align: center;" class="hide-on-small">Channel</th>
+                                        <!-- <th style="text-align: center;" class="hide-on-small">BSSID</th> -->
+                                        <th style="text-align: center;">🔒</th>
+                                        <th style="text-align: center;" class="hide-on-small">Security</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+
+                            <div id="ethernet_settings">
+                                <strong>Ethernet Networks Settings:</strong>
+                                <table cellspacing="0" cellpadding="3" style="width: 100%;">
+                                    <tr>
+                                        <td class="label">DHCP:</td>
+                                        <td><input type="checkbox" name="eth.dhcp" onchange="toggle_ip_settings(this)">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="label">IP: </td>
+                                        <td>
+                                            <input type="text" name="eth.ip" placeholder="192.168.1.20" size="12"
+                                                class="ip-addr">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="label">Netmask:</td>
+                                        <td>
+                                            <input type="text" name="eth.nm" placeholder="255.255.255.0" size="12"
+                                                class="ip-addr">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="label">Gateway:</td>
+                                        <td>
+                                            <input type="text" name="eth.gw" placeholder="192.168.1.1" size="12"
+                                                class="ip-addr">
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                            </div>
+                            </div>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
                         <strong>MQTT Settings:</strong>
                         <table cellspacing="0" cellpadding="3" style="width:100%">
                             <tr>
                                 <td class="label">Broker:</td>
-                                <td><input type="text" name="mqtt.broker" value=""><span id="mqtt_connection_status"></span></td>
+                                <td><input type="text" name="mqtt.broker" value=""><span
+                                        id="mqtt_connection_status"></span></td>
                             </tr>
                             <tr>
                                 <td class="label">Port:</td>
-                                <td><input type="number" name="mqtt.port" style="width: 5em" min="0" max="65535" value=""></td>
+                                <td><input type="number" name="mqtt.port" style="width: 5em" min="0" max="65535"
+                                        value=""></td>
                             </tr>
                             <tr>
                                 <td class="label">User Name:</td>
@@ -268,7 +316,7 @@
             xhr.open("POST", '/wifi_nets_scan.cgi', true);
         } else {
             xhr.open("POST", '/wifi_nets.cgi', true);
-        }   
+        }
         xhr.setRequestHeader("Content-Type", "application/json");
 
         // Use onreadystatechange instead of onload
@@ -303,7 +351,7 @@
         settings_form.elements["wifi.ssid"].value = event.target.text;
 
         if (event.target.dataset.auth_mode == 0) {
-            settings_form.elements["wifi.password"].value = "";           
+            settings_form.elements["wifi.password"].value = "";
         }
         settings_form.elements["wifi.auth_mode"].value = event.target.dataset.auth_mode;
     }
@@ -528,7 +576,7 @@
                 for (let i = 0; i < elements_to_hide.length; i++) {
                     elements_to_hide[i].style.display = "none";
                 }
-            }            
+            }
         });
 
         setModalEditing();
@@ -820,19 +868,19 @@
                 if (modalInput.type === 'checkbox') {
                     tds[index + 1].firstChild.checked = modalInput.checked; // +1 because first element is not an input
                 } else {
-                    if (modalInput.checkValidity()) {                        
+                    if (modalInput.checkValidity()) {
                         tds[index + 1].firstChild.value = modalInput.value; // +1 because first element is not an input
                     } else {
                         modalInput.reportValidity()
-                        can_save = false;                        
+                        can_save = false;
                     }
-                    
+
                 }
             });
 
             if (can_save) {
                 closeFormModal();
-            }                                    
+            }
         };
 
         modalForm.appendChild(saveButton);
