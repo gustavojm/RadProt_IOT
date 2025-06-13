@@ -42,7 +42,7 @@ void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* na
     json["reading"] = reading;
     json["topic"] = topic;
 
-    WebsocketPublishMessage msg;
+    websocket_publish_message msg;
     size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
     msg.payload_length = len;
     

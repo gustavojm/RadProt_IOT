@@ -55,8 +55,8 @@ static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
     return 0;
 }
 
-void ws_message_handler(uint8_t *data, uint32_t len, ws_type_t type) {
-    lDebug(Info, "Websocket received: %.*s", len, data);
+void ws_message_handler(uint8_t *payload, uint32_t length, websocket_msg_type type) {
+    lDebug(Info, "Websocket received: %.*s", length, payload);
 }
 
 
@@ -72,11 +72,7 @@ void ethernet_connect() {
     
     //enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
     enc28j60_driver_os_init(ipaddr, netmask, gw);
-
-
 }
-
-
 
 static void main_task(__unused void *params) {
 
@@ -96,11 +92,8 @@ static void main_task(__unused void *params) {
         initial_config = true;
     }
 
-    ws_server_t ws_server;
-    ws_server.msg_handler = ws_message_handler;
     httpd_init(ap_settings->hostname, ap_settings->domain_name);
-
-    ws_server_init(&ws_server);   
+    ws_server.init(ws_message_handler);
 
     if (initial_config) {
         uint8_t itf_sta_mac[6];
@@ -171,29 +164,22 @@ static void main_task(__unused void *params) {
         s3.init();
     }
     
-    if (initial_config) {
-        while (true) {
+    while (true) {
+        if (initial_config) {       // Blink the STATUS LED to indicate Initial Config Mode
             gpio_put(STATUS_LED_GPIO, true);
             vTaskDelay(pdMS_TO_TICKS(500));
             gpio_put(STATUS_LED_GPIO, false);
             vTaskDelay(pdMS_TO_TICKS(500));
+        } else {                    // Monitor WIFI connection and reconnect if necessary        
+            if (client_settings->wifi.enabled && !(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+                lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
+                netif_set_link_down(cyw43_state.netif);
+                while(!wifi_connect()) {
+                    vTaskDelay(pdMS_TO_TICKS(WIFI_RECONNECT_DELAY_MS));
+                }
+            }
+            vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECTION_MONITOR_DELAY_MS)); // Check connection status every second
         }
-    } else {
-        // Monitor connection and reconnect if necessary
-    //     while (true) {
-    //         if (client_settings->wifi.enabled && !(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
-
-    //             lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
-    //             netif_set_link_down(cyw43_state.netif);
-    //             while(!wifi_connect()) {
-    //                 vTaskDelay(pdMS_TO_TICKS(WIFI_RECONNECT_DELAY_MS));
-    //             }          
-    //             ws_request_restart();                     
-    //         }
-    //         vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECTION_MONITOR_DELAY_MS)); // Check connection status every second
-    //     }
-        
-        vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECTION_MONITOR_DELAY_MS)); // Check connection status every second
     }
 
     vTaskDelete(NULL);
