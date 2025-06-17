@@ -113,12 +113,10 @@ struct ipv4_settings {
 };
 
 struct ethernet_settings { 
-    bool enabled;    
     ipv4_settings ipv4; 
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
-        json["enabled"] = enabled;
         json["dhcp"] = ipv4.dhcp;
         json["ip"] = ipv4.ip.addr;
         json["nm"] = ipv4.nm.addr;
@@ -131,7 +129,6 @@ struct ethernet_settings {
 
 
 struct wifi_settings {
-    bool enabled;
     char ssid[32];
     char password[32];
     int auth_mode;    
@@ -139,7 +136,6 @@ struct wifi_settings {
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
-        json["enabled"] = enabled;
         json["ssid"] = ssid;
         json["password"] = password;
         json["auth_mode"] = auth_mode;
@@ -170,13 +166,14 @@ struct mqtt_settings {
     
 };
 
-enum conn_mode {
+enum conn_type {
     WIFI,
     ETHERNET
 };
 
 struct client_mode_settings {
   public:
+    enum conn_type conn_type;
     wifi_settings wifi;
     ethernet_settings eth;
 
@@ -187,6 +184,7 @@ struct client_mode_settings {
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
+        json["conn_type"] = conn_type == WIFI ? "WIFI" : "ETHERNET";
         json["wifi"] = wifi.to_json();
         json["eth"] = eth.to_json();
         json["mqtt"] = mqtt.to_json();

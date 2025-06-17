@@ -98,6 +98,14 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         ipaddr_aton(post_data["wifi"]["nm"], &cs.settings.wifi.ipv4.nm);
         ipaddr_aton(post_data["wifi"]["gw"], &cs.settings.wifi.ipv4.gw);
 
+        cs.settings.eth.ipv4.dhcp = post_data["eth"]["dhcp"];
+
+        ipaddr_aton(post_data["eth"]["ip"], &cs.settings.eth.ipv4.ip);
+        ipaddr_aton(post_data["eth"]["nm"], &cs.settings.eth.ipv4.nm);
+        ipaddr_aton(post_data["eth"]["gw"], &cs.settings.eth.ipv4.gw);
+
+        cs.settings.conn_type = post_data["conn_type"] == "WIFI" ? WIFI : ETHERNET;
+        
         strncpy(cs.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof cs.settings.mqtt.broker);
         cs.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
         strncpy(cs.settings.mqtt.username, post_data["mqtt"]["username"], sizeof cs.settings.mqtt.username);

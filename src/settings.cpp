@@ -57,13 +57,13 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 
 // constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
 const client_mode_settings_t s_Client_Settings = {                
-                .settings = { 
-                    .wifi = {
-                        .enabled = true,
+                .settings = {
+                    .conn_type = ETHERNET, 
+                    .wifi = {                        
                         .ssid = "C14017750 7261",
                         .password = "malamala",
                         .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
-                        .ipv4 = {.dhcp = true,
+                        .ipv4 = {.dhcp = false,
                                 .ip = 0xC889A8C0,      // 192.168.137.200
                                 .nm = 0x00FFFFFF,      // 255.255.255.0
                                 .gw = 0x0189A8C0,      // 192.168.137.1
@@ -71,7 +71,6 @@ const client_mode_settings_t s_Client_Settings = {
                                 }
                         },
                         .eth = {
-                            .enabled = false,
                             .ipv4 = {.dhcp = true,
                                     .ip = 0xC889A8C0,      // 192.168.137.200
                                     .nm = 0x00FFFFFF,      // 255.255.255.0

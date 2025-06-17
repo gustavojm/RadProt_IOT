@@ -19,15 +19,15 @@
 
                 <form action="" id="settings_form">
                     <div style="display: flex; justify-content: center; flex-direction: column;">
-                        
-                        <strong>Connection Type:</strong>                        
+
+                        <strong>Connection Type:</strong>
                         <div>
-                            <label><input type="radio" name="conn_type" value="WIFI" checked>WIFI</label>
-                            <label><input type="radio" name="conn_type" value="ETHERNET" checked>ETHERNET</label>
-                        </div> 
+                            <label><input type="radio" name="conn_type" value="WIFI" checked>Wi-Fi</label>
+                            <label><input type="radio" name="conn_type" value="ETHERNET">Ethernet</label>
+                        </div>
 
                         <div id="wifi_settings">
-                            <strong>WIFI Network Settings:</strong>
+                            <strong>Wi-Fi Network Settings:</strong>
                             <table cellspacing="0" cellpadding="3" style="width: 100%;">
                                 <tr>
                                     <td class="label">SSID:</td>
@@ -79,60 +79,60 @@
                                     </td>
                                 </tr>
                             </table>
+
+                            <div
+                                style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
+                                <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)"
+                                        class="hide-on-initial-config">Refresh</a></div>
+                                <table id="wifiTable" style="width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th style="text-align: center;" class="hide-on-small">#</th>
+                                            <th style="text-align: center;">SSID</th>
+                                            <th style="text-align: center; min-width: 7em;">RSSI</th>
+                                            <th style="text-align: center;" class="hide-on-small">Channel</th>
+                                            <!-- <th style="text-align: center;" class="hide-on-small">BSSID</th> -->
+                                            <th style="text-align: center;">🔒</th>
+                                            <th style="text-align: center;" class="hide-on-small">Security</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
                         </div>
 
-                        <div
-                            style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
-                            <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)"
-                                    class="hide-on-initial-config">Refresh</a></div>
-                            <table id="wifiTable" style="width: 100%;">
-                                <thead>
-                                    <tr>
-                                        <th style="text-align: center;" class="hide-on-small">#</th>
-                                        <th style="text-align: center;">SSID</th>
-                                        <th style="text-align: center; min-width: 7em;">RSSI</th>
-                                        <th style="text-align: center;" class="hide-on-small">Channel</th>
-                                        <!-- <th style="text-align: center;" class="hide-on-small">BSSID</th> -->
-                                        <th style="text-align: center;">🔒</th>
-                                        <th style="text-align: center;" class="hide-on-small">Security</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
+                        <div id="ethernet_settings">
+                            <strong>Ethernet Networks Settings:</strong>
+                            <table cellspacing="0" cellpadding="3" style="width: 100%;">
+                                <tr>
+                                    <td class="label">DHCP:</td>
+                                    <td><input type="checkbox" name="eth.dhcp" onchange="toggle_ip_settings(this)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">IP: </td>
+                                    <td>
+                                        <input type="text" name="eth.ip" placeholder="192.168.1.20" size="12"
+                                            class="ip-addr">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Netmask:</td>
+                                    <td>
+                                        <input type="text" name="eth.nm" placeholder="255.255.255.0" size="12"
+                                            class="ip-addr">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Gateway:</td>
+                                    <td>
+                                        <input type="text" name="eth.gw" placeholder="192.168.1.1" size="12"
+                                            class="ip-addr">
+                                    </td>
+                                </tr>
                             </table>
 
-                            <div id="ethernet_settings">
-                                <strong>Ethernet Networks Settings:</strong>
-                                <table cellspacing="0" cellpadding="3" style="width: 100%;">
-                                    <tr>
-                                        <td class="label">DHCP:</td>
-                                        <td><input type="checkbox" name="eth.dhcp" onchange="toggle_ip_settings(this)">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">IP: </td>
-                                        <td>
-                                            <input type="text" name="eth.ip" placeholder="192.168.1.20" size="12"
-                                                class="ip-addr">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Netmask:</td>
-                                        <td>
-                                            <input type="text" name="eth.nm" placeholder="255.255.255.0" size="12"
-                                                class="ip-addr">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Gateway:</td>
-                                        <td>
-                                            <input type="text" name="eth.gw" placeholder="192.168.1.1" size="12"
-                                                class="ip-addr">
-                                        </td>
-                                    </tr>
-                                </table>
-                                
-                            </div>
-                            </div>
+                        </div>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
                         <strong>MQTT Settings:</strong>
@@ -500,6 +500,16 @@
         settings_form.elements["wifi.ip"].value = uint32ToIp(settings_json["wifi"]["ip"]);
         settings_form.elements["wifi.nm"].value = uint32ToIp(settings_json["wifi"]["nm"]);
         settings_form.elements["wifi.gw"].value = uint32ToIp(settings_json["wifi"]["gw"]);
+
+        settings_form.elements["eth.dhcp"].checked = settings_json["eth"]["dhcp"];
+        toggle_ip_settings(settings_form.elements["eth.dhcp"]);
+
+        settings_form.elements["eth.ip"].value = uint32ToIp(settings_json["eth"]["ip"]);
+        settings_form.elements["eth.nm"].value = uint32ToIp(settings_json["eth"]["nm"]);
+        settings_form.elements["eth.gw"].value = uint32ToIp(settings_json["eth"]["gw"]);
+
+        settings_form.elements["conn_type"].value = settings_json["conn_type"];
+        toggle_connection_type(settings_json["conn_type"]);
 
         settings_form.elements["mqtt.broker"].value = settings_json["mqtt"]["broker"];
         settings_form.elements["mqtt.port"].value = settings_json["mqtt"]["port"];
@@ -1032,8 +1042,25 @@
         //ws_div.scrollTop = ws_div.scrollHeight;
     }
 
+    function toggle_connection_type(value) {
+        if (value == "WIFI") {
+            document.getElementById("wifi_settings").style.display = "block";
+            document.getElementById("ethernet_settings").style.display = "none";
+        } else {
+            document.getElementById("wifi_settings").style.display = "none";
+            document.getElementById("ethernet_settings").style.display = "block";
+        }
+    }
+
+    document.querySelectorAll('input[type="radio"][name="conn_type"]').forEach(radio => {
+        radio.onchange = function () {
+            toggle_connection_type(this.value);
+        };
+    });
+
     // Start WebSocket client
     const wsClient = new WebSocketClient();
+
 
 </script>
 

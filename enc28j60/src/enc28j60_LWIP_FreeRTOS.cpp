@@ -98,9 +98,9 @@ err_t enc28j60_driver_os_init(ip4_addr_t ipaddr, ip4_addr_t netmask, ip4_addr_t 
         return ERR_ABRT;
     }
 
-#if configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
-    vTaskCoreAffinitySet(irq_loop_task_handle, NETWORKING_CORE_ID);
-#endif
+// #if configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
+//     vTaskCoreAffinitySet(irq_loop_task_handle, NETWORKING_CORE_ID);
+// #endif
 
     eth_driver.enable_interupts();
 

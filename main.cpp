@@ -64,14 +64,27 @@ void ethernet_connect() {
     lDebug(Info, "Enabling Ethernet...");
     const client_mode_settings *client_settings = get_client_mode_settings();
 
-    // Allways initialize after cyw43, to use the tcpip_thread created by it
-    ip4_addr_t ipaddr, netmask, gw;
-    IP4_ADDR(&ipaddr, 192, 168, 2, 25);
-    IP4_ADDR(&netmask, 255, 255, 255, 0);
-    IP4_ADDR(&gw, 192, 168, 2, 1);
+    // Allways initialize after cyw43, to use the tcpip_thread created by it       
+
+    if (client_settings->eth.ipv4.dhcp) {
+        ip4_addr_t ipaddr, netmask, gw;
+        IP4_ADDR(&ipaddr, 0, 0, 0, 0);
+        IP4_ADDR(&netmask, 0, 0, 0, 0);
+        IP4_ADDR(&gw, 0, 0, 0, 0);
+        enc28j60_driver_os_init(ipaddr, netmask, gw);
+        dhcp_start(&net_if);
+        lDebug(Info, "Wait for DHCP to assign an IP");
+        while (net_if.ip_addr.addr == 0) {
+            lDebug(Info, "Waiting for DHCP...");
+            sleep_ms(1000);
+        }
+        lDebug(Info, "Connected! IP Address: %s", ip4addr_ntoa(netif_ip4_addr(&net_if)));
+    } else {
+        enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
+        lDebug(Info, "Static IP set to: %s", &net_if.ip_addr);
+    }
+
     
-    //enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
-    enc28j60_driver_os_init(ipaddr, netmask, gw);
 }
 
 static void main_task(__unused void *params) {
@@ -123,14 +136,12 @@ static void main_task(__unused void *params) {
             ap_settings->dns_ignores_network_suffix);
         set_secondary_ip_address(ap_settings->secondary_address);
     } else {
-        if (client_settings->wifi.enabled) {
+        if (client_settings->conn_type == WIFI) {
             wifi_connect();
-        }
-        
-        if (client_settings->eth.enabled) {
+        } else {
             ethernet_connect();
         }
-
+        
         mqtt_init();    
     }
  
@@ -171,7 +182,7 @@ static void main_task(__unused void *params) {
             gpio_put(STATUS_LED_GPIO, false);
             vTaskDelay(pdMS_TO_TICKS(500));
         } else {                    // Monitor WIFI connection and reconnect if necessary        
-            if (client_settings->wifi.enabled && !(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
+            if (client_settings->conn_type == WIFI && !(cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_JOIN)) {
                 lDebug(Warn, "Wi-Fi disconnected! Attempting to reconnect...");
                 netif_set_link_down(cyw43_state.netif);
                 while(!wifi_connect()) {
@@ -210,7 +221,7 @@ void writeStringTask(void *params) {
 }
 
 
-    int main(void) {
+int main(void) {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
