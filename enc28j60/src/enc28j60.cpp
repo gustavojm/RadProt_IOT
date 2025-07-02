@@ -10,6 +10,8 @@
 #include "stdio.h"
 #include "utils.h"
 #include <cstring>
+#include "hardware/flash.h"
+#include "pico/flash.h"
 
 #ifdef ENC_DEBUG_ON
 #define ENC_DEBUG_print printf
@@ -41,9 +43,9 @@ void enc28j60::irq_deferred_handler() {
             /* LINK changed handler */
             if ((intflags & EIR_LINKIF) != 0) {
                 if (is_link_up()) {
-                    netif_set_link_up(&net_if);
+                    netif_set_link_up(&netif);
                 } else {
-                    netif_set_link_down(&net_if);
+                    netif_set_link_down(&netif);
                 }
 
                 // check_link_status();
@@ -110,7 +112,7 @@ void enc28j60::irq_deferred_handler() {
                     LINK_STATS_INC(link.recv);
                     ENC_DEBUG_print("Received packet with len %d!\r\n", packet_info.byte_count);
 
-                    if (net_if.input(ptr, &net_if) != ERR_OK) {
+                    if (netif.input(ptr, &netif) != ERR_OK) {
                         ENC_DEBUG_print("Error processing frame input\r\n");
                         pbuf_free(ptr);
                     }
@@ -135,7 +137,7 @@ extern "C" void enc28j60_irq_callback(uint gpio, uint32_t events) {
     return;
 }
 
-bool enc28j60::init(const MacAddress &mac_address) {
+bool enc28j60::init() {       
     config_.mutex = xSemaphoreCreateRecursiveMutex();
     config_.spi.init();
     config_.RST_gpio.output();
@@ -149,8 +151,15 @@ bool enc28j60::init(const MacAddress &mac_address) {
     write_op(ENC28J60_SOFT_RESET, 0x00, ENC28J60_SOFT_RESET);
     vTaskDelay(pdMS_TO_TICKS(2));
     /** Oscillator ready */
-    while (!(read_reg(ESTAT) & ESTAT_CLKRDY))
-        ;
+    int retry = 100;
+    while (!(read_reg(ESTAT) & ESTAT_CLKRDY)) {
+        if (!(retry--)) {
+            is_available = false;
+            return is_available;            
+        }
+
+    }
+        
 
     /** RX buffer ptr */
     write_reg16(ERXST, RXSTART_INIT);
@@ -197,13 +206,14 @@ bool enc28j60::init(const MacAddress &mac_address) {
     read_reg(MAIPG);
     read_reg(0x07 | 0x40 | 0x80);
 
-    write_reg(MAADR5, mac_address[0]);
-    write_reg(MAADR4, mac_address[1]);
-    write_reg(MAADR3, mac_address[2]);
-    write_reg(MAADR2, mac_address[3]);
-    write_reg(MAADR1, mac_address[4]);
-    write_reg(MAADR0, mac_address[5]);
-    mac_ = mac_address;
+    flash_safe_execute([](void *me) { static_cast<enc28j60 *>(me)->generate_mac();}, (void *)this, 100);
+
+    write_reg(MAADR5, mac_[0]);
+    write_reg(MAADR4, mac_[1]);
+    write_reg(MAADR3, mac_[2]);
+    write_reg(MAADR2, mac_[3]);
+    write_reg(MAADR1, mac_[4]);
+    write_reg(MAADR0, mac_[5]);    
 
     write_phy(PHCON2, PHCON2_HDLDIS);
 
@@ -214,8 +224,10 @@ bool enc28j60::init(const MacAddress &mac_address) {
 
     uint8_t rev = read_reg(EREVID);
     unlock();
+    
+    is_available = rev > 0;
 
-    return rev > 0;
+    return is_available;
 }
 
 void enc28j60::enable_interupts() {
@@ -224,8 +236,11 @@ void enc28j60::enable_interupts() {
     lock();
     config_.IRQ_gpio.input();
     config_.IRQ_gpio.pull_up();
+    taskENTER_CRITICAL();
     gpio_set_irq_enabled_with_callback(config_.IRQ_gpio.get_gpio(), GPIO_IRQ_EDGE_FALL, true,
                                        &enc28j60_irq_callback);
+                                           
+    taskEXIT_CRITICAL();    
 
     write_phy(PHIE, PHIE_PGEIE | PHIE_PLNKIE);
 
@@ -591,7 +606,7 @@ err_t enc28j60::eth_netif_init(struct netif *netif) {
     netif->mtu = ETHERNET_MTU;
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_ETHERNET |
                    NETIF_FLAG_IGMP | NETIF_FLAG_MLD6;
-    memcpy(netif->hwaddr, me->mac_.data(), sizeof(netif->hwaddr));
+    memcpy(netif->hwaddr, me->mac_, sizeof(netif->hwaddr));
     netif->hwaddr_len = sizeof(netif->hwaddr);
 
     ENC_DEBUG_print("LWIP Init \n");
@@ -642,4 +657,26 @@ void enc28j60::dump_tsv(const char *msg, uint8_t tsv[TSV_SIZE]) {
                     TSV_GETBIT(tsv, TSV_BACKPRESSUREAPP), TSV_GETBIT(tsv, TSV_TXVLANTAGFRAME));
 }
 
+// Generate a locally administered MAC address
+
+void enc28j60::generate_mac() { 
+    uint8_t id[FLASH_UNIQUE_ID_SIZE_BYTES];
+    
+    // Disable interrupts on the current core
+    uint32_t status = save_and_disable_interrupts();
+    flash_get_unique_id(id);  // unique ID from Pico's flash
+
+    // Re-enable interrupts on the current core
+    restore_interrupts(status);
+
+    // Use some bytes from unique ID
+    mac_[0] = 0x02; // Locally administered, unicast
+    mac_[1] = id[0] ;
+    mac_[2] = id[1];
+    mac_[3] = id[2];
+    mac_[4] = id[3];
+    mac_[5] = id[4];
+}
+
 } // namespace drivers
+

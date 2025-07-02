@@ -44,6 +44,7 @@
 #include <settings.h>
 #include <stdio.h>
 #include <string.h>
+#include "hardware/flash.h"
 
 #include "wifi_fns.h"
 
@@ -59,20 +60,6 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
 
     responseJson["wifi"]["auth_mode"] = connect_auth_mode_to_scan_auth_mode(responseJson["wifi"]["auth_mode"]);
 
-    uint8_t itf_sta_mac[6];
-    cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
-    char mac_addr_str[18];
-    snprintf(
-        mac_addr_str,
-        sizeof mac_addr_str,
-        "%02X:%02X:%02X:%02X:%02X:%02X\n",
-        itf_sta_mac[0],
-        itf_sta_mac[1],
-        itf_sta_mac[2],
-        itf_sta_mac[3],
-        itf_sta_mac[4],
-        itf_sta_mac[5]);
-    responseJson["mac_address"] = mac_addr_str;
     responseJson["initial_config"] = initial_config;
     return responseJson;
 }

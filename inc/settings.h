@@ -13,6 +13,8 @@
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 
+#include "enc28j60_LWIP_FreeRTOS.h"
+
 inline const uint INITIAL_CONFIG_GPIO = 14;     // Pin 19
 inline const uint STATUS_LED_GPIO = 15;         // Pin 20
 
@@ -117,11 +119,27 @@ struct ethernet_settings {
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
-        json["dhcp"] = ipv4.dhcp;
-        json["ip"] = ipv4.ip.addr;
-        json["nm"] = ipv4.nm.addr;
-        json["gw"] = ipv4.gw.addr;
-        json["dns"] = ipv4.dns.addr;
+        json["is_available"] = enc28j60_state.is_available;
+        if (enc28j60_state.is_available) {
+            json["ip"] = ipv4.ip.addr;
+            json["nm"] = ipv4.nm.addr;
+            json["gw"] = ipv4.gw.addr;
+            json["dns"] = ipv4.dns.addr;
+            
+            char mac_addr_str[18];
+            snprintf(
+                mac_addr_str,
+                sizeof mac_addr_str,
+                "%02X:%02X:%02X:%02X:%02X:%02X\n",
+                enc28j60_state.mac_[0],
+                enc28j60_state.mac_[1],
+                enc28j60_state.mac_[2],
+                enc28j60_state.mac_[3],
+                enc28j60_state.mac_[4],
+                enc28j60_state.mac_[5]);
+            json["mac_address"] = mac_addr_str;
+    
+        }
         return json;
     }
 
@@ -144,6 +162,22 @@ struct wifi_settings {
         json["nm"] = ipv4.nm.addr;
         json["gw"] = ipv4.gw.addr;
         json["dns"] = ipv4.dns.addr;
+
+        uint8_t itf_sta_mac[6];
+        cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
+        char mac_addr_str[18];
+        snprintf(
+            mac_addr_str,
+            sizeof mac_addr_str,
+            "%02X:%02X:%02X:%02X:%02X:%02X\n",
+            itf_sta_mac[0],
+            itf_sta_mac[1],
+            itf_sta_mac[2],
+            itf_sta_mac[3],
+            itf_sta_mac[4],
+            itf_sta_mac[5]);
+        json["mac_address"] = mac_addr_str;
+            
         return json;
     }
     
@@ -186,7 +220,7 @@ struct client_mode_settings {
         ArduinoJson::MyJsonDocument json;
         json["conn_type"] = conn_type == WIFI ? "WIFI" : "ETHERNET";
         json["wifi"] = wifi.to_json();
-        json["eth"] = eth.to_json();
+        json["eth"] = eth.to_json();        
         json["mqtt"] = mqtt.to_json();
     
         auto sensor_settings_array = json["sensor_settings"].to<ArduinoJson::JsonArray>();

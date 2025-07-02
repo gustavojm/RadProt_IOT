@@ -45,26 +45,11 @@ static void netif_link_callback(struct netif *netif) {
 
 err_t enc28j60_driver_os_init(ip4_addr_t ipaddr, ip4_addr_t netmask, ip4_addr_t gw) {
 
-    static drivers::Spi spi0_{{.spi_handle = spi0, 
-                               .CLK_gpio = 18, 
-                               .MOSI_gpio = 19, 
-                               .MISO_gpio = 16, 
-                               .baudrate_Hz = 25 * 1000000
-                              }};
-    
-    static drivers::enc28j60 eth_driver{{.CS_gpio = 17, 
-                                         .RST_gpio = 21, 
-                                         .IRQ_gpio = 22, 
-                                         .spi = spi0_
-                                        }};
-
-    constexpr drivers::enc28j60::MacAddress mac{0x0a, 0xbd, 0x7d, 0x95, 0xd3, 0xa5};
-
-    if (!eth_driver.init(mac)) {
-        hal::panic();
+    if (!enc28j60_state.is_available) {
+        return ERR_ABRT;
     }    
 
-    if (netif_add(&net_if, &ipaddr, &netmask, &gw, static_cast<void *>(&eth_driver),
+    if (netif_add(&enc28j60_state.netif, &ipaddr, &netmask, &gw, static_cast<void *>(&enc28j60_state),
                   drivers::enc28j60::eth_netif_init, tcpip_input) == nullptr) {
         printf("netif_add failed\n");
         return ERR_ABRT;
@@ -72,16 +57,16 @@ err_t enc28j60_driver_os_init(ip4_addr_t ipaddr, ip4_addr_t netmask, ip4_addr_t 
 
     printf("netif_add ADDED\n");
 
-    net_if.name[0] = 'e';
-    net_if.name[1] = '0';
+    enc28j60_state.netif.name[0] = 'e';
+    enc28j60_state.netif.name[1] = '0';
 
-    netif_set_status_callback(&net_if, netif_status_callback);
-    netif_set_link_callback(&net_if, netif_link_callback);
-    netif_set_hostname(&net_if, "PICO");
+    netif_set_status_callback(&enc28j60_state.netif, netif_status_callback);
+    netif_set_link_callback(&enc28j60_state.netif, netif_link_callback);
+    netif_set_hostname(&enc28j60_state.netif, "PICO");
 
-    netif_set_default(&net_if);
-    netif_set_up(&net_if);
-    // dhcp_start(&net_if);
+    netif_set_default(&enc28j60_state.netif);
+    netif_set_up(&enc28j60_state.netif);
+    // dhcp_start(&eth_driver.net_if);
     // printf("netif DHCP STARTED\n");
 
     // tcpip_init allready called by cyw43 driver
@@ -93,16 +78,16 @@ err_t enc28j60_driver_os_init(ip4_addr_t ipaddr, ip4_addr_t netmask, ip4_addr_t 
 
     TaskHandle_t irq_loop_task_handle{};
     if (xTaskCreate([](void *me) { static_cast<drivers::enc28j60 *>(me)->irq_deferred_handler(); },
-                    "irq_loop", 2048, (void *)&eth_driver, configMAX_PRIORITIES - 1,
+                    "irq_loop", 2048, (void *)&enc28j60_state, configMAX_PRIORITIES - 1,
                     &irq_loop_task_handle) != pdPASS) {
         return ERR_ABRT;
     }
 
-// #if configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
-//     vTaskCoreAffinitySet(irq_loop_task_handle, NETWORKING_CORE_ID);
-// #endif
+#if configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
+    vTaskCoreAffinitySet(irq_loop_task_handle, NETWORKING_CORE_ID);
+#endif
 
-    eth_driver.enable_interupts();
+    enc28j60_state.enable_interupts();
 
     return ERR_OK;
 }

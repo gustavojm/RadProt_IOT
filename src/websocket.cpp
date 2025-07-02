@@ -336,13 +336,15 @@ void websocket_server::task() {
         }
         
         // Check for queued messages to send
-        if (client.established && xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
-            websocket_message ws_msg;
-            ws_msg.message = (uint8_t *)&queued_msg.payload;
-            ws_msg.msg_size = queued_msg.payload_length;
-            ws_msg.msg_type = WS_TYPE_STRING;
-            send_message(&ws_msg);
-            lDebug(Info, "Sent queued message to client");
+        if (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
+            if (client.established) {
+                websocket_message ws_msg;
+                ws_msg.message = (uint8_t *)&queued_msg.payload;
+                ws_msg.msg_size = queued_msg.payload_length;
+                ws_msg.msg_type = WS_TYPE_STRING;
+                send_message(&ws_msg);
+                lDebug(Info, "Sent queued message to client");
+            }
         }
     }
 }

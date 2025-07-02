@@ -15,19 +15,20 @@
     <div class="slider-container">
         <div class="slider">
             <div class="slide">
-                <h2>MAC Address: <span id="mac_address"></span> </h2>
-
                 <form action="" id="settings_form">
                     <div style="display: flex; justify-content: center; flex-direction: column;">
 
-                        <strong>Connection Type:</strong>
-                        <div>
-                            <label><input type="radio" name="conn_type" value="WIFI" checked>Wi-Fi</label>
-                            <label><input type="radio" name="conn_type" value="ETHERNET">Ethernet</label>
+                        <div id="connection_type">
+                            <strong>Connection Type:</strong>
+                            <div>
+                                <label><input type="radio" name="conn_type" value="WIFI" checked>Wi-Fi</label>
+                                <label><input type="radio" name="conn_type" value="ETHERNET">Ethernet</label>
+                            </div>
                         </div>
 
                         <div id="wifi_settings">
                             <strong>Wi-Fi Network Settings:</strong>
+                            <h2>MAC Address: <span id="wifi.mac_address"></span> </h2>
                             <table cellspacing="0" cellpadding="3" style="width: 100%;">
                                 <tr>
                                     <td class="label">SSID:</td>
@@ -54,7 +55,7 @@
                                 </tr>
                                 <tr>
                                     <td class="label">DHCP:</td>
-                                    <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_ip_settings(this)">
+                                    <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_wifi_ip_settings(this)">
                                     </td>
                                 </tr>
                                 <tr>
@@ -103,10 +104,11 @@
 
                         <div id="ethernet_settings">
                             <strong>Ethernet Networks Settings:</strong>
+                            <h2>MAC Address: <span id="eth.mac_address"></span> </h2>
                             <table cellspacing="0" cellpadding="3" style="width: 100%;">
                                 <tr>
                                     <td class="label">DHCP:</td>
-                                    <td><input type="checkbox" name="eth.dhcp" onchange="toggle_ip_settings(this)">
+                                    <td><input type="checkbox" name="eth.dhcp" onchange="toggle_eth_ip_settings(this)">
                                     </td>
                                 </tr>
                                 <tr>
@@ -462,7 +464,7 @@
     }
 
 
-    function toggle_ip_settings(checkbox) {
+    function toggle_wifi_ip_settings(checkbox) {
         const settings_form = document.getElementById('settings_form');
         if (checkbox.checked) {
             settings_form.elements["wifi.ip"].disabled = true;
@@ -474,6 +476,20 @@
             settings_form.elements["wifi.gw"].disabled = false;
         }
     }
+
+    function toggle_eth_ip_settings(checkbox) {
+        const settings_form = document.getElementById('settings_form');
+        if (checkbox.checked) {
+            settings_form.elements["eth.ip"].disabled = true;
+            settings_form.elements["eth.nm"].disabled = true;
+            settings_form.elements["eth.gw"].disabled = true;
+        } else {
+            settings_form.elements["eth.ip"].disabled = false;
+            settings_form.elements["eth.nm"].disabled = false;
+            settings_form.elements["eth.gw"].disabled = false;
+        }
+    }
+
 
     function create_baud_option(sensor, baudrate) {
         let res = "";
@@ -488,25 +504,31 @@
     }
 
     function settings_populate(settings_json) {
-        document.getElementById('mac_address').innerHTML = settings_json["mac_address"];
+        document.getElementById('wifi.mac_address').innerHTML = settings_json["wifi"]["mac_address"];
 
         const settings_form = document.getElementById('settings_form');
         settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];
         settings_form.elements["wifi.auth_mode"].value = settings_json["wifi"]["auth_mode"];
         settings_form.elements["wifi.password"].value = settings_json["wifi"]["password"];
         settings_form.elements["wifi.dhcp"].checked = settings_json["wifi"]["dhcp"];
-        toggle_ip_settings(settings_form.elements["wifi.dhcp"]);
+        toggle_wifi_ip_settings(settings_form.elements["wifi.dhcp"]);
 
         settings_form.elements["wifi.ip"].value = uint32ToIp(settings_json["wifi"]["ip"]);
         settings_form.elements["wifi.nm"].value = uint32ToIp(settings_json["wifi"]["nm"]);
         settings_form.elements["wifi.gw"].value = uint32ToIp(settings_json["wifi"]["gw"]);
 
-        settings_form.elements["eth.dhcp"].checked = settings_json["eth"]["dhcp"];
-        toggle_ip_settings(settings_form.elements["eth.dhcp"]);
-
-        settings_form.elements["eth.ip"].value = uint32ToIp(settings_json["eth"]["ip"]);
-        settings_form.elements["eth.nm"].value = uint32ToIp(settings_json["eth"]["nm"]);
-        settings_form.elements["eth.gw"].value = uint32ToIp(settings_json["eth"]["gw"]);
+        if (settings_json["eth"]["is_available"]) {
+            document.getElementById('eth.mac_address').innerHTML = settings_json["eth"]["mac_address"];
+            settings_form.elements["eth.dhcp"].checked = settings_json["eth"]["dhcp"];
+            toggle_eth_ip_settings(settings_form.elements["eth.dhcp"]);
+            
+            settings_form.elements["eth.ip"].value = uint32ToIp(settings_json["eth"]["ip"]);
+            settings_form.elements["eth.nm"].value = uint32ToIp(settings_json["eth"]["nm"]);
+            settings_form.elements["eth.gw"].value = uint32ToIp(settings_json["eth"]["gw"]);
+        } else {
+            document.getElementById('connection_type').style.display = "none";
+            document.getElementById('ethernet_settings').style.display = "none";
+        }
 
         settings_form.elements["conn_type"].value = settings_json["conn_type"];
         toggle_connection_type(settings_json["conn_type"]);
@@ -685,7 +707,7 @@
         {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
             wifi_networks_populate(JSON.parse(networks_string));
 
-            let settings_string = '\{"mac_address" : "99:99:99:99:99:99",\
+            let settings_string = '\{"wifi.mac_address" : "99:99:99:99:99:99", eth.mac_address" : "99:99:99:99:99:99"\
                 "initial_config" : true,\
                 "wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
                 "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\

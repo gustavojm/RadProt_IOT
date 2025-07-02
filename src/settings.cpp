@@ -58,7 +58,7 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 // constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
 const client_mode_settings_t s_Client_Settings = {                
                 .settings = {
-                    .conn_type = ETHERNET, 
+                    .conn_type = WIFI, 
                     .wifi = {                        
                         .ssid = "C14017750 7261",
                         .password = "malamala",

@@ -33,20 +33,22 @@ void Serial::on_uart_rx() {
 }
 
 void Serial::handle_received_char(char c, BaseType_t &xHigherPriorityTaskWoken) {
-    if (c == terminationChar || index == (uart_buffer_size - 2)) { // if we are about to overflow the buffer
-        uart_buffer[index++] = '\0';                               // Null-terminate the string
+    portDISABLE_INTERRUPTS();
+    if (c == terminationChar || uart_buffer->space_left() == 1) {  // if we are about to overflow the buffer
+        uart_buffer->push('\0');                               // Null-terminate the string
         string_finished_ = true;
         // Notification for read_string to indicate that a whole string was read or that the buffer is full
         vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    } else if (index < uart_buffer_size - 1) {
-        uart_buffer[index++] = c; // Add the character to the buffer
+    } else {
+        uart_buffer->push(c);               // Add the character to the buffer
     }
+    portENABLE_INTERRUPTS();
 }
 
 Serial::Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
-    : uart_num(uart_num), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate), uart_buffer_size(uart_buffer_size),
-      uart_buffer(new char[uart_buffer_size]) {
+    : uart_num(uart_num), gpio_tx(gpio_tx), gpio_rx(gpio_rx), baud_rate(baud_rate),
+      uart_buffer(new RingBuffer<char>(uart_buffer_size)) {
         hardware_uart = uart_num == 0 ? uart0 : uart1;
         hardware_uart_IRQ = uart_num == 0 ? UART0_IRQ : UART1_IRQ;
 
@@ -139,14 +141,20 @@ void Serial::set_receiving_task_handle(TaskHandle_t handle) {
     receiving_task_handle = handle;
 }
 
-int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) {
+int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) { 
     vTaskEnterCritical();
-    size_t bytes = (index < buffer_size) ? index : buffer_size;
-    memcpy(buffer, uart_buffer, bytes);
-    memset(uart_buffer, '\0', uart_buffer_size);
-    index = 0;
+    char c;    
+    size_t bytes = 0;
+    while (uart_buffer->pop(c) && buffer_size-- > 1) {
+        *buffer++ = c;
+        bytes++;
+
+        if (c == '\0') {
+            break;
+        }
+    }
     string_finished_ = false;
-    vTaskExitCritical();
+    vTaskExitCritical();    
     return bytes;
 }
 
@@ -160,7 +168,6 @@ void Serial::set_delimiter(char delimiter) {
 
 // Function to read a string with a timeout
 int Serial::read_string(char *buffer, size_t buffer_size) {
-
     TimeOut_t xTimeOut;
     TickType_t xTicksToWait = timeout_ticks;
     /* Initialize xTimeOut. This records the time at which this function was entered. */
@@ -174,5 +181,8 @@ int Serial::read_string(char *buffer, size_t buffer_size) {
 
         ulTaskNotifyTake(pdTRUE, timeout_ticks);
     }
-    return read_from_receive_buffer(buffer, buffer_size);
+    taskENTER_CRITICAL();
+    int bytes_read = read_from_receive_buffer(buffer, buffer_size);
+    taskEXIT_CRITICAL();
+    return bytes_read;
 }

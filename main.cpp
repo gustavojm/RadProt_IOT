@@ -1,6 +1,3 @@
-#include "enc28j60.h"
-#include "enc28j60_LWIP_FreeRTOS.h"
-
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
@@ -30,6 +27,7 @@
 #include "debug.h"
 #include "websocket.h"
 #include "wifi_fns.h"
+#include "ethernet_fns.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 #define WIFI_CONNECTION_MONITOR_DELAY_MS 1000 // 1 second
@@ -60,39 +58,16 @@ void ws_message_handler(uint8_t *payload, uint32_t length, websocket_msg_type ty
 }
 
 
-void ethernet_connect() {
-    lDebug(Info, "Enabling Ethernet...");
-    const client_mode_settings *client_settings = get_client_mode_settings();
-
-    // Allways initialize after cyw43, to use the tcpip_thread created by it       
-
-    if (client_settings->eth.ipv4.dhcp) {
-        ip4_addr_t ipaddr, netmask, gw;
-        IP4_ADDR(&ipaddr, 0, 0, 0, 0);
-        IP4_ADDR(&netmask, 0, 0, 0, 0);
-        IP4_ADDR(&gw, 0, 0, 0, 0);
-        enc28j60_driver_os_init(ipaddr, netmask, gw);
-        dhcp_start(&net_if);
-        lDebug(Info, "Wait for DHCP to assign an IP");
-        while (net_if.ip_addr.addr == 0) {
-            lDebug(Info, "Waiting for DHCP...");
-            sleep_ms(1000);
-        }
-        lDebug(Info, "Connected! IP Address: %s", ip4addr_ntoa(netif_ip4_addr(&net_if)));
-    } else {
-        enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
-        lDebug(Info, "Static IP set to: %s", &net_if.ip_addr);
-    }
-
-    
-}
-
 static void main_task(__unused void *params) {
 
     if (cyw43_arch_init()) {
-        lDebug(Error, "failed to initialise");
+        lDebug(Error, "Failed to initialise Wi-Fi");
         return;
     }
+
+    if (!enc28j60_state.init()) {
+        lDebug(Error, "Failed to initialise ENC28J60");
+    }    
 
     cyw43_arch_enable_sta_mode();
 

@@ -80,6 +80,7 @@ add_executable(${PROJECT_NAME}
         src/FreeRTOSTimers.cpp
         src/MQTT.cpp
         src/wifi_fns.cpp
+        src/ethernet_fns.cpp
         src/websocket.cpp
         src/crypto.cpp
         src/debug.cpp

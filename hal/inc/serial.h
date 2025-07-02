@@ -9,6 +9,7 @@
 #include "hardware/pio.h"
 #include "uart_rx.pio.h"
 #include "debug.h"
+#include "ringbuffer.h"
 
 class Serial {
 public:
@@ -51,9 +52,7 @@ private:
     
     TickType_t timeout;
     volatile TaskHandle_t receiving_task_handle;
-    char *uart_buffer;
-    size_t uart_buffer_size;
-    volatile size_t index;
+    RingBuffer<char> *uart_buffer;    
     volatile bool string_finished_ = false;
     TickType_t timeout_ticks = pdMS_TO_TICKS(1000); 
     char terminationChar = '\n';

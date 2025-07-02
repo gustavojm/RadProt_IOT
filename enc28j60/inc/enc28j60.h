@@ -38,10 +38,12 @@ class enc28j60 {
         Gpio RST_gpio;
         Gpio IRQ_gpio;
         Spi &spi;
-        SemaphoreHandle_t mutex;
+        SemaphoreHandle_t mutex;        
     };
     
-    using MacAddress = std::array<uint8_t, 6>;
+    using MacAddress = uint8_t[6];
+    struct netif netif{};
+    bool is_available = true;
 
     struct __attribute__((packed)) PacketMetaInfo {
         uint16_t next_packet_pointer;
@@ -67,15 +69,15 @@ class enc28j60 {
     enc28j60(Config config);
 
     void lock();
-    void unlock();
-    void send_packet(uint16_t len);
-    bool init(const MacAddress &mac_address);
+    void unlock();    
+    bool init();
     bool is_link_up();
     uint8_t get_number_of_packets();
     size_t get_incoming_packet(const PacketMetaInfo &info, uint8_t *dst, const size_t max_length);
     PacketMetaInfo get_incoming_packet_info();
     bool send_packet(const uint8_t *src, const size_t len);
     bool link_state_changed();
+    void __not_in_flash_func(generate_mac)();
 
   public:
     Config config_;

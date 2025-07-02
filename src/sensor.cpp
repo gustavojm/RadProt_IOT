@@ -69,12 +69,11 @@ void Sensor::read_task() {
                     pub_settings.start < bytes_received && pub_settings.end < bytes_received) {
                     size_t len = pub_settings.end - pub_settings.start;
 
-
-                    char data[SERIAL_BUFFERS_SIZE];
+                    char data[SERIAL_BUFFERS_SIZE] {};
                     memcpy(data, &serial_buffer[pub_settings.start], len);
                     data[len] = '\0'; // Ensure null-termination
 
-                    //lDebug(Info, "****** %s ******", data);
+                    lDebug(Info, "****** %s ****** sensor %i: **", data, sensor_num);
 
                     if (pub_settings.is_num) {
                         errno = 0; /* To distinguish success/failure after call */
@@ -86,8 +85,8 @@ void Sensor::read_task() {
                         }
 
                         if (endptr == data) {
-                            //lDebug(Warn, "No digits were found in serial buffer: %s", serial_buffer);
-                            lDebug(Warn, "No digits were found in serial buffer");
+                            lDebug(Warn, "No digits were found in serial buffer: %s", serial_buffer);
+                            // lDebug(Warn, "No digits were found in serial buffer");
                         }
 
                         /* If we got here, strtol() successfully parsed a number. */
