@@ -49,6 +49,7 @@
 #include "wifi_fns.h"
 
 #include "post.h"
+#include "watchdog.h"
 
 namespace json = ArduinoJson;
 
@@ -149,6 +150,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
             responseJson["OK"] = "Rebooting";
             flash_safe_execute(write_client_mode_settings, &cs, UINT32_MAX);
             watchdog_reboot(0, SRAM_END, 1000);
+            vTaskSuspend(feedWdTask_handle);
         }        
     }
     return responseJson;

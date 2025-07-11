@@ -58,7 +58,7 @@ const char *get_next_domain_name_component(const char *domain_name, int *positio
 // constexpr int padding_multiplier = (sizeof(client_settings) / FLASH_SECTOR_SIZE) + 1;
 const client_mode_settings_t s_Client_Settings = {                
                 .settings = {
-                    .conn_type = WIFI, 
+                    .conn_type = ETHERNET, 
                     .wifi = {                        
                         .ssid = "C14017750 7261",
                         .password = "malamala",
@@ -80,7 +80,7 @@ const client_mode_settings_t s_Client_Settings = {
                             },
                             
 
-                    .mqtt = {.broker = "192.168.137.175",
+                    .mqtt = {.broker = "192.168.2.2",
                             .port = 1883,
                             .username = "jorgito",
                             .password = "pass_",

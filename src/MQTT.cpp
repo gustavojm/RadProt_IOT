@@ -65,25 +65,23 @@ static void mqtt_task(void *pvParameters) {
 
                 MqttPublishMessage msg;
 
-                while (true) {
-                    if (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
-                        // Publish the message using your MQTT client library
-                        MQTTMessage message;
+                while (xQueueReceive(mqttQueue, &msg, portMAX_DELAY) == pdPASS) {
+                    // Publish the message using your MQTT client library
+                    MQTTMessage message;
 
-                        message.qos = (enum QoS)msg.qos;
-                        message.retained = 0;
-                        message.payload = msg.payload;
-                        message.payloadlen = strlen(msg.payload);
+                    message.qos = (enum QoS)msg.qos;
+                    message.retained = 0;
+                    message.payload = msg.payload;
+                    message.payloadlen = strlen(msg.payload);
 
-                        if ((rc = MQTTPublish(&client, msg.topic, &message)) == 0) {
-                            gpio_put(STATUS_LED_GPIO, true);
-                            xTimerStart(status_led_off_timer, 0);
-                            lDebug(Info, "--MQTT-->");
-                        } else {
-                            lDebug(Error, "Error publishing: %d", rc);
-                            goto close_socket;
-                            // break;
-                        }
+                    if ((rc = MQTTPublish(&client, msg.topic, &message)) == 0) {
+                        gpio_put(STATUS_LED_GPIO, true);
+                        xTimerStart(status_led_off_timer, 0);
+                        lDebug(Info, "--MQTT-->");
+                    } else {
+                        lDebug(Error, "Error publishing: %d", rc);
+                        goto close_socket;
+                        // break;
                     }
                 }
             } else {

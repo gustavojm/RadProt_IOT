@@ -25,6 +25,7 @@ namespace drivers {
 
 class enc28j60 {
     static constexpr uint16_t RXSTART_INIT = 0x0;
+    static constexpr uint16_t RXEND_INIT = 0x19FF;
     static constexpr uint16_t RXSTOP_INIT = (0x1FFF - 0x0600 - 1);
     static constexpr uint16_t TXSTART_INIT = (0x1FFF - 0x0600);
     static constexpr uint16_t TXEND_INIT = 0x1FFF;
@@ -113,6 +114,7 @@ class enc28j60 {
     int wait_phy_ready();
     int poll_ready(uint8_t reg, uint8_t mask, uint8_t val);
     void txfifo_init(uint16_t start, uint16_t end);
+    void rxfifo_init(uint16_t start, uint16_t end);
     bool enc28j60_irq(int irq);
     void tx_clear(bool err);
     int get_free_rxfifo();
@@ -120,6 +122,7 @@ class enc28j60 {
     void enable_interupts();
     static err_t eth_netif_init(struct netif *netif);
     static err_t eth_packet_output(struct netif *netif, struct pbuf *p);
+    uint16_t tx_retry_count = 0;
 };
 
 } // namespace drivers

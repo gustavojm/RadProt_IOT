@@ -22,7 +22,7 @@ void ethernet_connect() {
         lDebug(Info, "Connected! IP Address: %s", ip4addr_ntoa(netif_ip4_addr(&enc28j60_state.netif)));
     } else {
         enc28j60_driver_os_init(client_settings->eth.ipv4.ip, client_settings->eth.ipv4.nm, client_settings->eth.ipv4.gw);
-        lDebug(Info, "Static IP set to: %s", &enc28j60_state.netif.ip_addr);
+        lDebug(Info, "Static IP set to: %s", ip4addr_ntoa(&enc28j60_state.netif.ip_addr));
     }
 
     

@@ -28,6 +28,7 @@
 #include "websocket.h"
 #include "wifi_fns.h"
 #include "ethernet_fns.h"
+#include "watchdog.h"
 
 #define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
 #define WIFI_CONNECTION_MONITOR_DELAY_MS 1000 // 1 second
@@ -66,8 +67,17 @@ static void main_task(__unused void *params) {
     }
 
     if (!enc28j60_state.init()) {
-        lDebug(Error, "Failed to initialise ENC28J60");
+        lDebug(Error, "Failed to initialise ENC28J60 or not available");
     }    
+
+    if (watchdog_enable_caused_reboot()) {
+        // Turn on-board led to indicate reboot by watchdog timer expired
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+        lDebug(Warn, "Rebooted by Watchdog!");
+    }
+
+    // Habilitar el watchdog con un tiempo máximo de 10s entre actualizaciones
+    // watchdog_enable(10000, 1);
 
     cyw43_arch_enable_sta_mode();
 
@@ -174,7 +184,7 @@ static void main_task(__unused void *params) {
 /** 
  * Simulates sensor information sent periodically through UART
  */
-void writeStringTask(void *params) {
+void feedWatchdogTask(void *params) {
     // Set the TX and RX pins by using the function select on the GPIO
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
@@ -187,13 +197,16 @@ void writeStringTask(void *params) {
         vTaskDelay(500);
         // Send out a string, with CR/LF conversions
         uart_puts(uart1, "Hel987.2233lo, UART!\n");
-        vTaskDelay(500);
+        vTaskDelay(100);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
-        vTaskDelay(500);
+        vTaskDelay(100);
         uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
-        vTaskDelay(500);        
+        vTaskDelay(100);
+        watchdog_update();
     }
 }
+
+
 
 
 int main(void) {
@@ -203,9 +216,8 @@ int main(void) {
 
     xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 8, NULL, MAIN_TASK_PRIORITY, &task);
 
-    TaskHandle_t writeStringTask_handle;
-    xTaskCreate(writeStringTask, "WriteStringTask", 256, NULL, MAIN_TASK_PRIORITY, &writeStringTask_handle);
-    vTaskCoreAffinitySet(writeStringTask_handle, 1 << 1);       // It's a mask, not a number of core
+    xTaskCreate(feedWatchdogTask, "feedWdTask", 256, NULL, MAIN_TASK_PRIORITY, &feedWdTask_handle);
+    vTaskCoreAffinitySet(feedWdTask_handle, 1 << 1);       // It's a mask, not a number of core
 
     gpio_init(INITIAL_CONFIG_GPIO);
     gpio_set_dir(INITIAL_CONFIG_GPIO, GPIO_IN);
@@ -213,5 +225,6 @@ int main(void) {
 
     busy_wait_ms(10);
     initial_config = !gpio_get(INITIAL_CONFIG_GPIO);
+     
     vTaskStartScheduler();
 }

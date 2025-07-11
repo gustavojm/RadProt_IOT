@@ -241,3 +241,4 @@ constexpr uint8_t TSV_SIZE = 7;
 #define TSV_GETBIT(x, y) (((x)[TSV_BYTEOF(y)] & TSV_BITMASK(y)) ? 1 : 0)
 
 constexpr uint8_t MAX_TX_RETRYCOUNT = 16;
+

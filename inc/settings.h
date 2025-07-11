@@ -121,6 +121,7 @@ struct ethernet_settings {
         ArduinoJson::MyJsonDocument json;
         json["is_available"] = enc28j60_state.is_available;
         if (enc28j60_state.is_available) {
+            json["dhcp"] = ipv4.dhcp;
             json["ip"] = ipv4.ip.addr;
             json["nm"] = ipv4.nm.addr;
             json["gw"] = ipv4.gw.addr;
