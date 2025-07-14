@@ -19,6 +19,22 @@
 #define ENC_DEBUG_print
 #endif
 
+/*
+ * ERXRDPT need to be set always at odd addresses, refer to errata datasheet
+ */
+static uint16_t erxrdpt_workaround(uint16_t next_packet_ptr, uint16_t start, uint16_t end)
+{
+	uint16_t erxrdpt;
+
+	if ((next_packet_ptr - 1 < start) || (next_packet_ptr - 1 > end))
+		erxrdpt = end;
+	else
+		erxrdpt = next_packet_ptr - 1;
+
+	return erxrdpt;
+}
+
+
 namespace drivers {
 
     enc28j60::enc28j60(Config config) : config_{ config } {
@@ -78,13 +94,15 @@ namespace drivers {
                     dump_tsv("Tx Error", tsv);
                     ENC_DEBUG_print("TX Error");
                     LINK_STATS_INC(link.err);
+                    
                     /* Reset TX logic */
                     write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRTS);
-                    // lock();
-                    // write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
-                    // write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
-                    // txfifo_init(TXSTART_INIT, TXEND_INIT);
-                    // unlock();
+                    lock();
+                    write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
+                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
+                    txfifo_init(TXSTART_INIT, TXEND_INIT);
+                    unlock();
+                    
                     /* Transmit Late collision check for retransmit */
                     if (TSV_GETBIT(tsv, TSV_TXLATECOLLISION)) {
                     ENC_DEBUG_print("LateCollision TXErr \n");
@@ -102,13 +120,17 @@ namespace drivers {
                     /* Check free FIFO space to flag RX overrun */
                     if (get_free_rxfifo() <= 0) {
                         ENC_DEBUG_print("RX Overrun\n");
+
                     }
                     /* Reset RX logic */
                     lock();
+
+                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXEN);
                     write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXRST);
                     write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXRST);
-                    //txfifo_init(TXSTART_INIT, TXEND_INIT);
+                    rxfifo_init(RXSTART_INIT, RXEND_INIT);
                     write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
+                    write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
                     unlock();
                 }
                 /* RX handler */
@@ -165,6 +187,8 @@ namespace drivers {
         config_.RST_gpio.set();
 
         write_op(ENC28J60_SOFT_RESET, 0x00, ENC28J60_SOFT_RESET);
+        /* Errata workaround #1, CLKRDY check is unreliable,
+	     * delay at least 1 ms instead */
         vTaskDelay(pdMS_TO_TICKS(2));
         /** Oscillator ready */
         int retry = 100;
@@ -399,7 +423,7 @@ namespace drivers {
         return n;
     }
 
-    size_t enc28j60::get_incoming_packet(const PacketMetaInfo &info, uint8_t *dst, const size_t length) {
+    size_t enc28j60::get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t length) {
 
 
         if (info.next_packet_pointer > RXEND_INIT) {
@@ -413,7 +437,8 @@ namespace drivers {
             write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
             write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
             unlock();
-            // ndev->stats.rx_errors++;
+            LINK_STATS_INC(link.recv);
+            
             return 0;
         }
 
@@ -556,7 +581,11 @@ namespace drivers {
             return;
         }
         /* set receive buffer start + end */
+        next_packet_pointer = start;
         write_reg16(ERXRDPT, start);
+      	uint16_t erxrdpt = erxrdpt_workaround(next_packet_pointer, start, end);
+    	write_reg16(ERXRDPT, erxrdpt);
+
         write_reg16(ERXND, end);
     }
 
@@ -736,6 +765,6 @@ namespace drivers {
         mac_[3] = id[2];
         mac_[4] = id[3];
         mac_[5] = id[4];
-    }
+    }    
 
 } // namespace drivers

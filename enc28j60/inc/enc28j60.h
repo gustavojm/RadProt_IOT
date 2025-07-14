@@ -74,7 +74,7 @@ class enc28j60 {
     bool init();
     bool is_link_up();
     uint8_t get_number_of_packets();
-    size_t get_incoming_packet(const PacketMetaInfo &info, uint8_t *dst, const size_t max_length);
+    size_t get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t max_length);
     PacketMetaInfo get_incoming_packet_info();
     bool send_packet(const uint8_t *src, const size_t len);
     bool link_state_changed();
@@ -115,10 +115,8 @@ class enc28j60 {
     int poll_ready(uint8_t reg, uint8_t mask, uint8_t val);
     void txfifo_init(uint16_t start, uint16_t end);
     void rxfifo_init(uint16_t start, uint16_t end);
-    bool enc28j60_irq(int irq);
     void tx_clear(bool err);
     int get_free_rxfifo();
-    int rx_interrupt();
     void enable_interupts();
     static err_t eth_netif_init(struct netif *netif);
     static err_t eth_packet_output(struct netif *netif, struct pbuf *p);
