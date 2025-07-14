@@ -308,7 +308,7 @@ void websocket_server::task() {
                     lwip_close(client.socket);
                     client.socket = -1;
                     client.established = false;
-                    continue;
+                    //continue;
                 }
                 
                 // Process received data
@@ -333,18 +333,18 @@ void websocket_server::task() {
                 client.socket = -1;
                 client.established = false;
             }
-        }
-        
-        // Check for queued messages to send
-        while (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
-            if (client.established) {
-                websocket_message ws_msg;
-                ws_msg.message = (uint8_t *)&queued_msg.payload;
-                ws_msg.msg_size = queued_msg.payload_length;
-                ws_msg.msg_type = WS_TYPE_STRING;
-                send_message(&ws_msg);
+            // Check for queued messages to send
+            while (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
+                if (client.established) {
+                    websocket_message ws_msg;
+                    ws_msg.message = (uint8_t *)&queued_msg.payload;
+                    ws_msg.msg_size = queued_msg.payload_length;
+                    ws_msg.msg_type = WS_TYPE_STRING;
+                    send_message(&ws_msg);
+                }
             }
-        }
+        } 
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 

@@ -21,6 +21,10 @@
 
 inline SemaphoreHandle_t irq_loop_sem;
 
+#define TSV_BYTEOF(x)((x) / 8)
+#define TSV_BITMASK(x) (1 << ((x) % 8))
+#define TSV_GETBIT(x, y) (((x)[TSV_BYTEOF(y)] & TSV_BITMASK(y)) ? 1 : 0)
+
 namespace drivers {
 
 class enc28j60 {
@@ -32,6 +36,7 @@ class enc28j60 {
     static constexpr uint16_t TXSTOP_INIT = 0x1FFF;
     static constexpr uint32_t AFTER_RESET_DELAY_MS = 100;
     static constexpr size_t ETHERNET_MTU = 1500;
+    static constexpr uint8_t MAX_TX_RETRYCOUNT = 16;
 
   public:
     struct Config {
@@ -114,8 +119,9 @@ class enc28j60 {
     int wait_phy_ready();
     int poll_ready(uint8_t reg, uint8_t mask, uint8_t val);
     void txfifo_init(uint16_t start, uint16_t end);
+    void reset_tx_logic();
     void rxfifo_init(uint16_t start, uint16_t end);
-    void tx_clear(bool err);
+    void reset_rx_logic();
     int get_free_rxfifo();
     void enable_interupts();
     static err_t eth_netif_init(struct netif *netif);

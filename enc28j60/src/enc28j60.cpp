@@ -80,9 +80,10 @@ namespace drivers {
                     tx_retry_count = 0;
                     if (read_reg(ESTAT) & ESTAT_TXABRT) {
                         ENC_DEBUG_print("Tx Error (aborted)\n");
+                        LINK_STATS_INC(link.err);
                         err = true;
                     }
-                    tx_clear(err);
+                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
                     write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_TXIF);
                 }
                 /* TX Error handler */
@@ -95,13 +96,7 @@ namespace drivers {
                     ENC_DEBUG_print("TX Error");
                     LINK_STATS_INC(link.err);
                     
-                    /* Reset TX logic */
-                    write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRTS);
-                    lock();
-                    write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
-                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
-                    txfifo_init(TXSTART_INIT, TXEND_INIT);
-                    unlock();
+                    reset_tx_logic();
                     
                     /* Transmit Late collision check for retransmit */
                     if (TSV_GETBIT(tsv, TSV_TXLATECOLLISION)) {
@@ -109,9 +104,9 @@ namespace drivers {
                     	if (tx_retry_count++ < MAX_TX_RETRYCOUNT)
                     		write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRTS);
                     	else
-                    		tx_clear(true);
+                    		write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
                     } else
-                    	tx_clear(true);
+                    	write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
                     write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_TXERIF | EIR_TXIF);
                 }
                 /* RX Error handler */
@@ -122,16 +117,8 @@ namespace drivers {
                         ENC_DEBUG_print("RX Overrun\n");
 
                     }
-                    /* Reset RX logic */
-                    lock();
-
-                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXEN);
-                    write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXRST);
-                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXRST);
-                    rxfifo_init(RXSTART_INIT, RXEND_INIT);
-                    write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
-                    write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
-                    unlock();
+                    reset_rx_logic();
+                    LINK_STATS_INC(link.err);
                 }
                 /* RX handler */
                 int pk_counter = read_reg(EPKTCNT);
@@ -145,10 +132,10 @@ namespace drivers {
                             get_incoming_packet(packet_info, (uint8_t *)ptr->payload, packet_info.byte_count);
 
                             LINK_STATS_INC(link.recv);
-                            ENC_DEBUG_print("Received packet with len %d!\r\n", packet_info.byte_count);
+                            ENC_DEBUG_print("Received packet with len %d!\n", packet_info.byte_count);
 
                             if (netif.input(ptr, &netif) != ERR_OK) {
-                                ENC_DEBUG_print("Error processing frame input\r\n");
+                                ENC_DEBUG_print("Error processing frame input\n");
                                 pbuf_free(ptr);
                             }
                         }
@@ -428,16 +415,9 @@ namespace drivers {
 
         if (info.next_packet_pointer > RXEND_INIT) {
             ENC_DEBUG_print("Invalid packet address!!");
-            /* packet address corrupted: reset RX logic */
-            lock();
-            write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXEN);
-            write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXRST);
-            write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXRST);
-            rxfifo_init(RXSTART_INIT, RXEND_INIT);
-            write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
-            write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
-            unlock();
-            LINK_STATS_INC(link.recv);
+            /* packet address corrupted */
+            reset_rx_logic();
+            LINK_STATS_INC(link.err);
             
             return 0;
         }
@@ -574,6 +554,15 @@ namespace drivers {
         write_reg16(ETXND, end);   // ETXNDL
     }
 
+
+    void enc28j60::reset_tx_logic() {
+        lock();
+        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
+        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
+        txfifo_init(TXSTART_INIT, TXEND_INIT);
+        unlock();
+    }
+
     void enc28j60::rxfifo_init(uint16_t start, uint16_t end) {
         if (start > 0x1FFF || end > 0x1FFF || start > end) {
             // ENC_DEBUG_print("%s(%d, %d) TXFIFO bad parameters!\n",
@@ -589,10 +578,15 @@ namespace drivers {
         write_reg16(ERXND, end);
     }
 
-
-
-    void enc28j60::tx_clear(bool err) {
-        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
+    void enc28j60::reset_rx_logic() {
+        lock();
+        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXEN);
+        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXRST);
+        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXRST);
+        rxfifo_init(RXSTART_INIT, RXEND_INIT);
+        write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
+        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+        unlock();
     }
 
     /*
@@ -658,17 +652,17 @@ namespace drivers {
         uint8_t *buf = flatten_pbuf(p);
 
         if (!buf) {
-            ENC_DEBUG_print("Failed to flatten pbuf\r\n");
+            ENC_DEBUG_print("Failed to flatten pbuf\n");
             return ERR_MEM; // Memory allocation failed
         }
 
         if (!me->send_packet(buf, p->tot_len)) {
-            ENC_DEBUG_print("Cannot send packet of length %d\r\n", p->tot_len);
+            ENC_DEBUG_print("Cannot send packet of length %d\n", p->tot_len);
             delete[] buf;
             return ERR_ABRT;
         }
 
-        ENC_DEBUG_print("Sent packet with len %d[%d]!\r\n", p->len, p->tot_len);
+        ENC_DEBUG_print("Sent packet with len %d[%d]!\n", p->len, p->tot_len);
         delete[] buf;
         return ERR_OK;
     }

@@ -235,10 +235,3 @@ constexpr uint8_t TSV_TXPAUSEFRAME = 49;
 constexpr uint8_t TSV_BACKPRESSUREAPP = 50;
 constexpr uint8_t TSV_TXVLANTAGFRAME = 51;
 constexpr uint8_t TSV_SIZE = 7;
-
-#define TSV_BYTEOF(x)((x) / 8)
-#define TSV_BITMASK(x) (1 << ((x) % 8))
-#define TSV_GETBIT(x, y) (((x)[TSV_BYTEOF(y)] & TSV_BITMASK(y)) ? 1 : 0)
-
-constexpr uint8_t MAX_TX_RETRYCOUNT = 16;
-
