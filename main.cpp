@@ -206,9 +206,6 @@ void feedWatchdogTask(void *params) {
     }
 }
 
-
-
-
 int main(void) {
     stdio_init_all();
     TaskHandle_t task;

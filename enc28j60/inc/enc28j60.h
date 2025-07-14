@@ -28,12 +28,19 @@ inline SemaphoreHandle_t irq_loop_sem;
 namespace drivers {
 
 class enc28j60 {
+    /* buffer boundaries applied to internal 8K ram
+    * entire available packet buffer space is allocated.
+
+    * Give TX buffer space for one full ethernet frame (~1500 bytes)
+    * receive buffer gets the rest */
+    static constexpr uint16_t TXSTART_INIT = 0x1A00;
+    static constexpr uint16_t TXEND_INIT = 0x1FFF;
+
+    /* Put RX buffer at 0 as suggested by the Errata datasheet */
     static constexpr uint16_t RXSTART_INIT = 0x0;
     static constexpr uint16_t RXEND_INIT = 0x19FF;
-    static constexpr uint16_t RXSTOP_INIT = (0x1FFF - 0x0600 - 1);
-    static constexpr uint16_t TXSTART_INIT = (0x1FFF - 0x0600);
-    static constexpr uint16_t TXEND_INIT = 0x1FFF;
-    static constexpr uint16_t TXSTOP_INIT = 0x1FFF;
+
+
     static constexpr uint32_t AFTER_RESET_DELAY_MS = 100;
     static constexpr size_t ETHERNET_MTU = 1500;
     static constexpr uint8_t MAX_TX_RETRYCOUNT = 16;

@@ -186,14 +186,13 @@ namespace drivers {
             }
         }
 
+        //rxfifo_init(RXSTART_INIT, RXEND_INIT);
+	    txfifo_init(TXSTART_INIT, TXEND_INIT);
+
         /** RX buffer ptr */
         write_reg16(ERXST, RXSTART_INIT);
         write_reg16(ERXRDPT, RXSTART_INIT);
-        write_reg16(ERXND, RXSTOP_INIT);
-
-        /** TX buffer ptr */
-        write_reg16(ETXST, TXSTART_INIT);
-        write_reg16(ETXND, TXSTOP_INIT);
+        write_reg16(ERXND, RXEND_INIT);
 
         write_phy(PHLCON, 0x476);
 
@@ -545,7 +544,7 @@ namespace drivers {
 
     void enc28j60::txfifo_init(uint16_t start, uint16_t end) {
         if (start > 0x1FFF || end > 0x1FFF || start > end) {
-            // ENC_DEBUG_print("%s(%d, %d) TXFIFO bad parameters!\n",
+            ENC_DEBUG_print("%s(%d, %d) TXFIFO bad parameters!\n");
             // 		__func__, start, end);
             return;
         }
@@ -565,13 +564,12 @@ namespace drivers {
 
     void enc28j60::rxfifo_init(uint16_t start, uint16_t end) {
         if (start > 0x1FFF || end > 0x1FFF || start > end) {
-            // ENC_DEBUG_print("%s(%d, %d) TXFIFO bad parameters!\n",
+            ENC_DEBUG_print("%s(%d, %d) RXFIFO bad parameters!\n");
             // 		__func__, start, end);
             return;
         }
         /* set receive buffer start + end */
         next_packet_pointer = start;
-        write_reg16(ERXRDPT, start);
       	uint16_t erxrdpt = erxrdpt_workaround(next_packet_pointer, start, end);
     	write_reg16(ERXRDPT, erxrdpt);
 
