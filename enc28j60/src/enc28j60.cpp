@@ -22,18 +22,16 @@
 /*
  * ERXRDPT need to be set always at odd addresses, refer to errata datasheet
  */
-static uint16_t erxrdpt_workaround(uint16_t next_packet_ptr, uint16_t start, uint16_t end)
-{
-	uint16_t erxrdpt;
+static uint16_t erxrdpt_workaround(uint16_t next_packet_ptr, uint16_t start, uint16_t end) {
+    uint16_t erxrdpt;
 
-	if ((next_packet_ptr - 1 < start) || (next_packet_ptr - 1 > end))
-		erxrdpt = end;
-	else
-		erxrdpt = next_packet_ptr - 1;
+    if ((next_packet_ptr - 1 < start) || (next_packet_ptr - 1 > end))
+        erxrdpt = end;
+    else
+        erxrdpt = next_packet_ptr - 1;
 
-	return erxrdpt;
+    return erxrdpt;
 }
-
 
 namespace drivers {
 
@@ -57,10 +55,12 @@ namespace drivers {
                 reg_bfclr(EIE, EIE_INTIE);
 
                 intflags = regb_read(EIR);
+
                 /* DMA interrupt handler (not currently used) */
                 if ((intflags & EIR_DMAIF) != 0) {
                     reg_bfclr(EIR, EIR_DMAIF);
                 }
+
                 /* LINK changed handler */
                 if ((intflags & EIR_LINKIF) != 0) {
                     if (is_link_up()) {
@@ -73,6 +73,7 @@ namespace drivers {
                     /* read PHIR to clear the flag */
                     read_phy(PHIR);
                 }
+
                 /* TX complete handler */
                 if (((intflags & EIR_TXIF) != 0) && ((intflags & EIR_TXERIF) == 0)) {
                     bool err = false;
@@ -86,40 +87,40 @@ namespace drivers {
                     reg_bfclr(ECON1, ECON1_TXRTS);
                     reg_bfclr(EIR, EIR_TXIF);
                 }
+
                 /* TX Error handler */
                 if ((intflags & EIR_TXERIF) != 0) {
                     // uint8_t tsv[TSV_SIZE];
-                    ENC_DEBUG_print("intTXErr\n");
                     uint8_t tsv[TSV_SIZE];
                     read_tsv(tsv);
-                    dump_tsv("Tx Error", tsv);
-                    ENC_DEBUG_print("TX Error");
+                    dump_tsv("intTXErr", tsv);
                     LINK_STATS_INC(link.err);
-                    
+
                     reset_tx_logic();
-                    
+
                     /* Transmit Late collision check for retransmit */
                     if (TSV_GETBIT(tsv, TSV_TXLATECOLLISION)) {
-                    ENC_DEBUG_print("LateCollision TXErr \n");
-                    	if (tx_retry_count++ < MAX_TX_RETRYCOUNT)
-                    		reg_bfset(ECON1, ECON1_TXRTS);
-                    	else
-                    		reg_bfclr(ECON1, ECON1_TXRTS);
+                        ENC_DEBUG_print("LateCollision TXErr \n");
+                        if (tx_retry_count++ < MAX_TX_RETRYCOUNT)
+                            reg_bfset(ECON1, ECON1_TXRTS);
+                        else
+                            reg_bfclr(ECON1, ECON1_TXRTS);
                     } else
-                    	reg_bfclr(ECON1, ECON1_TXRTS);
+                        reg_bfclr(ECON1, ECON1_TXRTS);
                     reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
                 }
+
                 /* RX Error handler */
                 if ((intflags & EIR_RXERIF) != 0) {
                     ENC_DEBUG_print("intRXErr\n");
                     /* Check free FIFO space to flag RX overrun */
                     if (get_free_rxfifo() <= 0) {
                         ENC_DEBUG_print("RX Overrun\n");
-
                     }
                     reset_rx_logic();
                     LINK_STATS_INC(link.err);
                 }
+
                 /* RX handler */
                 int pk_counter = regb_read(EPKTCNT);
                 while (pk_counter-- > 0) {
@@ -140,7 +141,7 @@ namespace drivers {
                             }
                         }
                     } else {
-                        get_incoming_packet(packet_info, nullptr, 0);   // Advance to the next packet discarding current
+                        get_incoming_packet(packet_info, nullptr, 0); // Advance to the next packet discarding current
                     }
                 }
 
@@ -157,8 +158,6 @@ namespace drivers {
         xSemaphoreGiveFromISR(irq_loop_sem, &xHigherPriorityTaskWoken);
         gpio_acknowledge_irq(gpio, events);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-
-        // Acknowledge the interrupt
         return;
     }
 
@@ -175,10 +174,11 @@ namespace drivers {
 
         spi_write_op(ENC28J60_SOFT_RESET, 0x00, ENC28J60_SOFT_RESET);
         /* Errata workaround #1, CLKRDY check is unreliable,
-	     * delay at least 1 ms instead */
+         * delay at least 1 ms instead */
         vTaskDelay(pdMS_TO_TICKS(2));
-        /** Oscillator ready */
-        int retry = 100;
+        /* Oscillator ready */
+
+        int retry = 10;
         while (!(regb_read(ESTAT) & ESTAT_CLKRDY)) {
             if (!(retry--)) {
                 is_available = false;
@@ -187,11 +187,9 @@ namespace drivers {
         }
 
         rxfifo_init(RXSTART_INIT, RXEND_INIT);
-	    txfifo_init(TXSTART_INIT, TXEND_INIT);
-        
-        write_phy(PHLCON, ENC28J60_LAMPS_MODE);
+        txfifo_init(TXSTART_INIT, TXEND_INIT);
 
-        read_phy(PHHID1);
+        write_phy(PHLCON, ENC28J60_LAMPS_MODE);
 
         /* default filter mode: (unicast OR broadcast) AND crc valid */
         regb_write(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN);
@@ -199,7 +197,6 @@ namespace drivers {
         /** Set the MARXEN bit in MACON1 to enable the MAC to receive frames. If using full duplex, most
          * applications should also set TXPAUS and RXPAUS to allow IEEE defined flow control to function
          */
-        select_bank(MACON1);
         reg_bfset(MACON1, MACON1_MARXEN);
         /** Configure the PADCFG, TXCRCEN and FULDPX bits of MACON3. */
         reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
@@ -207,12 +204,11 @@ namespace drivers {
         /** Program the MAMXFL registers with the maxi- mum frame length to be permitted to be received
          * or transmitted. MAX PDU - offset */
         /*
-        * MACLCON1 (default)
-        * MACLCON2 (default)
-        * Set the maximum packet size which the controller will accept.
-        */
+         * MACLCON1 (default)
+         * MACLCON2 (default)
+         * Set the maximum packet size which the controller will accept.
+         */
         regw_write(MAMXFL, MAX_FRAMELEN);
-
 
         /** Configure the Back-to-Back Inter-Packet Gap register, MABBIPG. Most applications will pro-
          * gram this register with 15h when Full-Duplex mode is used and 12h when Half-Duplex mode is
@@ -241,11 +237,10 @@ namespace drivers {
         write_phy(PHCON2, PHCON2_HDLDIS);
 
         /** Start receiving */
-        select_bank(ECON1);
         reg_bfset(EIE, EIE_INTIE | EIE_PKTIE | EIR_LINKIF);
         reg_bfset(ECON1, ECON1_RXEN);
 
-        uint8_t rev = regb_read(EREVID);        
+        uint8_t rev = regb_read(EREVID);
 
         is_available = rev > 0;
 
@@ -319,8 +314,8 @@ namespace drivers {
      * Register bit field Clear
      */
     void enc28j60::reg_bfclr(uint8_t addr, uint8_t mask) {
-	    select_bank(addr);
-	    spi_write_op(ENC28J60_BIT_FIELD_CLR, addr, mask);
+        select_bank(addr);
+        spi_write_op(ENC28J60_BIT_FIELD_CLR, addr, mask);
     }
 
     void enc28j60::select_bank(const uint8_t address) {
@@ -425,16 +420,14 @@ namespace drivers {
 
     size_t enc28j60::get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t length) {
 
-
         if (info.next_packet_pointer > RXEND_INIT) {
             ENC_DEBUG_print("Invalid packet address!!");
             /* packet address corrupted */
             reset_rx_logic();
             LINK_STATS_INC(link.err);
-            
+
             return 0;
         }
-
 
         size_t bytes_read;
         if (dst != nullptr) {
@@ -448,7 +441,12 @@ namespace drivers {
         return bytes_read;
     }
 
-    bool enc28j60::send_packet(const uint8_t *src, const size_t len) {
+    bool enc28j60::send_pbuf2(struct pbuf *p) {
+        if (p->tot_len > (TXEND_INIT - TXSTART_INIT)) {
+            ENC_DEBUG_print("%s(%d, %d) packet too big!\n");
+            return false;
+        }
+
         uint8_t retry = 0;
 
         while (1) {
@@ -493,21 +491,23 @@ namespace drivers {
             reg_bfclr(ECON1, ECON1_TXRST);
             reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
 
-            // prepare new transmission
-            // if (retry == 0) {
-            // Set the write pointer to start of transmit buffer area
+            // Prepare new transmission
             regw_write(EWRPT, TXSTART_INIT);
 
             // Set the TXND pointer to correspond to the packet size given
-            regw_write(ETXND, TXSTART_INIT + len);
+            regw_write(ETXND, TXSTART_INIT + p->tot_len);
 
             // Write per-packet control byte
             spi_write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
 
-            // Copy the packet into the transmit buffer
-            write_buff(src, len);
-            //}
+            // Copy pbuf chain to transmit buffer (buffer position on ENC28J60 set to autoincrement with every byte)
+            for (const pbuf *q = p; q != nullptr; q = q->next) {
+                if (q->payload && q->len > 0) {
 
+                    // Copy the packet into the transmit buffer
+                    write_buff((uint8_t *)q->payload, q->len);
+                }
+            }            
             // Initiate transmission
             reg_bfset(ECON1, ECON1_TXRTS);
             if (retry == 0) {
@@ -516,6 +516,77 @@ namespace drivers {
 
             retry++;
         }
+        return false;
+    }
+
+
+    bool enc28j60::send_pbuf(struct pbuf *p) {
+        if (p->tot_len > (TXEND_INIT - TXSTART_INIT)) {
+            ENC_DEBUG_print("%s(%d, %d) packet too big!\n");
+            return false;
+        }
+
+        uint8_t retry = 0;
+#define MAX_RETRIES       1000U
+#define MAX_TX_RETRYCOUNT 3 // Define if not already defined
+
+        while (retry <= MAX_TX_RETRYCOUNT) {
+            // Wait until last transmission has finished
+            uint16_t count = 0;
+            while ((regb_read(EIR) & (EIR_TXIF | EIR_TXERIF)) == 0 && ++count < MAX_RETRIES) {
+                // Optional: add small delay to prevent busy waiting
+            }
+
+            bool transmission_stuck = (count >= MAX_RETRIES);
+            bool transmission_error = (regb_read(EIR) & EIR_TXERIF) != 0;
+
+            if (transmission_stuck || transmission_error) {
+                // Cancel previous transmission if stuck or error occurred
+                reg_bfclr(ECON1, ECON1_TXRTS);
+            }
+
+            // Check for late collision (hardware errata workaround)
+            uint8_t tsv[TSV_SIZE];
+            read_tsv(tsv);
+
+            bool late_collision = transmission_error && (TSV_GETBIT(tsv, TSV_TXLATECOLLISION));
+
+            // Always reset transmit logic (Errata Issue 12)
+            reg_bfset(ECON1, ECON1_TXRST);
+            reg_bfclr(ECON1, ECON1_TXRST);
+            reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
+
+            // Prepare new transmission
+            regw_write(EWRPT, TXSTART_INIT);
+
+            // Set the TXND pointer to correspond to the packet size given
+            regw_write(ETXND, TXSTART_INIT + p->tot_len);
+
+            // Write per-packet control byte
+            spi_write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
+
+            // Copy pbuf chain to transmit buffer (buffer position on ENC28J60 set to autoincrement with every byte)
+            for (const pbuf *q = p; q != nullptr; q = q->next) {
+                if (q->payload && q->len > 0) {
+
+                    // Copy the packet into the transmit buffer
+                    write_buff((uint8_t *)q->payload, q->len);
+                }
+            }
+
+            // Initiate transmission
+            reg_bfset(ECON1, ECON1_TXRTS);
+
+            // If this is the first attempt or no late collision, consider it successful
+            if (retry == 0 || !late_collision) {
+                return true;
+            }
+
+            // Increment retry counter for late collision cases
+            retry++;
+        }
+
+        // Max retries exceeded
         return false;
     }
 
@@ -567,7 +638,6 @@ namespace drivers {
         regw_write(ETXND, end);   // ETXNDL
     }
 
-
     void enc28j60::reset_tx_logic() {
         lock();
         reg_bfset(ECON1, ECON1_TXRST);
@@ -585,11 +655,11 @@ namespace drivers {
         /* set receive buffer start + end */
         next_packet_pointer = start;
         regw_write(ERXST, RXSTART_INIT);
-      	
-        uint16_t erxrdpt = erxrdpt_workaround(next_packet_pointer, start, end);
-    	regw_write(ERXRDPT, erxrdpt);
 
-        regw_write(ERXND, end);        
+        uint16_t erxrdpt = erxrdpt_workaround(next_packet_pointer, start, end);
+        regw_write(ERXRDPT, erxrdpt);
+
+        regw_write(ERXND, end);
     }
 
     void enc28j60::reset_rx_logic() {
@@ -632,52 +702,16 @@ namespace drivers {
         return free_space;
     }
 
-    static uint8_t *flatten_pbuf(const pbuf *p) {
-        if (!p || p->tot_len == 0) {
-            return nullptr; // Handle null or empty pbuf
-        }
-
-        uint8_t *buf = new uint8_t[p->tot_len];
-        if (!buf) {
-            return nullptr; // Handle allocation failure
-        }
-
-        size_t copied = 0;
-        for (const pbuf *q = p; q != nullptr; q = q->next) {
-            if (q->payload && q->len > 0) {
-                std::memcpy(buf + copied, q->payload, q->len);
-                copied += q->len;
-            }
-        }
-
-        // Optional: check if we copied the expected number of bytes
-        if (copied != p->tot_len) {
-            delete[] buf; // Clean up in case of unexpected error
-            return nullptr;
-        }
-
-        return buf;
-    }
-
     err_t enc28j60::eth_packet_output(struct netif *netif, struct pbuf *p) {
         LINK_STATS_INC(link.xmit);
         drivers::enc28j60 *me = static_cast<drivers::enc28j60 *>(netif->state);
 
-        uint8_t *buf = flatten_pbuf(p);
-
-        if (!buf) {
-            ENC_DEBUG_print("Failed to flatten pbuf\n");
-            return ERR_MEM; // Memory allocation failed
-        }
-
-        if (!me->send_packet(buf, p->tot_len)) {
+        if (!me->send_pbuf2(p)) {
             ENC_DEBUG_print("Cannot send packet of length %d\n", p->tot_len);
-            delete[] buf;
             return ERR_ABRT;
         }
 
         ENC_DEBUG_print("Sent packet with len %d[%d]!\n", p->len, p->tot_len);
-        delete[] buf;
         return ERR_OK;
     }
 
@@ -701,7 +735,7 @@ namespace drivers {
      */
     void enc28j60::read_tsv(uint8_t tsv[TSV_SIZE]) {
         int16_t endptr = regw_read(ETXND);
-        ENC_DEBUG_print("enc28j60: reading TSV at addr:0x%04x\n", endptr + 1);
+        // ENC_DEBUG_print("enc28j60: reading TSV at addr:0x%04x\n", endptr + 1);
         regw_write(ERDPT, endptr + 1);
         read_buff(tsv, TSV_SIZE);
     }
@@ -773,6 +807,6 @@ namespace drivers {
         mac_[3] = id[2];
         mac_[4] = id[3];
         mac_[5] = id[4];
-    }    
+    }
 
 } // namespace drivers
