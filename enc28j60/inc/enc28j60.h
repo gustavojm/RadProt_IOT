@@ -39,11 +39,14 @@ class enc28j60 {
     /* Put RX buffer at 0 as suggested by the Errata datasheet */
     static constexpr uint16_t RXSTART_INIT = 0x0;
     static constexpr uint16_t RXEND_INIT = 0x19FF;
-
-
+  
     static constexpr uint32_t AFTER_RESET_DELAY_MS = 100;
     static constexpr size_t ETHERNET_MTU = 1500;
     static constexpr uint8_t MAX_TX_RETRYCOUNT = 16;
+
+    /* maximum ethernet frame length */
+    static constexpr uint16_t MAX_FRAMELEN = 1518;
+
 
   public:
     struct Config {
@@ -98,15 +101,15 @@ class enc28j60 {
 
     void irq_deferred_handler();
 
-    void write_op(uint8_t operation, const uint8_t reg, const uint8_t data);
-    uint8_t read_op(uint8_t operation, const uint8_t reg);
+    void spi_write_op(uint8_t operation, const uint8_t reg, const uint8_t data);
+    uint8_t spi_read_op(uint8_t operation, const uint8_t reg);
     void select_bank(const uint8_t address);
 
-    void write_reg(const uint8_t addr, const uint8_t data);
-    void write_reg16(const uint8_t addr, const uint16_t data);
+    void regb_write(const uint8_t addr, const uint8_t data);
+    void regw_write(const uint8_t addr, const uint16_t data);
 
-    uint8_t read_reg(const uint8_t reg);
-    uint16_t read_reg16(const uint8_t reg);
+    uint8_t regb_read(const uint8_t reg);
+    uint16_t regw_read(const uint8_t reg);
 
     void write_phy(const uint8_t reg, const uint16_t data);
     uint16_t read_phy(const uint8_t reg);
@@ -128,6 +131,8 @@ class enc28j60 {
     void txfifo_init(uint16_t start, uint16_t end);
     void reset_tx_logic();
     void rxfifo_init(uint16_t start, uint16_t end);
+    void reg_bfset(uint8_t addr, uint8_t mask);
+    void reg_bfclr(uint8_t addr, uint8_t mask);
     void reset_rx_logic();
     int get_free_rxfifo();
     void enable_interupts();

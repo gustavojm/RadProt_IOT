@@ -182,6 +182,7 @@ static void main_task(__unused void *params) {
 }
 
 /** 
+ * Updates watchdog timer
  * Simulates sensor information sent periodically through UART
  */
 void feedWatchdogTask(void *params) {

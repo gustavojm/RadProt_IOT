@@ -235,3 +235,6 @@ constexpr uint8_t TSV_TXPAUSEFRAME = 49;
 constexpr uint8_t TSV_BACKPRESSUREAPP = 50;
 constexpr uint8_t TSV_TXVLANTAGFRAME = 51;
 constexpr uint8_t TSV_SIZE = 7;
+
+/* Preferred half duplex: LEDA: Link status LEDB: Rx/Tx activity */
+constexpr uint16_t ENC28J60_LAMPS_MODE = 0x3476;

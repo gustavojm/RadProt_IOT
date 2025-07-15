@@ -54,12 +54,12 @@ namespace drivers {
             if (xSemaphoreTake(irq_loop_sem, portMAX_DELAY) == pdPASS) {
                 int intflags;
                 /* disable further interrupts */
-                write_op(ENC28J60_BIT_FIELD_CLR, EIE, EIE_INTIE);
+                reg_bfclr(EIE, EIE_INTIE);
 
-                intflags = read_reg(EIR);
+                intflags = regb_read(EIR);
                 /* DMA interrupt handler (not currently used) */
                 if ((intflags & EIR_DMAIF) != 0) {
-                    write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_DMAIF);
+                    reg_bfclr(EIR, EIR_DMAIF);
                 }
                 /* LINK changed handler */
                 if ((intflags & EIR_LINKIF) != 0) {
@@ -78,13 +78,13 @@ namespace drivers {
                     bool err = false;
                     // ENC_DEBUG_print("intTX\n");
                     tx_retry_count = 0;
-                    if (read_reg(ESTAT) & ESTAT_TXABRT) {
+                    if (regb_read(ESTAT) & ESTAT_TXABRT) {
                         ENC_DEBUG_print("Tx Error (aborted)\n");
                         LINK_STATS_INC(link.err);
                         err = true;
                     }
-                    write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
-                    write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_TXIF);
+                    reg_bfclr(ECON1, ECON1_TXRTS);
+                    reg_bfclr(EIR, EIR_TXIF);
                 }
                 /* TX Error handler */
                 if ((intflags & EIR_TXERIF) != 0) {
@@ -102,12 +102,12 @@ namespace drivers {
                     if (TSV_GETBIT(tsv, TSV_TXLATECOLLISION)) {
                     ENC_DEBUG_print("LateCollision TXErr \n");
                     	if (tx_retry_count++ < MAX_TX_RETRYCOUNT)
-                    		write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRTS);
+                    		reg_bfset(ECON1, ECON1_TXRTS);
                     	else
-                    		write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
+                    		reg_bfclr(ECON1, ECON1_TXRTS);
                     } else
-                    	write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
-                    write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_TXERIF | EIR_TXIF);
+                    	reg_bfclr(ECON1, ECON1_TXRTS);
+                    reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
                 }
                 /* RX Error handler */
                 if ((intflags & EIR_RXERIF) != 0) {
@@ -121,7 +121,7 @@ namespace drivers {
                     LINK_STATS_INC(link.err);
                 }
                 /* RX handler */
-                int pk_counter = read_reg(EPKTCNT);
+                int pk_counter = regb_read(EPKTCNT);
                 while (pk_counter-- > 0) {
                     auto packet_info = get_incoming_packet_info();
 
@@ -145,7 +145,7 @@ namespace drivers {
                 }
 
                 /* re-enable interrupts */
-                write_op(ENC28J60_BIT_FIELD_SET, EIE, EIE_INTIE);
+                reg_bfset(EIE, EIE_INTIE);
             }
         }
     }
@@ -173,81 +173,79 @@ namespace drivers {
         vTaskDelay(pdMS_TO_TICKS(AFTER_RESET_DELAY_MS));
         config_.RST_gpio.set();
 
-        write_op(ENC28J60_SOFT_RESET, 0x00, ENC28J60_SOFT_RESET);
+        spi_write_op(ENC28J60_SOFT_RESET, 0x00, ENC28J60_SOFT_RESET);
         /* Errata workaround #1, CLKRDY check is unreliable,
 	     * delay at least 1 ms instead */
         vTaskDelay(pdMS_TO_TICKS(2));
         /** Oscillator ready */
         int retry = 100;
-        while (!(read_reg(ESTAT) & ESTAT_CLKRDY)) {
+        while (!(regb_read(ESTAT) & ESTAT_CLKRDY)) {
             if (!(retry--)) {
                 is_available = false;
                 return is_available;
             }
         }
 
-        //rxfifo_init(RXSTART_INIT, RXEND_INIT);
+        rxfifo_init(RXSTART_INIT, RXEND_INIT);
 	    txfifo_init(TXSTART_INIT, TXEND_INIT);
-
-        /** RX buffer ptr */
-        write_reg16(ERXST, RXSTART_INIT);
-        write_reg16(ERXRDPT, RXSTART_INIT);
-        write_reg16(ERXND, RXEND_INIT);
-
-        write_phy(PHLCON, 0x476);
+        
+        write_phy(PHLCON, ENC28J60_LAMPS_MODE);
 
         read_phy(PHHID1);
-        /** FILTERS setup */
-        write_reg(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_PMEN | ERXFCON_BCEN);
 
-        write_reg16(EPMM0, 0x303f);
-        write_reg16(EPMCS, 0xf7f9);
+        /* default filter mode: (unicast OR broadcast) AND crc valid */
+        regb_write(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN);
 
         /** Set the MARXEN bit in MACON1 to enable the MAC to receive frames. If using full duplex, most
          * applications should also set TXPAUS and RXPAUS to allow IEEE defined flow control to function
          */
         select_bank(MACON1);
-        write_op(ENC28J60_BIT_FIELD_SET, MACON1, MACON1_MARXEN);
+        reg_bfset(MACON1, MACON1_MARXEN);
         /** Configure the PADCFG, TXCRCEN and FULDPX bits of MACON3. */
-        write_op(ENC28J60_BIT_FIELD_SET, MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
+        reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
 
         /** Program the MAMXFL registers with the maxi- mum frame length to be permitted to be received
          * or transmitted. MAX PDU - offset */
-        write_reg16(MAMXFL, 1500);
+        /*
+        * MACLCON1 (default)
+        * MACLCON2 (default)
+        * Set the maximum packet size which the controller will accept.
+        */
+        regw_write(MAMXFL, MAX_FRAMELEN);
+
 
         /** Configure the Back-to-Back Inter-Packet Gap register, MABBIPG. Most applications will pro-
          * gram this register with 15h when Full-Duplex mode is used and 12h when Half-Duplex mode is
          * used. */
-        write_reg(MABBIPG, 0x12);
-        read_reg(MABBIPG);
+        regb_write(MABBIPG, 0x12);
+        regb_read(MABBIPG);
 
         /** Configure the Non-Back-to-Back Inter-Packet Gap register low byte, MAIPGL. Most applications
          * will program this register with 12h. If half duplex is used, the Non-Back-to-Back
          * Inter-Packet Gap register high byte, MAIPGH, should be programmed. Most applications will
          * program this register to 0Ch.*/
-        write_reg16(MAIPG, 0x0C12);
+        regw_write(MAIPG, 0x0C12);
 
-        read_reg(MAIPG);
-        read_reg(0x07 | 0x40 | 0x80);
+        regb_read(MAIPG);
+        regb_read(0x07 | 0x40 | 0x80);
 
         flash_safe_execute([](void *me) { static_cast<enc28j60 *>(me)->generate_mac(); }, (void *)this, 100);
 
-        write_reg(MAADR5, mac_[0]);
-        write_reg(MAADR4, mac_[1]);
-        write_reg(MAADR3, mac_[2]);
-        write_reg(MAADR2, mac_[3]);
-        write_reg(MAADR1, mac_[4]);
-        write_reg(MAADR0, mac_[5]);
+        regb_write(MAADR5, mac_[0]);
+        regb_write(MAADR4, mac_[1]);
+        regb_write(MAADR3, mac_[2]);
+        regb_write(MAADR2, mac_[3]);
+        regb_write(MAADR1, mac_[4]);
+        regb_write(MAADR0, mac_[5]);
 
         write_phy(PHCON2, PHCON2_HDLDIS);
 
         /** Start receiving */
         select_bank(ECON1);
-        write_op(ENC28J60_BIT_FIELD_SET, EIE, EIE_INTIE | EIE_PKTIE | EIR_LINKIF);
-        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+        reg_bfset(EIE, EIE_INTIE | EIE_PKTIE | EIR_LINKIF);
+        reg_bfset(ECON1, ECON1_RXEN);
 
-        uint8_t rev = read_reg(EREVID);
-        unlock();
+        uint8_t rev = regb_read(EREVID);        
 
         is_available = rev > 0;
 
@@ -267,11 +265,11 @@ namespace drivers {
 
         write_phy(PHIE, PHIE_PGEIE | PHIE_PLNKIE);
 
-        write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_DMAIF | EIR_LINKIF | EIR_TXIF | EIR_TXERIF | EIR_RXERIF | EIR_PKTIF);
-        write_reg(EIE, EIE_INTIE | EIE_PKTIE | EIE_LINKIE | EIE_TXIE | EIE_TXERIE | EIE_RXERIE);
+        reg_bfclr(EIR, EIR_DMAIF | EIR_LINKIF | EIR_TXIF | EIR_TXERIF | EIR_RXERIF | EIR_PKTIF);
+        regb_write(EIE, EIE_INTIE | EIE_PKTIE | EIE_LINKIE | EIE_TXIE | EIE_TXERIE | EIE_RXERIE);
 
         /* enable receive logic */
-        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+        reg_bfset(ECON1, ECON1_RXEN);
 
         unlock();
     }
@@ -280,7 +278,7 @@ namespace drivers {
         return (read_phy(PHSTAT2) & PHSTAT2_LSTAT);
     }
 
-    void enc28j60::write_op(const uint8_t op, const uint8_t addr, const uint8_t data) {
+    void enc28j60::spi_write_op(const uint8_t op, const uint8_t addr, const uint8_t data) {
         lock();
         config_.CS_gpio.reset();
         const uint8_t operation = op | (addr & ENC_ADDR_MASK);
@@ -290,7 +288,7 @@ namespace drivers {
         unlock();
     }
 
-    uint8_t enc28j60::read_op(const uint8_t op, const uint8_t reg) {
+    uint8_t enc28j60::spi_read_op(const uint8_t op, const uint8_t reg) {
         lock();
         config_.CS_gpio.reset();
         const uint8_t operation = op | (reg & ENC_ADDR_MASK);
@@ -309,77 +307,93 @@ namespace drivers {
         return incoming_data;
     }
 
+    /*
+     * Register bit field Set
+     */
+    void enc28j60::reg_bfset(uint8_t addr, uint8_t mask) {
+        select_bank(addr);
+        spi_write_op(ENC28J60_BIT_FIELD_SET, addr, mask);
+    }
+
+    /*
+     * Register bit field Clear
+     */
+    void enc28j60::reg_bfclr(uint8_t addr, uint8_t mask) {
+	    select_bank(addr);
+	    spi_write_op(ENC28J60_BIT_FIELD_CLR, addr, mask);
+    }
+
     void enc28j60::select_bank(const uint8_t address) {
         if (current_register_bank != (address & BANK_MASK)) {
-            write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_BSEL0 | ECON1_BSEL1);
-            write_op(ENC28J60_BIT_FIELD_SET, ECON1, (address & BANK_MASK) >> 5);
+            spi_write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_BSEL0 | ECON1_BSEL1);
+            spi_write_op(ENC28J60_BIT_FIELD_SET, ECON1, (address & BANK_MASK) >> 5);
             current_register_bank = address & BANK_MASK;
         }
     }
 
-    void enc28j60::write_reg(const uint8_t addr, const uint8_t data) {
+    void enc28j60::regb_write(const uint8_t addr, const uint8_t data) {
         lock();
         select_bank(addr);
-        write_op(ENC28J60_WRITE_CTRL_REG, addr, data);
+        spi_write_op(ENC28J60_WRITE_CTRL_REG, addr, data);
         unlock();
     }
 
-    void enc28j60::write_reg16(const uint8_t addr, const uint16_t data) {
+    void enc28j60::regw_write(const uint8_t addr, const uint16_t data) {
         //    enc28j60::write_op_16bit(ENC28J60_WRITE_CTRL_REG, addr, data);
         lock();
-        write_reg(addr, data & 0xff);
-        write_reg(addr + 1, data >> 8);
+        regb_write(addr, data & 0xff);
+        regb_write(addr + 1, data >> 8);
         unlock();
     }
 
-    uint8_t enc28j60::read_reg(const uint8_t reg) {
+    uint8_t enc28j60::regb_read(const uint8_t reg) {
         lock();
         select_bank(reg);
-        uint8_t res = read_op(ENC28J60_READ_CTRL_REG, reg);
+        uint8_t res = spi_read_op(ENC28J60_READ_CTRL_REG, reg);
         unlock();
         return res;
     }
 
-    uint16_t enc28j60::read_reg16(const uint8_t reg) {
+    uint16_t enc28j60::regw_read(const uint8_t reg) {
         lock();
-        uint8_t res = read_reg(reg) + (read_reg(reg + 1) << 8);
+        uint8_t res = regb_read(reg) + (regb_read(reg + 1) << 8);
         unlock();
         return res;
     }
 
     void enc28j60::write_phy(const uint8_t reg, const uint16_t data) {
         /** 1. Write the address of the PHY register to write to into the MIREGADR register. */
-        write_reg(MIREGADR, reg);
+        regb_write(MIREGADR, reg);
         /** 2. Write the lower 8 bits of data to write into the MIWRL register. */
-        write_reg16(MIWR, data);
+        regw_write(MIWR, data);
         /** 3. Write the upper 8 bits of data to write into the MIWRH register.
          * Writing to this register auto- matically begins the MIIM transaction, so it must be written
          * to after MIWRL. The MISTAT.BUSY bit becomes set. */
-        while (enc28j60::read_reg(MISTAT) & MISTAT_BUSY)
+        while (enc28j60::regb_read(MISTAT) & MISTAT_BUSY)
             ;
     }
 
     uint16_t enc28j60::read_phy(const uint8_t reg) {
         /** 1. Write the address of the PHY register to read from into the MIREGADR register.  */
-        enc28j60::write_reg(MIREGADR, reg);
-        uint8_t xd = enc28j60::read_reg(MIREGADR);
+        enc28j60::regb_write(MIREGADR, reg);
+        uint8_t xd = enc28j60::regb_read(MIREGADR);
 
         /** 2. Set the MICMD.MIIRD bit. The read operation begins and the MISTAT.BUSY bit is set. */
-        enc28j60::write_reg(MICMD, MICMD_MIIRD);
+        enc28j60::regb_write(MICMD, MICMD_MIIRD);
 
         /** 3. Wait 10.24 μs. Poll the MISTAT.BUSY bit to be certain that the operation is complete.
          While busy, the host controller should not start any MIISCAN operations or write to the MIWRH
         register. When the MAC has obtained the register contents, the BUSY bit will clear itself.  */
-        while (enc28j60::read_reg(MISTAT) & MISTAT_BUSY)
+        while (enc28j60::regb_read(MISTAT) & MISTAT_BUSY)
             ;
 
         /** 4. Clear the MICMD.MIIRD bit. */
-        enc28j60::write_reg(MICMD, 0x00);
+        enc28j60::regb_write(MICMD, 0x00);
 
         /** 5. Read the desired data from the MIRDL and MIRDH registers. The order that these bytes are
          * accessed is unimportant. */
-        uint8_t out_L = enc28j60::read_reg(MIRDL);
-        uint8_t out_H = enc28j60::read_reg(MIRDH);
+        uint8_t out_L = enc28j60::regb_read(MIRDL);
+        uint8_t out_H = enc28j60::regb_read(MIRDH);
         return (out_H << 8) | out_L;
     }
 
@@ -405,7 +419,7 @@ namespace drivers {
     }
 
     uint8_t enc28j60::get_number_of_packets() {
-        uint8_t n = read_reg(EPKTCNT);
+        uint8_t n = regb_read(EPKTCNT);
         return n;
     }
 
@@ -428,8 +442,8 @@ namespace drivers {
         }
 
         next_packet_pointer = info.next_packet_pointer;
-        write_reg16(ERXRDPT, info.next_packet_pointer);
-        write_op(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
+        regw_write(ERXRDPT, info.next_packet_pointer);
+        reg_bfset(ECON2, ECON2_PKTDEC);
 
         return bytes_read;
     }
@@ -445,12 +459,12 @@ namespace drivers {
             // a counter to avoid hangs; of course they didn't update the errata sheet
             uint16_t count = 0;
 #define MAX_RETRIES 1000U
-            while ((read_reg(EIR) & (EIR_TXIF | EIR_TXERIF)) == 0 && ++count < MAX_RETRIES) {
+            while ((regb_read(EIR) & (EIR_TXIF | EIR_TXERIF)) == 0 && ++count < MAX_RETRIES) {
             }
 
-            if ((read_reg(EIR) & EIR_TXERIF) || count >= MAX_RETRIES) {
+            if ((regb_read(EIR) & EIR_TXERIF) || count >= MAX_RETRIES) {
                 // Cancel previous transmission if stuck
-                write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRTS);
+                reg_bfclr(ECON1, ECON1_TXRTS);
                 retry = 0;
             }
 
@@ -463,7 +477,7 @@ namespace drivers {
             read_tsv(tsv);
             //dump_tsv("Send packet ", tsv);
 
-            if (!((read_reg(EIR) & EIR_TXERIF) && (TSV_GETBIT(tsv, TSV_TXLATECOLLISION))) || retry > MAX_TX_RETRYCOUNT) {
+            if (!((regb_read(EIR) & EIR_TXERIF) && (TSV_GETBIT(tsv, TSV_TXLATECOLLISION))) || retry > MAX_TX_RETRYCOUNT) {
                 // there was some error but no LATECOL so we do not repeat
                 retry = 0;
             }
@@ -475,27 +489,27 @@ namespace drivers {
             // but this has been changed in later versions; possibly they
             // have a reason for this; they don't mention this in the errata
             // sheet
-            write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
-            write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
-            write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_TXERIF | EIR_TXIF);
+            reg_bfset(ECON1, ECON1_TXRST);
+            reg_bfclr(ECON1, ECON1_TXRST);
+            reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
 
             // prepare new transmission
             // if (retry == 0) {
             // Set the write pointer to start of transmit buffer area
-            write_reg16(EWRPT, TXSTART_INIT);
+            regw_write(EWRPT, TXSTART_INIT);
 
             // Set the TXND pointer to correspond to the packet size given
-            write_reg16(ETXND, TXSTART_INIT + len);
+            regw_write(ETXND, TXSTART_INIT + len);
 
             // Write per-packet control byte
-            write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
+            spi_write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
 
             // Copy the packet into the transmit buffer
             write_buff(src, len);
             //}
 
             // Initiate transmission
-            write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRTS);
+            reg_bfset(ECON1, ECON1_TXRTS);
             if (retry == 0) {
                 return true;
             }
@@ -507,7 +521,7 @@ namespace drivers {
 
     enc28j60::PacketMetaInfo enc28j60::get_incoming_packet_info() {
         PacketMetaInfo ret{};
-        write_reg16(ERDPT, next_packet_pointer);
+        regw_write(ERDPT, next_packet_pointer);
         read_buff(reinterpret_cast<uint8_t *>(&ret), sizeof(PacketMetaInfo));
 
         return ret;
@@ -526,7 +540,7 @@ namespace drivers {
         TickType_t start = xTaskGetTickCount();
 
         /* 20 msec timeout read */
-        while ((read_reg(reg) & mask) != val) {
+        while ((regb_read(reg) & mask) != val) {
             if ((xTaskGetTickCount() - start) > pdMS_TO_TICKS(20)) {
                 return -ETIMEDOUT;
             }
@@ -549,15 +563,15 @@ namespace drivers {
             return;
         }
         /* set transmit buffer start + end */
-        write_reg16(ETXST, start); // ETXSTL
-        write_reg16(ETXND, end);   // ETXNDL
+        regw_write(ETXST, start); // ETXSTL
+        regw_write(ETXND, end);   // ETXNDL
     }
 
 
     void enc28j60::reset_tx_logic() {
         lock();
-        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
-        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
+        reg_bfset(ECON1, ECON1_TXRST);
+        reg_bfclr(ECON1, ECON1_TXRST);
         txfifo_init(TXSTART_INIT, TXEND_INIT);
         unlock();
     }
@@ -570,20 +584,22 @@ namespace drivers {
         }
         /* set receive buffer start + end */
         next_packet_pointer = start;
-      	uint16_t erxrdpt = erxrdpt_workaround(next_packet_pointer, start, end);
-    	write_reg16(ERXRDPT, erxrdpt);
+        regw_write(ERXST, RXSTART_INIT);
+      	
+        uint16_t erxrdpt = erxrdpt_workaround(next_packet_pointer, start, end);
+    	regw_write(ERXRDPT, erxrdpt);
 
-        write_reg16(ERXND, end);
+        regw_write(ERXND, end);        
     }
 
     void enc28j60::reset_rx_logic() {
         lock();
-        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXEN);
-        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXRST);
-        write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_RXRST);
+        reg_bfclr(ECON1, ECON1_RXEN);
+        reg_bfset(ECON1, ECON1_RXRST);
+        reg_bfclr(ECON1, ECON1_RXRST);
         rxfifo_init(RXSTART_INIT, RXEND_INIT);
-        write_op(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
-        write_op(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+        reg_bfclr(EIR, EIR_RXERIF);
+        reg_bfset(ECON1, ECON1_RXEN);
         unlock();
     }
 
@@ -595,14 +611,14 @@ namespace drivers {
         int free_space;
 
         lock();
-        epkcnt = read_reg(EPKTCNT);
+        epkcnt = regb_read(EPKTCNT);
         if (epkcnt >= 255)
             free_space = -1;
         else {
-            erxst = read_reg16(ERXST);
-            erxnd = read_reg16(ERXND);
-            erxwr = read_reg16(ERXWRPT);
-            erxrd = read_reg16(ERXRDPT);
+            erxst = regw_read(ERXST);
+            erxnd = regw_read(ERXND);
+            erxwr = regw_read(ERXWRPT);
+            erxrd = regw_read(ERXRDPT);
 
             if (erxwr > erxrd)
                 free_space = (erxnd - erxst) - (erxwr - erxrd);
@@ -684,9 +700,9 @@ namespace drivers {
      * Read the Transmit Status Vector
      */
     void enc28j60::read_tsv(uint8_t tsv[TSV_SIZE]) {
-        int16_t endptr = read_reg16(ETXND);
+        int16_t endptr = regw_read(ETXND);
         ENC_DEBUG_print("enc28j60: reading TSV at addr:0x%04x\n", endptr + 1);
-        write_reg16(ERDPT, endptr + 1);
+        regw_write(ERDPT, endptr + 1);
         read_buff(tsv, TSV_SIZE);
     }
 
