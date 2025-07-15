@@ -81,6 +81,7 @@ namespace drivers {
                     tx_retry_count = 0;
                     if (regb_read(ESTAT) & ESTAT_TXABRT) {
                         ENC_DEBUG_print("Tx Error (aborted)\n");
+                        reset_tx_logic();
                         LINK_STATS_INC(link.err);
                         err = true;
                     }
@@ -429,100 +430,26 @@ namespace drivers {
             return 0;
         }
 
+        //regw_write(ERDPT, info.next_packet_pointer);
+        next_packet_pointer = info.next_packet_pointer;
+        regw_write(ERXRDPT, info.next_packet_pointer);
+
         size_t bytes_read;
         if (dst != nullptr) {
             bytes_read = read_buff(dst, length);
         }
 
-        next_packet_pointer = info.next_packet_pointer;
-        regw_write(ERXRDPT, info.next_packet_pointer);
         reg_bfset(ECON2, ECON2_PKTDEC);
 
         return bytes_read;
     }
 
-    bool enc28j60::send_pbuf2(struct pbuf *p) {
-        if (p->tot_len > (TXEND_INIT - TXSTART_INIT)) {
-            ENC_DEBUG_print("%s(%d, %d) packet too big!\n");
-            return false;
-        }
-
-        uint8_t retry = 0;
-
-        while (1) {
-            // wait until last transmission has finished; referring to the data sheet and
-            // to the errata (Errata Issue 13; Example 1) you only need to wait until either
-            // TXIF or TXERIF gets set; however this leads to hangs; apparently Microchip
-            // realized this and in later implementations of their tcp/ip stack they introduced
-            // a counter to avoid hangs; of course they didn't update the errata sheet
-            uint16_t count = 0;
-#define MAX_RETRIES 1000U
-            while ((regb_read(EIR) & (EIR_TXIF | EIR_TXERIF)) == 0 && ++count < MAX_RETRIES) {
-            }
-
-            if ((regb_read(EIR) & EIR_TXERIF) || count >= MAX_RETRIES) {
-                // Cancel previous transmission if stuck
-                reg_bfclr(ECON1, ECON1_TXRTS);
-                retry = 0;
-            }
-
-            // Check whether the chip thinks that a late collision occurred; the chip
-            // may be wrong (Errata Issue 13); therefore we retry. We could check
-            // LATECOL in the ESTAT register in order to find out whether the chip
-            // thinks a late collision occurred but (Errata Issue 15) tells us that
-            // this is not working. Therefore we check TSV
-            uint8_t tsv[TSV_SIZE];
-            read_tsv(tsv);
-            //dump_tsv("Send packet ", tsv);
-
-            if (!((regb_read(EIR) & EIR_TXERIF) && (TSV_GETBIT(tsv, TSV_TXLATECOLLISION))) || retry > MAX_TX_RETRYCOUNT) {
-                // there was some error but no LATECOL so we do not repeat
-                retry = 0;
-            }
-
-            // latest errata sheet: DS80349C
-            // always reset transmit logic (Errata Issue 12)
-            // the Microchip TCP/IP stack implementation used to first check
-            // whether TXERIF is set and only then reset the transmit logic
-            // but this has been changed in later versions; possibly they
-            // have a reason for this; they don't mention this in the errata
-            // sheet
-            reg_bfset(ECON1, ECON1_TXRST);
-            reg_bfclr(ECON1, ECON1_TXRST);
-            reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
-
-            // Prepare new transmission
-            regw_write(EWRPT, TXSTART_INIT);
-
-            // Set the TXND pointer to correspond to the packet size given
-            regw_write(ETXND, TXSTART_INIT + p->tot_len);
-
-            // Write per-packet control byte
-            spi_write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
-
-            // Copy pbuf chain to transmit buffer (buffer position on ENC28J60 set to autoincrement with every byte)
-            for (const pbuf *q = p; q != nullptr; q = q->next) {
-                if (q->payload && q->len > 0) {
-
-                    // Copy the packet into the transmit buffer
-                    write_buff((uint8_t *)q->payload, q->len);
-                }
-            }            
-            // Initiate transmission
-            reg_bfset(ECON1, ECON1_TXRTS);
-            if (retry == 0) {
-                return true;
-            }
-
-            retry++;
-        }
-        return false;
-    }
-
 
     bool enc28j60::send_pbuf(struct pbuf *p) {
-        if (p->tot_len > (TXEND_INIT - TXSTART_INIT)) {
+        if ((TXSTART_INIT + p->tot_len) > TXEND_INIT ) {
             ENC_DEBUG_print("%s(%d, %d) packet too big!\n");
+            asm volatile ("bkpt #0");
+            while(1) {};
             return false;
         }
 
@@ -706,7 +633,7 @@ namespace drivers {
         LINK_STATS_INC(link.xmit);
         drivers::enc28j60 *me = static_cast<drivers::enc28j60 *>(netif->state);
 
-        if (!me->send_pbuf2(p)) {
+        if (!me->send_pbuf(p)) {
             ENC_DEBUG_print("Cannot send packet of length %d\n", p->tot_len);
             return ERR_ABRT;
         }

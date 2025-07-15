@@ -88,7 +88,6 @@ namespace drivers {
         PacketMetaInfo get_incoming_packet_info();
         
         bool send_pbuf(struct pbuf *p);
-        bool send_pbuf2(struct pbuf *p);
 
         bool link_state_changed();
         void __not_in_flash_func(generate_mac)();
