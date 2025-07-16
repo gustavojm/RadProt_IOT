@@ -82,6 +82,7 @@ namespace drivers {
                     if (regb_read(ESTAT) & ESTAT_TXABRT) {
                         ENC_DEBUG_print("Tx Error (aborted)\n");
                         reset_tx_logic();
+                        reg_bfclr(ESTAT, ESTAT_TXABRT);
                         LINK_STATS_INC(link.err);
                         err = true;
                     }
@@ -120,6 +121,7 @@ namespace drivers {
                     }
                     reset_rx_logic();
                     LINK_STATS_INC(link.err);
+                    reg_bfclr(EIR, EIR_RXERIF);
                 }
 
                 /* RX handler */
@@ -320,6 +322,12 @@ namespace drivers {
     }
 
     void enc28j60::select_bank(const uint8_t address) {
+        /* These registers (EIE, EIR, ESTAT, ECON2, ECON1)
+        * are present in all banks, no need to switch bank.
+        */
+        if (address >= EIE && address <= ECON1)
+            return;
+
         if (current_register_bank != (address & BANK_MASK)) {
             spi_write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_BSEL0 | ECON1_BSEL1);
             spi_write_op(ENC28J60_BIT_FIELD_SET, ECON1, (address & BANK_MASK) >> 5);

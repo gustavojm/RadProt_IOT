@@ -10,7 +10,7 @@ inline drivers::Spi spi0_{{.spi_handle = spi0,
     .CLK_gpio = 18, 
     .MOSI_gpio = 19, 
     .MISO_gpio = 16, 
-    .baudrate_Hz = 25 * 1000000
+    .baudrate_Hz = 12 * 1000000
    }};
 
 inline drivers::enc28j60 enc28j60_state{{.CS_gpio = 17, 
