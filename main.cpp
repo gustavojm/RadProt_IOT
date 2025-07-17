@@ -195,14 +195,14 @@ void feedWatchdogTask(void *params) {
 
     while (true) {
         uart_init(uart1, baud);
-        vTaskDelay(500);
+        vTaskDelay(1000);
         // Send out a string, with CR/LF conversions
         uart_puts(uart1, "Hel987.2233lo, UART!\n");
-        vTaskDelay(100);
+        vTaskDelay(500);
         uart_puts(uart1, "Mes12.34567890 from serial port!\n");
-        vTaskDelay(100);
+        vTaskDelay(500);
         uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
-        vTaskDelay(100);
+        vTaskDelay(500);
         watchdog_update();
     }
 }

@@ -134,11 +134,13 @@ void websocket_server::send_message(websocket_message *msg) {
         return;
     }
 
+    taskENTER_CRITICAL();
     memset(outbuf_ptr, 0x00, WS_SEND_BUFFER_SIZE);
     outbuf_ptr[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
     outbuf_ptr = set_size_to_frame(msg->msg_size, &outbuf_ptr[1]);
     outbuf_ptr = set_data_to_frame(msg->message, msg->msg_size, outbuf_ptr);
     size_t packet_size = outbuf_ptr - send_buf;
+    taskEXIT_CRITICAL();
 
     // Set send timeout using setsockopt
     struct timeval timeout;
@@ -150,7 +152,7 @@ void websocket_server::send_message(websocket_message *msg) {
     if (bytes_sent < 0) {
         lDebug(Error, "Write failed with err %d (\"%s\")", errno, strerror(errno));
     } else {
-        lDebug(Info, "Sent %d bytes to client", bytes_sent);
+        lDebug(Warn, "Sent %d bytes to client", bytes_sent);
     }
 }
 
@@ -286,6 +288,10 @@ void websocket_server::task() {
                 socklen_t addr_len = sizeof(client_addr);
                 int client_sock = lwip_accept(listen_sock, (struct sockaddr *)&client_addr, &addr_len);
                 
+                // every lwip_send will generate one packet on the wire, do not coalesce small packets into one
+                int flag = 1;
+                lwip_setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+                
                 if (client_sock >= 0) {
                     client.socket = client_sock;
                     lDebug(Info, "New client connected");
@@ -337,7 +343,7 @@ void websocket_server::task() {
                 client.established = false;
             }
         } 
-        
+
         // Check for queued messages to send
         while (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
             if (client.established) {

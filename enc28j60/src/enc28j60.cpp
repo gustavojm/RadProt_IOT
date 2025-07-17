@@ -192,17 +192,34 @@ namespace drivers {
         rxfifo_init(RXSTART_INIT, RXEND_INIT);
         txfifo_init(TXSTART_INIT, TXEND_INIT);
 
-        write_phy(PHLCON, ENC28J60_LAMPS_MODE);
-
         /* default filter mode: (unicast OR broadcast) AND crc valid */
         regb_write(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN);
 
         /** Set the MARXEN bit in MACON1 to enable the MAC to receive frames. If using full duplex, most
          * applications should also set TXPAUS and RXPAUS to allow IEEE defined flow control to function
          */
-        reg_bfset(MACON1, MACON1_MARXEN);
+        reg_bfset(MACON1, MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
         /** Configure the PADCFG, TXCRCEN and FULDPX bits of MACON3. */
-        reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
+        //reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
+
+
+        if (full_duplex) {
+            regb_write(MACON3,
+                        MACON3_PADCFG0 | MACON3_TXCRCEN |
+                        MACON3_FRMLNEN | MACON3_FULDPX);
+            /* set inter-frame gap (non-back-to-back) */
+            regb_write(MAIPG, 0x12);
+            /* set inter-frame gap (back-to-back) */
+            regb_write(MABBIPG, 0x15);
+        } else {
+            regb_write(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
+            regb_write(MACON4, 1 << 6);	/* DEFER bit */
+            /* set inter-frame gap (non-back-to-back) */
+            regw_write(MAIPG, 0x0C12);
+            /* set inter-frame gap (back-to-back) */
+            regb_write(MABBIPG, 0x12);
+        }        
+
 
         /** Program the MAMXFL registers with the maxi- mum frame length to be permitted to be received
          * or transmitted. MAX PDU - offset */
@@ -213,20 +230,28 @@ namespace drivers {
          */
         regw_write(MAMXFL, MAX_FRAMELEN);
 
-        /** Configure the Back-to-Back Inter-Packet Gap register, MABBIPG. Most applications will pro-
-         * gram this register with 15h when Full-Duplex mode is used and 12h when Half-Duplex mode is
-         * used. */
-        regb_write(MABBIPG, 0x12);
-        regb_read(MABBIPG);
-
         /** Configure the Non-Back-to-Back Inter-Packet Gap register low byte, MAIPGL. Most applications
          * will program this register with 12h. If half duplex is used, the Non-Back-to-Back
          * Inter-Packet Gap register high byte, MAIPGH, should be programmed. Most applications will
          * program this register to 0Ch.*/
         regw_write(MAIPG, 0x0C12);
 
-        regb_read(MAIPG);
-        regb_read(0x07 | 0x40 | 0x80);
+        if (full_duplex) {
+            if (!write_phy(PHCON1, PHCON1_PDPXMD))
+                return 0;
+            if (!write_phy(PHCON2, 0x00))
+                return 0;
+            if (!write_phy(PHLCON, 0x0480))
+                return 0;
+        } else {
+            if (!write_phy(PHCON1, 0x00))
+                return 0;
+            if (!write_phy(PHCON2, PHCON2_HDLDIS))
+                return 0;
+            if (!write_phy(PHLCON, ENC28J60_LAMPS_MODE))
+                return 0;
+        }
+
 
         flash_safe_execute([](void *me) { static_cast<enc28j60 *>(me)->generate_mac(); }, (void *)this, 100);
 
@@ -237,7 +262,7 @@ namespace drivers {
         regb_write(MAADR1, mac_[4]);
         regb_write(MAADR0, mac_[5]);
 
-        write_phy(PHCON2, PHCON2_HDLDIS);
+        //write_phy(PHCON2, PHCON2_HDLDIS);
 
         /** Start receiving */
         reg_bfset(EIE, EIE_INTIE | EIE_PKTIE | EIR_LINKIF);
@@ -365,7 +390,7 @@ namespace drivers {
         return res;
     }
 
-    void enc28j60::write_phy(const uint8_t reg, const uint16_t data) {
+    int enc28j60::write_phy(const uint8_t reg, const uint16_t data) {
         /** 1. Write the address of the PHY register to write to into the MIREGADR register. */
         regb_write(MIREGADR, reg);
         /** 2. Write the lower 8 bits of data to write into the MIWRL register. */
@@ -373,8 +398,9 @@ namespace drivers {
         /** 3. Write the upper 8 bits of data to write into the MIWRH register.
          * Writing to this register auto- matically begins the MIIM transaction, so it must be written
          * to after MIWRL. The MISTAT.BUSY bit becomes set. */
-        while (enc28j60::regb_read(MISTAT) & MISTAT_BUSY)
-            ;
+            
+        int ret = wait_phy_ready();
+        return ret;
     }
 
     uint16_t enc28j60::read_phy(const uint8_t reg) {
@@ -463,7 +489,7 @@ namespace drivers {
 
         uint8_t retry = 0;
 #define MAX_RETRIES       1000U
-#define MAX_TX_RETRYCOUNT 3 // Define if not already defined
+#define MAX_TX_RETRYCOUNT 1 
 
         while (retry <= MAX_TX_RETRYCOUNT) {
             // Wait until last transmission has finished
@@ -645,7 +671,7 @@ namespace drivers {
             ENC_DEBUG_print("Cannot send packet of length %d\n", p->tot_len);
             return ERR_ABRT;
         }
-
+        
         ENC_DEBUG_print("Sent packet with len %d[%d]!\n", p->len, p->tot_len);
         return ERR_OK;
     }

@@ -56,6 +56,8 @@ namespace drivers {
             SemaphoreHandle_t mutex;
         };
 
+        bool full_duplex = false;
+
         struct __attribute__((packed)) PacketMetaInfo {
             uint16_t next_packet_pointer;
             uint16_t byte_count;
@@ -104,7 +106,7 @@ namespace drivers {
         uint8_t regb_read(const uint8_t reg);
         uint16_t regw_read(const uint8_t reg);
 
-        void write_phy(const uint8_t reg, const uint16_t data);
+        int write_phy(const uint8_t reg, const uint16_t data);
         uint16_t read_phy(const uint8_t reg);
 
         size_t read_buff(uint8_t *dst, size_t len);
