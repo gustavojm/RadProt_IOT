@@ -95,7 +95,7 @@ static void mqtt_task(void *pvParameters) {
     close_socket:
         network.disconnect(&network);
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
     /* do not return */
 }

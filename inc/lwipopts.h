@@ -11,7 +11,7 @@
 // MEM_LIBC_MALLOC is incompatible with non polling versions
 #define MEM_LIBC_MALLOC 0
 #define MEM_ALIGNMENT 4
-#define MEM_SIZE 8 * 1024
+#define MEM_SIZE 16 * 1024
 #define MEMP_NUM_TCP_SEG 32
 #define MEMP_NUM_TCP_PCB 32
 #define MEMP_NUM_ARP_QUEUE 10
@@ -31,7 +31,7 @@
 #define LWIP_NETCONN 0
 #define MEM_STATS 0
 #define SYS_STATS 0
-#define MEMP_STATS 0
+#define MEMP_STATS 1
 #define LINK_STATS 0
 // #define ETH_PAD_SIZE                2
 #define LWIP_CHKSUM_ALGORITHM 3
@@ -132,4 +132,7 @@
 #define MEMP_NUM_PBUF 20
 #define MEMP_NUM_NETBUF 20
 
+//#define MEM_OVERFLOW_CHECK 2
+
 #endif /* __LWIPOPTS_H__ */
+

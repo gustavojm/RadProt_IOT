@@ -430,7 +430,7 @@ namespace drivers {
     size_t enc28j60::get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t length) {
 
         if (info.next_packet_pointer > RXEND_INIT) {
-            ENC_DEBUG_print("Invalid packet address!!");
+            ENC_DEBUG_print("Invalid packet address!!\n");
             /* packet address corrupted */
             reset_rx_logic();
             LINK_STATS_INC(link.err);
