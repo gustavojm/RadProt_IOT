@@ -85,6 +85,7 @@ namespace drivers {
                 reg_bfclr(EIE, EIE_INTIE);
 
                 do {
+                    loop = 0;
                     intflags = regb_read(EIR);
 
                     /* DMA interrupt handler (not currently used) */
