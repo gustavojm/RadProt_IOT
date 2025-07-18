@@ -288,10 +288,6 @@ void websocket_server::task() {
                 socklen_t addr_len = sizeof(client_addr);
                 int client_sock = lwip_accept(listen_sock, (struct sockaddr *)&client_addr, &addr_len);
                 
-                // every lwip_send will generate one packet on the wire, do not coalesce small packets into one
-                int flag = 1;
-                lwip_setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-                
                 if (client_sock >= 0) {
                     client.socket = client_sock;
                     lDebug(Info, "New client connected");
