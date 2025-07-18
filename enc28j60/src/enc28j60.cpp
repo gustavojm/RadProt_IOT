@@ -46,110 +46,125 @@ namespace drivers {
         xSemaphoreGiveRecursive(config_.mutex);
     }
 
+    int enc28j60::rx_interrupt() {
+        /* RX handler */ 
+        int ret;
+        int pk_counter = regb_read(EPKTCNT);
+        while (pk_counter-- > 0) {
+            auto packet_info = get_incoming_packet_info();
+
+            if (packet_info.received_ok) {
+
+                pbuf *ptr = pbuf_alloc(PBUF_RAW, packet_info.byte_count, PBUF_RAM);
+                if (ptr != nullptr) {
+                    get_incoming_packet(packet_info, (uint8_t *)ptr->payload, packet_info.byte_count);
+
+                    LINK_STATS_INC(link.recv);
+                    ENC_DEBUG_print("Received packet with len %d!\n", packet_info.byte_count);
+
+                    if (netif.input(ptr, &netif) != ERR_OK) {
+                        ENC_DEBUG_print("Error processing frame input\n");
+                        pbuf_free(ptr);
+                    }
+                }
+            } else {
+                get_incoming_packet(packet_info, nullptr, 0); // Advance to the next packet discarding current
+            }
+            ret = pk_counter; 
+        }
+        return ret;
+    }
+
     void enc28j60::irq_deferred_handler() {
 
         while (true) {
             if (xSemaphoreTake(irq_loop_sem, portMAX_DELAY) == pdPASS) {
+                int loop;
                 int intflags;
                 /* disable further interrupts */
                 reg_bfclr(EIE, EIE_INTIE);
 
-                intflags = regb_read(EIR);
+                do {
+                    intflags = regb_read(EIR);
 
-                /* DMA interrupt handler (not currently used) */
-                if ((intflags & EIR_DMAIF) != 0) {
-                    reg_bfclr(EIR, EIR_DMAIF);
-                }
-
-                /* LINK changed handler */
-                if ((intflags & EIR_LINKIF) != 0) {
-                    if (is_link_up()) {
-                        netif_set_link_up(&netif);
-                    } else {
-                        netif_set_link_down(&netif);
+                    /* DMA interrupt handler (not currently used) */
+                    if ((intflags & EIR_DMAIF) != 0) {
+                        loop++;
+                        reg_bfclr(EIR, EIR_DMAIF);
                     }
 
-                    // check_link_status();
-                    /* read PHIR to clear the flag */
-                    read_phy(PHIR);
-                }
-
-                /* TX complete handler */
-                if (((intflags & EIR_TXIF) != 0) && ((intflags & EIR_TXERIF) == 0)) {
-                    bool err = false;
-                    // ENC_DEBUG_print("intTX\n");
-                    tx_retry_count = 0;
-                    if (regb_read(ESTAT) & ESTAT_TXABRT) {
-                        ENC_DEBUG_print("Tx Error (aborted)\n");
-                        reset_tx_logic();
-                        reg_bfclr(ESTAT, ESTAT_TXABRT);
-                        LINK_STATS_INC(link.err);
-                        err = true;
-                    }
-                    reg_bfclr(ECON1, ECON1_TXRTS);
-                    reg_bfclr(EIR, EIR_TXIF);
-                }
-
-                /* TX Error handler */
-                if ((intflags & EIR_TXERIF) != 0) {
-                    // uint8_t tsv[TSV_SIZE];
-                    uint8_t tsv[TSV_SIZE];
-                    read_tsv(tsv);
-                    dump_tsv("intTXErr", tsv);
-                    LINK_STATS_INC(link.err);
-
-                    reset_tx_logic();
-
-                    /* Transmit Late collision check for retransmit */
-                    if (TSV_GETBIT(tsv, TSV_TXLATECOLLISION)) {
-                        ENC_DEBUG_print("LateCollision TXErr \n");
-                        if (tx_retry_count++ < MAX_TX_RETRYCOUNT)
-                            reg_bfset(ECON1, ECON1_TXRTS);
-                        else
-                            reg_bfclr(ECON1, ECON1_TXRTS);
-                    } else
-                        reg_bfclr(ECON1, ECON1_TXRTS);
-                    reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
-                }
-
-                /* RX Error handler */
-                if ((intflags & EIR_RXERIF) != 0) {
-                    ENC_DEBUG_print("intRXErr\n");
-                    /* Check free FIFO space to flag RX overrun */
-                    if (get_free_rxfifo() <= 0) {
-                        ENC_DEBUG_print("RX Overrun\n");
-                    }
-                    reset_rx_logic();
-                    LINK_STATS_INC(link.err);
-                    reg_bfclr(EIR, EIR_RXERIF);
-                }
-
-                /* RX handler */
-                int pk_counter = regb_read(EPKTCNT);
-                while (pk_counter-- > 0) {
-                    auto packet_info = get_incoming_packet_info();
-
-                    if (packet_info.received_ok) {
-
-                        pbuf *ptr = pbuf_alloc(PBUF_RAW, packet_info.byte_count, PBUF_RAM);
-                        if (ptr != nullptr) {
-                            get_incoming_packet(packet_info, (uint8_t *)ptr->payload, packet_info.byte_count);
-
-                            LINK_STATS_INC(link.recv);
-                            ENC_DEBUG_print("Received packet with len %d!\n", packet_info.byte_count);
-
-                            if (netif.input(ptr, &netif) != ERR_OK) {
-                                ENC_DEBUG_print("Error processing frame input\n");
-                                pbuf_free(ptr);
-                            }
+                    /* LINK changed handler */
+                    if ((intflags & EIR_LINKIF) != 0) {
+                        loop++;
+                        if (is_link_up()) {
+                            netif_set_link_up(&netif);
+                        } else {
+                            netif_set_link_down(&netif);
                         }
-                    } else {
-                        get_incoming_packet(packet_info, nullptr, 0); // Advance to the next packet discarding current
-                    }
-                }
 
-                /* re-enable interrupts */
-                reg_bfset(EIE, EIE_INTIE);
+                        // check_link_status();
+                        /* read PHIR to clear the flag */
+                        read_phy(PHIR);
+                    }
+
+                    /* TX complete handler */
+                    if (((intflags & EIR_TXIF) != 0) && ((intflags & EIR_TXERIF) == 0)) {                        
+                        bool err = false;
+                        loop++;
+                        // ENC_DEBUG_print("intTX\n");
+                        tx_retry_count = 0;
+                        if (regb_read(ESTAT) & ESTAT_TXABRT) {
+                            ENC_DEBUG_print("Tx Error (aborted)\n");
+                            reset_tx_logic();
+                            reg_bfclr(ESTAT, ESTAT_TXABRT);
+                            LINK_STATS_INC(link.err);
+                            err = true;
+                        }
+                        reg_bfclr(ECON1, ECON1_TXRTS);
+                        reg_bfclr(EIR, EIR_TXIF);
+                    }
+
+                    /* TX Error handler */
+                    if ((intflags & EIR_TXERIF) != 0) {
+                        loop++;
+                        uint8_t tsv[TSV_SIZE];
+                        read_tsv(tsv);
+                        dump_tsv("intTXErr", tsv);
+                        LINK_STATS_INC(link.err);
+
+                        reset_tx_logic();
+
+                        /* Transmit Late collision check for retransmit */
+                        if (TSV_GETBIT(tsv, TSV_TXLATECOLLISION)) {
+                            ENC_DEBUG_print("LateCollision TXErr \n");
+                            if (tx_retry_count++ < MAX_TX_RETRYCOUNT)
+                                reg_bfset(ECON1, ECON1_TXRTS);
+                            else
+                                reg_bfclr(ECON1, ECON1_TXRTS);
+                        } else
+                            reg_bfclr(ECON1, ECON1_TXRTS);
+                        reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
+                    }
+
+                    /* RX Error handler */
+                    if ((intflags & EIR_RXERIF) != 0) {
+                        loop++;
+                        ENC_DEBUG_print("intRXErr\n");
+                        /* Check free FIFO space to flag RX overrun */
+                        if (get_free_rxfifo() <= 0) {
+                            ENC_DEBUG_print("RX Overrun\n");
+                        }
+                        reset_rx_logic();
+                        LINK_STATS_INC(link.err);
+                        reg_bfclr(EIR, EIR_RXERIF);
+                    }
+
+                    if (rx_interrupt()) {
+                        loop++;
+                    }
+                    /* re-enable interrupts */
+                    reg_bfset(EIE, EIE_INTIE);
+                } while (loop);
             }
         }
     }
@@ -200,26 +215,22 @@ namespace drivers {
          */
         reg_bfset(MACON1, MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
         /** Configure the PADCFG, TXCRCEN and FULDPX bits of MACON3. */
-        //reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
-
+        // reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
 
         if (full_duplex) {
-            regb_write(MACON3,
-                        MACON3_PADCFG0 | MACON3_TXCRCEN |
-                        MACON3_FRMLNEN | MACON3_FULDPX);
+            regb_write(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN | MACON3_FULDPX);
             /* set inter-frame gap (non-back-to-back) */
             regb_write(MAIPG, 0x12);
             /* set inter-frame gap (back-to-back) */
             regb_write(MABBIPG, 0x15);
         } else {
             regb_write(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
-            regb_write(MACON4, 1 << 6);	/* DEFER bit */
+            regb_write(MACON4, 1 << 6); /* DEFER bit */
             /* set inter-frame gap (non-back-to-back) */
             regw_write(MAIPG, 0x0C12);
             /* set inter-frame gap (back-to-back) */
             regb_write(MABBIPG, 0x12);
-        }        
-
+        }
 
         /** Program the MAMXFL registers with the maxi- mum frame length to be permitted to be received
          * or transmitted. MAX PDU - offset */
@@ -252,7 +263,6 @@ namespace drivers {
                 return 0;
         }
 
-
         flash_safe_execute([](void *me) { static_cast<enc28j60 *>(me)->generate_mac(); }, (void *)this, 100);
 
         regb_write(MAADR5, mac_[0]);
@@ -262,7 +272,7 @@ namespace drivers {
         regb_write(MAADR1, mac_[4]);
         regb_write(MAADR0, mac_[5]);
 
-        //write_phy(PHCON2, PHCON2_HDLDIS);
+        // write_phy(PHCON2, PHCON2_HDLDIS);
 
         /** Start receiving */
         reg_bfset(EIE, EIE_INTIE | EIE_PKTIE | EIR_LINKIF);
@@ -348,8 +358,8 @@ namespace drivers {
 
     void enc28j60::select_bank(const uint8_t address) {
         /* These registers (EIE, EIR, ESTAT, ECON2, ECON1)
-        * are present in all banks, no need to switch bank.
-        */
+         * are present in all banks, no need to switch bank.
+         */
         if (address >= EIE && address <= ECON1)
             return;
 
@@ -398,7 +408,7 @@ namespace drivers {
         /** 3. Write the upper 8 bits of data to write into the MIWRH register.
          * Writing to this register auto- matically begins the MIIM transaction, so it must be written
          * to after MIWRL. The MISTAT.BUSY bit becomes set. */
-            
+
         int ret = wait_phy_ready();
         return ret;
     }
@@ -464,7 +474,7 @@ namespace drivers {
             return 0;
         }
 
-        //regw_write(ERDPT, info.next_packet_pointer);
+        // regw_write(ERDPT, info.next_packet_pointer);
         next_packet_pointer = info.next_packet_pointer;
         regw_write(ERXRDPT, info.next_packet_pointer);
 
@@ -478,77 +488,46 @@ namespace drivers {
         return bytes_read;
     }
 
+#define MAX_RETRIES       1000U
 
     bool enc28j60::send_pbuf(struct pbuf *p) {
-        if ((TXSTART_INIT + p->tot_len) > TXEND_INIT ) {
+        if ((TXSTART_INIT + p->tot_len) > TXEND_INIT) {
             ENC_DEBUG_print("%s(%d, %d) packet too big!\n");
-            asm volatile ("bkpt #0");
-            while(1) {};
             return false;
         }
 
-        uint8_t retry = 0;
-#define MAX_RETRIES       1000U
-#define MAX_TX_RETRYCOUNT 1 
-
-        while (retry <= MAX_TX_RETRYCOUNT) {
-            // Wait until last transmission has finished
-            uint16_t count = 0;
-            while ((regb_read(EIR) & (EIR_TXIF | EIR_TXERIF)) == 0 && ++count < MAX_RETRIES) {
-                // Optional: add small delay to prevent busy waiting
-            }
-
-            bool transmission_stuck = (count >= MAX_RETRIES);
-            bool transmission_error = (regb_read(EIR) & EIR_TXERIF) != 0;
-
-            if (transmission_stuck || transmission_error) {
-                // Cancel previous transmission if stuck or error occurred
-                reg_bfclr(ECON1, ECON1_TXRTS);
-            }
-
-            // Check for late collision (hardware errata workaround)
-            uint8_t tsv[TSV_SIZE];
-            read_tsv(tsv);
-
-            bool late_collision = transmission_error && (TSV_GETBIT(tsv, TSV_TXLATECOLLISION));
-
-            // Always reset transmit logic (Errata Issue 12)
-            reg_bfset(ECON1, ECON1_TXRST);
-            reg_bfclr(ECON1, ECON1_TXRST);
-            reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
-
-            // Prepare new transmission
-            regw_write(EWRPT, TXSTART_INIT);
-
-            // Set the TXND pointer to correspond to the packet size given
-            regw_write(ETXND, TXSTART_INIT + p->tot_len);
-
-            // Write per-packet control byte
-            spi_write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
-
-            // Copy pbuf chain to transmit buffer (buffer position on ENC28J60 set to autoincrement with every byte)
-            for (const pbuf *q = p; q != nullptr; q = q->next) {
-                if (q->payload && q->len > 0) {
-
-                    // Copy the packet into the transmit buffer
-                    write_buff((uint8_t *)q->payload, q->len);
-                }
-            }
-
-            // Initiate transmission
-            reg_bfset(ECON1, ECON1_TXRTS);
-
-            // If this is the first attempt or no late collision, consider it successful
-            if (retry == 0 || !late_collision) {
-                return true;
-            }
-
-            // Increment retry counter for late collision cases
-            retry++;
+        // Wait until last transmission has finished
+        uint16_t count = 0;
+        while ((regb_read(EIR) & (EIR_TXIF | EIR_TXERIF)) == 0 && ++count < MAX_RETRIES) {            
         }
 
-        // Max retries exceeded
-        return false;
+        // Always reset transmit logic (Errata Issue 12)
+        reg_bfset(ECON1, ECON1_TXRST);
+        reg_bfclr(ECON1, ECON1_TXRST);
+        reg_bfclr(EIR, EIR_TXERIF | EIR_TXIF);
+
+        // Prepare new transmission
+        regw_write(EWRPT, TXSTART_INIT);
+
+        // Set the TXND pointer to correspond to the packet size given
+        regw_write(ETXND, TXSTART_INIT + p->tot_len);
+
+        // Write per-packet control byte
+        spi_write_op(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
+
+        // Copy pbuf chain to transmit buffer (buffer position on ENC28J60 set to autoincrement with every byte)
+        for (const pbuf *q = p; q != nullptr; q = q->next) {
+            if (q->payload && q->len > 0) {
+
+                // Copy the packet into the transmit buffer
+                write_buff((uint8_t *)q->payload, q->len);
+            }
+        }
+
+        // Initiate transmission
+        reg_bfset(ECON1, ECON1_TXRTS);
+
+        return true;
     }
 
     enc28j60::PacketMetaInfo enc28j60::get_incoming_packet_info() {
@@ -671,7 +650,7 @@ namespace drivers {
             ENC_DEBUG_print("Cannot send packet of length %d\n", p->tot_len);
             return ERR_ABRT;
         }
-        
+
         ENC_DEBUG_print("Sent packet with len %d[%d]!\n", p->len, p->tot_len);
         return ERR_OK;
     }

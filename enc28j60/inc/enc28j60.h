@@ -85,6 +85,8 @@ namespace drivers {
         void lock();
         void unlock();
 
+        int rx_interrupt();
+
         uint8_t get_number_of_packets();
         size_t get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t max_length);
         PacketMetaInfo get_incoming_packet_info();
