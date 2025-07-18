@@ -125,12 +125,12 @@ void websocket_server::send_message(websocket_message *msg) {
     uint8_t *outbuf_ptr = send_buf;
 
     if (msg->msg_size + 10 > WS_SEND_BUFFER_SIZE) {
-        lDebug(Info, "Message too large for buffer");
+        lDebug(Warn, "Message too large for buffer");
         return;
     }
 
     if (!client.established) {
-        lDebug(Info, "No client connected");
+        lDebug(Warn, "No client connected");
         return;
     }
 
@@ -152,7 +152,7 @@ void websocket_server::send_message(websocket_message *msg) {
     if (bytes_sent < 0) {
         lDebug(Error, "Write failed with err %d (\"%s\")", errno, strerror(errno));
     } else {
-        lDebug(Warn, "Sent %d bytes to client", bytes_sent);
+        lDebug(Debug, "Sent %d bytes to client", bytes_sent);
     }
 }
 

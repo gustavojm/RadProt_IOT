@@ -21,5 +21,5 @@ target_link_libraries(${NAME} PRIVATE hal
                     )
 
 add_compile_definitions(
-                        ENC_DEBUG_ON
+                        #ENC_DEBUG_ON
                        )

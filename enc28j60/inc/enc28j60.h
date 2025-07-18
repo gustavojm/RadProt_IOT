@@ -56,7 +56,9 @@ namespace drivers {
             SemaphoreHandle_t mutex;
         };
 
-        bool full_duplex = false;
+        // Set the interface on linux machine: sudo ethtool -s enp1s0 autoneg off speed 10 duplex full
+        // view links status: dmesg |grep <iface>
+        bool full_duplex = true;
 
         struct __attribute__((packed)) PacketMetaInfo {
             uint16_t next_packet_pointer;
@@ -87,7 +89,6 @@ namespace drivers {
 
         int rx_interrupt();
 
-        uint8_t get_number_of_packets();
         size_t get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t max_length);
         PacketMetaInfo get_incoming_packet_info();
         

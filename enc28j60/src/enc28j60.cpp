@@ -163,6 +163,7 @@ namespace drivers {
                     if (rx_interrupt()) {
                         loop++;
                     }
+
                     /* re-enable interrupts */
                     reg_bfset(EIE, EIE_INTIE);
                 } while (loop);
@@ -215,8 +216,6 @@ namespace drivers {
          * applications should also set TXPAUS and RXPAUS to allow IEEE defined flow control to function
          */
         reg_bfset(MACON1, MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
-        /** Configure the PADCFG, TXCRCEN and FULDPX bits of MACON3. */
-        // reg_bfset(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
 
         if (full_duplex) {
             regb_write(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN | MACON3_FULDPX);
@@ -292,9 +291,9 @@ namespace drivers {
         lock();
         config_.IRQ_gpio.input();
         config_.IRQ_gpio.pull_up();
+        
         taskENTER_CRITICAL();
         gpio_set_irq_enabled_with_callback(config_.IRQ_gpio.get_gpio(), GPIO_IRQ_EDGE_FALL, true, &enc28j60_irq_callback);
-
         taskEXIT_CRITICAL();
 
         write_phy(PHIE, PHIE_PGEIE | PHIE_PLNKIE);
@@ -459,23 +458,17 @@ namespace drivers {
         unlock();
     }
 
-    uint8_t enc28j60::get_number_of_packets() {
-        uint8_t n = regb_read(EPKTCNT);
-        return n;
-    }
-
     size_t enc28j60::get_incoming_packet(PacketMetaInfo &info, uint8_t *dst, const size_t length) {
 
         if (info.next_packet_pointer > RXEND_INIT) {
-            ENC_DEBUG_print("Invalid packet address!!\n");
             /* packet address corrupted */
+            ENC_DEBUG_print("Invalid packet address!!\n");
             reset_rx_logic();
             LINK_STATS_INC(link.err);
 
             return 0;
         }
 
-        // regw_write(ERDPT, info.next_packet_pointer);
         next_packet_pointer = info.next_packet_pointer;
         regw_write(ERXRDPT, info.next_packet_pointer);
 
@@ -484,6 +477,7 @@ namespace drivers {
             bytes_read = read_buff(dst, length);
         }
 
+        /* we are done with this packet, decrement the packet counter */
         reg_bfset(ECON2, ECON2_PKTDEC);
 
         return bytes_read;
@@ -493,7 +487,7 @@ namespace drivers {
 
     bool enc28j60::send_pbuf(struct pbuf *p) {
         if ((TXSTART_INIT + p->tot_len) > TXEND_INIT) {
-            ENC_DEBUG_print("%s(%d, %d) packet too big!\n");
+            ENC_DEBUG_print("%s(%d) Packet too big!\n", __func__, p->tot_len);
             return false;
         }
 
@@ -570,8 +564,7 @@ namespace drivers {
 
     void enc28j60::txfifo_init(uint16_t start, uint16_t end) {
         if (start > 0x1FFF || end > 0x1FFF || start > end) {
-            ENC_DEBUG_print("%s(%d, %d) TXFIFO bad parameters!\n");
-            // 		__func__, start, end);
+            ENC_DEBUG_print("%s(%d, %d) TXFIFO bad parameters!\n", __func__, start, end);            
             return;
         }
         /* set transmit buffer start + end */
@@ -589,8 +582,7 @@ namespace drivers {
 
     void enc28j60::rxfifo_init(uint16_t start, uint16_t end) {
         if (start > 0x1FFF || end > 0x1FFF || start > end) {
-            ENC_DEBUG_print("%s(%d, %d) RXFIFO bad parameters!\n");
-            // 		__func__, start, end);
+            ENC_DEBUG_print("%s(%d, %d) RXFIFO bad parameters!\n", __func__, start, end);
             return;
         }
         /* set receive buffer start + end */
@@ -639,7 +631,7 @@ namespace drivers {
                 free_space = erxrd - erxwr - 1;
         }
         unlock();
-        // ENC_DEBUG_print("%s() free_space = %d\n", __func__, free_space);
+        ENC_DEBUG_print("%s() free_space = %d\n", __func__, free_space);
         return free_space;
     }
 
@@ -652,7 +644,7 @@ namespace drivers {
             return ERR_ABRT;
         }
 
-        ENC_DEBUG_print("Sent packet with len %d[%d]!\n", p->len, p->tot_len);
+        ENC_DEBUG_print("Sent packet with len %d\n", p->tot_len);
         return ERR_OK;
     }
 

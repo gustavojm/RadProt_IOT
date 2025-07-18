@@ -74,7 +74,7 @@ static inline const char *levelText(enum debugLevels level) {
  * controls how much debug output is produced. Higher values produce more
  * output. See the use in <tt>lDebug()</tt>.
  */
-inline enum debugLevels debugLevel = Warn;
+inline enum debugLevels debugLevel = Info;
 
 /**
  * The file where debug output is written. Defaults to <tt>stderr</tt>.
