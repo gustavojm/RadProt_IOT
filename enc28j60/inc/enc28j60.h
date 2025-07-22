@@ -53,12 +53,12 @@ namespace drivers {
             Gpio RST_gpio;
             Gpio IRQ_gpio;
             Spi &spi;
-            SemaphoreHandle_t mutex;
         };
 
+        SemaphoreHandle_t mutex;
         // Set the interface on linux machine: sudo ethtool -s enp1s0 autoneg off speed 10 duplex full
         // view links status: dmesg |grep <iface>
-        bool full_duplex = true;
+        bool full_duplex = false;
 
         struct __attribute__((packed)) PacketMetaInfo {
             uint16_t next_packet_pointer;
@@ -101,7 +101,7 @@ namespace drivers {
 
         void spi_write_op(uint8_t operation, const uint8_t reg, const uint8_t data);
         uint8_t spi_read_op(uint8_t operation, const uint8_t reg);
-        void select_bank(const uint8_t address);
+        void set_bank(const uint8_t address);
 
         void regb_write(const uint8_t addr, const uint8_t data);
         void regw_write(const uint8_t addr, const uint16_t data);

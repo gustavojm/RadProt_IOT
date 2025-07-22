@@ -39,11 +39,11 @@ namespace drivers {
     }
 
     void enc28j60::lock() {
-        xSemaphoreTakeRecursive(config_.mutex, portMAX_DELAY);
+        xSemaphoreTakeRecursive(mutex, portMAX_DELAY);
     }
 
     void enc28j60::unlock() {
-        xSemaphoreGiveRecursive(config_.mutex);
+        xSemaphoreGiveRecursive(mutex);
     }
 
     int enc28j60::rx_interrupt() {
@@ -164,9 +164,10 @@ namespace drivers {
                         loop++;
                     }
 
-                    /* re-enable interrupts */
-                    reg_bfset(EIE, EIE_INTIE);
                 } while (loop);
+                
+                /* re-enable interrupts */
+                reg_bfset(EIE, EIE_INTIE);
             }
         }
     }
@@ -182,7 +183,7 @@ namespace drivers {
     }
 
     bool enc28j60::init() {
-        config_.mutex = xSemaphoreCreateRecursiveMutex();
+        mutex = xSemaphoreCreateRecursiveMutex();
         config_.spi.init();
         config_.RST_gpio.output();
         config_.CS_gpio.output();
@@ -344,7 +345,7 @@ namespace drivers {
      * Register bit field Set
      */
     void enc28j60::reg_bfset(uint8_t addr, uint8_t mask) {
-        select_bank(addr);
+        set_bank(addr);
         spi_write_op(ENC28J60_BIT_FIELD_SET, addr, mask);
     }
 
@@ -352,27 +353,42 @@ namespace drivers {
      * Register bit field Clear
      */
     void enc28j60::reg_bfclr(uint8_t addr, uint8_t mask) {
-        select_bank(addr);
+        set_bank(addr);
         spi_write_op(ENC28J60_BIT_FIELD_CLR, addr, mask);
     }
 
-    void enc28j60::select_bank(const uint8_t address) {
-        /* These registers (EIE, EIR, ESTAT, ECON2, ECON1)
-         * are present in all banks, no need to switch bank.
-         */
-        if (address >= EIE && address <= ECON1)
-            return;
+/*
+ * select the current register bank if necessary
+ */
+void enc28j60::set_bank(uint8_t addr)
+{
+	uint8_t b = (addr & BANK_MASK) >> 5;
 
-        if (current_register_bank != (address & BANK_MASK)) {
-            spi_write_op(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_BSEL0 | ECON1_BSEL1);
-            spi_write_op(ENC28J60_BIT_FIELD_SET, ECON1, (address & BANK_MASK) >> 5);
-            current_register_bank = address & BANK_MASK;
-        }
-    }
+	/* These registers (EIE, EIR, ESTAT, ECON2, ECON1)
+	 * are present in all banks, no need to switch bank.
+	 */
+	if (addr >= EIE && addr <= ECON1)
+		return;
+
+	/* Clear or set each bank selection bit as needed */
+	if ((b & ECON1_BSEL0) != (current_register_bank & ECON1_BSEL0)) {
+		if (b & ECON1_BSEL0)
+			spi_write_op(ENC28J60_BIT_FIELD_SET, ECON1,	ECON1_BSEL0);
+		else
+			spi_write_op(ENC28J60_BIT_FIELD_CLR, ECON1,	ECON1_BSEL0);
+	}
+	if ((b & ECON1_BSEL1) != (current_register_bank & ECON1_BSEL1)) {
+		if (b & ECON1_BSEL1)
+			spi_write_op(ENC28J60_BIT_FIELD_SET, ECON1,	ECON1_BSEL1);
+		else
+			spi_write_op(ENC28J60_BIT_FIELD_CLR, ECON1,	ECON1_BSEL1);
+	}
+	current_register_bank = b;
+}
 
     void enc28j60::regb_write(const uint8_t addr, const uint8_t data) {
         lock();
-        select_bank(addr);
+        set_bank(addr);
         spi_write_op(ENC28J60_WRITE_CTRL_REG, addr, data);
         unlock();
     }
@@ -387,7 +403,7 @@ namespace drivers {
 
     uint8_t enc28j60::regb_read(const uint8_t reg) {
         lock();
-        select_bank(reg);
+        set_bank(reg);
         uint8_t res = spi_read_op(ENC28J60_READ_CTRL_REG, reg);
         unlock();
         return res;
@@ -568,8 +584,8 @@ namespace drivers {
             return;
         }
         /* set transmit buffer start + end */
-        regw_write(ETXST, start); // ETXSTL
-        regw_write(ETXND, end);   // ETXNDL
+        regw_write(ETXST, start);
+        regw_write(ETXND, end);
     }
 
     void enc28j60::reset_tx_logic() {
@@ -722,7 +738,6 @@ namespace drivers {
     }
 
     // Generate a locally administered MAC address
-
     void enc28j60::generate_mac() {
         uint8_t id[FLASH_UNIQUE_ID_SIZE_BYTES];
 
