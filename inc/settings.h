@@ -15,8 +15,8 @@
 
 #include "enc28j60_LWIP_FreeRTOS.h"
 
-inline const uint INITIAL_CONFIG_GPIO = 14;     // Pin 19
-inline const uint STATUS_LED_GPIO = 15;         // Pin 20
+inline const uint INITIAL_CONFIG_GPIO = 15;     // Pin 20
+inline const uint STATUS_LED_GPIO = 9;          // Pin 12
 
 inline volatile bool initial_config = false;
 
