@@ -527,10 +527,12 @@
             settings_form.elements["eth.ip"].value = uint32ToIp(settings_json["eth"]["ip"]);
             settings_form.elements["eth.nm"].value = uint32ToIp(settings_json["eth"]["nm"]);
             settings_form.elements["eth.gw"].value = uint32ToIp(settings_json["eth"]["gw"]);
+
+            settings_form.elements["conn_type"].value = settings_json["conn_type"];
+            toggle_connection_type(settings_json["conn_type"]);
+
         }
 
-        settings_form.elements["conn_type"].value = settings_json["conn_type"];
-        toggle_connection_type(settings_json["conn_type"]);
 
         settings_form.elements["mqtt.broker"].value = settings_json["mqtt"]["broker"];
         settings_form.elements["mqtt.port"].value = settings_json["mqtt"]["port"];
