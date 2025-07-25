@@ -64,7 +64,7 @@ add_custom_target(makefsdata
 )
 
 add_executable(${PROJECT_NAME}
-        main.cpp
+        src/main.cpp
         dhcpserver/dhcpserver.cpp
         dns/dnsserver.cpp
         httpserver/httpd.cpp
@@ -84,6 +84,7 @@ add_executable(${PROJECT_NAME}
         src/websocket.cpp
         src/crypto.cpp
         src/debug.cpp
+        src/status.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.cpp
         paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.cpp

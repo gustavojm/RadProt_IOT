@@ -290,7 +290,7 @@ void websocket_server::task() {
                 
                 if (client_sock >= 0) {
                     client.socket = client_sock;
-                    lDebug(Info, "New client connected");
+                    lDebug(Info, "New client connected");                    
                 }
             }
         } else {
@@ -321,6 +321,19 @@ void websocket_server::task() {
                     // Handle WebSocket handshake
                     if (process_handshake(client.recv_buf)) {
                         client.established = true;
+
+                        ArduinoJson::MyJsonDocument json = status_get();
+
+                        websocket_publish_message msg;
+                        size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
+                        msg.payload_length = len;
+                        
+                        xQueueReset(websocketQueue);
+
+                        if (xQueueSend(websocketQueue, &msg, 0) == pdPASS) {
+                            lDebug(Info, "Initial status sent");
+                        }
+
                     } else {
                         // Invalid handshake
                         lDebug(Error, "Invalid WebSocket handshake");
@@ -352,19 +365,6 @@ void websocket_server::task() {
         }
 
     }
-}
-
-int websocket_server::send_to_queue(const char *payload) {
-    websocket_publish_message msg;
-    strncpy(msg.payload, payload, sizeof msg.payload);
-    msg.payload_length = strlen(payload);
-    
-    if (xQueueSend(websocketQueue, &msg, 0) != pdPASS) {
-        lDebug(Warn, "Websocket queue is full");
-        return -1;
-    }
-
-    return 0;
 }
 
 void websocket_server::init(ws_callback_t callback) {

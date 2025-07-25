@@ -644,7 +644,7 @@
                         detail_row.innerHTML = `
                                         <td>${index}</td>
                                         <td>${item.name}</td>
-                                        <td id="s_s[${index_sensor}]p_s[${index}].reading"></td>
+                                        <td id="s_s[${index_sensor}]p_s[${index}].value"></td>
                                         <td>${item.topic}</td>
                                     `;
 
@@ -1030,30 +1030,36 @@
 
         handleMessage(data) {
             let dataJSON = JSON.parse(data);
-            let reading_td = document.getElementById(`s_s[${dataJSON.s_s}]p_s[${dataJSON.p_s}].reading`);
-            reading_td.innerHTML = dataJSON.reading;
+            if (dataJSON.reading) {
+                let reading = dataJSON.reading;
+                let value_td = document.getElementById(`s_s[${reading.s_s}]p_s[${reading.p_s}].value`);
+                value_td.innerHTML = reading.value;
 
-            let entry = dataJSON["reading"] + "->" + dataJSON["topic"];
+                let entry = reading.value + "->" + reading.topic;
+                ws_addEntry(entry);
+            }
 
             if (dataJSON.mem) {
-                let mem_free = (dataJSON.mem.free / dataJSON.mem.total * 100).toFixed(1);
-                let mem_free_text = ((dataJSON.mem.free / 1024).toFixed(1) || 0) + "k(" + mem_free + "%)"
+                let mem = dataJSON.mem;
+                let mem_free = (mem.free / mem.total * 100).toFixed(1);
+                let mem_free_text = ((mem.free / 1024).toFixed(1) || 0) + "k(" + mem_free + "%)"
                 if (isNaN(mem_free)) {
                     mem_free = 0;
                     mem_free_text = "---";
                 }
 
-                let mem_min_free = (dataJSON.mem.min_free / dataJSON.mem.total * 100).toFixed(1);
+                let mem_min_free = (mem.min_free / mem.total * 100).toFixed(1);
                 document.getElementById("mem_free").style = "width: " + mem_free + "%";
                 document.getElementById("mem_free_text").innerHTML = mem_free_text;
                 document.getElementById("mem_free_min_mark").style = "left: " + mem_min_free + "%";
-
             }
-            document.getElementById("mqtt_connection_status").innerHTML = dataJSON.mqtt.connected ? "🟢" : "❌";
-            document.getElementById("mqtt_connection_status").style = "padding:5px;"
-            document.getElementById("mqtt_connection_status").title = dataJSON.mqtt.connected ? "Connected" : "Disconnected";
 
-            ws_addEntry(entry);
+            if (dataJSON.mqtt) {
+                let mqtt = dataJSON.mqtt;
+                document.getElementById("mqtt_connection_status").innerHTML = mqtt.connected ? "🟢" : "❌";
+                document.getElementById("mqtt_connection_status").style = "padding:5px;"
+                document.getElementById("mqtt_connection_status").title = mqtt.connected ? "Connected" : "Disconnected";
+            }
         }
     }
 

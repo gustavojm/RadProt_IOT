@@ -6,12 +6,15 @@
 #include "semphr.h"
 #include "debug.h"
 
+#include <ArduinoJson.hpp>
+#include "arduinojson_cust_alloc.h"
+
 #include "lwip/api.h"
 
 #include <string.h>
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
-
+#include "status.h"
 #include "crypto.h"
 
 #define WS_PORT                 8765
@@ -85,7 +88,6 @@ private:
 
 public:
     void init(ws_callback_t callback);    
-    int send_to_queue(const char *payload);
 };
 
 inline websocket_server ws_server;
