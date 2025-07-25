@@ -755,27 +755,41 @@
     sensors_templates = {
         "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
 
-        "femto-TECH THFS-400": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+        "femto-TECH THFS-400": 
+                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                           {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
-                         }\
-                     ]',
+                       },\
+                       {"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"456"},\
+                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/456"}\
+                         ]\
+                       },\
+                       {"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"789"},\
+                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/789"}\
+                         ]\
+                       }\
+                      ]',
 
-        "GRAETZ WS05C-3": '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+        "GRAETZ WS05C-3": 
+                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
-                         ]},\
-                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                         ]\
+                       },\
+                       {"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"456"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/456"}\
-                         ]},\
-                         {"baudrate":9600,"enabled":true,"publish_settings":\
+                         ]\
+                       },\
+                       {"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"789"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/789"}\
                          ]\
-                         }\
-                        ]'
+                       }\
+                      ]'
     };
 
     function reset_sensors_settings() {
