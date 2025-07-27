@@ -409,8 +409,8 @@
         xhr.send(json);
         xhr.onloadend = function () {
             dataJSON = JSON.parse(this.responseText)
-            if (dataJSON["error"]) {
-                alert(dataJSON["error"]);
+            if (dataJSON["message"]) {
+                alert(dataJSON["message"]);
                 return;
             } else {
                 document.getElementById("reboot_popup").style.display = "block";

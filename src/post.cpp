@@ -135,7 +135,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
 
         if (initial_config) {
             if (strcmp(post_data["settings"]["password"], "") == 0 && strcmp((char *)current_settings->password, "") == 0) {
-                responseJson["error"] = "Define a Password to Protect Settings";
+                responseJson["message"] = "Define a Password to Protect Settings";
                 save_settings = false;
             };
 
@@ -144,26 +144,26 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
             }
         } else {
             if (post_data["settings"]["password"] != current_settings->password) {
-                responseJson["error"] = "Wrong Password";
+                responseJson["message"] = "Wrong Password";
                 save_settings = false;
             } 
         }
 
         if (save_settings) {
-            responseJson["OK"] = "Rebooting";
             flash_safe_execute(write_client_mode_settings, &cs, UINT32_MAX);
 
             if ((old_settings.conn_type != cs.conn_type) ||
                 (memcmp(&old_settings.wifi, &cs.settings.wifi, sizeof(wifi_settings)) != 0) ||
                 (memcmp(&old_settings.eth, &cs.settings.eth, sizeof(ethernet_settings)) != 0)
                 ) {
+                    responseJson["OK"] = "Rebooting";
                     watchdog_reboot(0, SRAM_END, 1000);
                     vTaskSuspend(feedWdTask_handle);
+            } else {    
+                if (memcmp(&old_settings.mqtt, &cs.settings.mqtt, sizeof(mqtt_settings)) != 0) {
+                    mqtt_reconnect = true;
                 }
-            {
-
-            if (memcmp(&old_settings.mqtt, &cs.settings.mqtt, sizeof(mqtt_settings)) != 0) {
-                mqtt_reconnect = true;
+                responseJson["message"] = "Settings saved";
             }
         }        
     }
