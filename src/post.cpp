@@ -74,7 +74,10 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         lDebug(Error, "Error json parse. %s", error.c_str());
     } else {
         static client_mode_settings_t cs;
+        client_mode_settings_t old_settings;
         cs.settings = *get_client_mode_settings();
+
+        old_settings = cs;
 
         strncpy(cs.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof cs.settings.wifi.ssid);
         strncpy(cs.settings.wifi.password, post_data["wifi"]["password"], sizeof cs.settings.wifi.password);
@@ -149,8 +152,19 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         if (save_settings) {
             responseJson["OK"] = "Rebooting";
             flash_safe_execute(write_client_mode_settings, &cs, UINT32_MAX);
-            watchdog_reboot(0, SRAM_END, 1000);
-            vTaskSuspend(feedWdTask_handle);
+
+            if ((old_settings.conn_type != cs.conn_type) ||
+                (memcmp(&old_settings.wifi, &cs.settings.wifi, sizeof(wifi_settings)) != 0) ||
+                (memcmp(&old_settings.eth, &cs.settings.eth, sizeof(ethernet_settings)) != 0)
+                ) {
+                    watchdog_reboot(0, SRAM_END, 1000);
+                    vTaskSuspend(feedWdTask_handle);
+                }
+            {
+
+            if (memcmp(&old_settings.mqtt, &cs.settings.mqtt, sizeof(mqtt_settings)) != 0) {
+                mqtt_reconnect = true;
+            }
         }        
     }
     return responseJson;
