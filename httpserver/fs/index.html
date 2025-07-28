@@ -18,7 +18,7 @@
                 <form action="" id="settings_form">
                     <div style="display: flex; justify-content: center; flex-direction: column;">
 
-                        <div id="connection_type"  style="display: none;">
+                        <div id="connection_type" style="display: none;">
                             <strong>Connection Type:</strong>
                             <div>
                                 <label><input type="radio" name="conn_type" value="WIFI" checked>Wi-Fi</label>
@@ -55,7 +55,8 @@
                                 </tr>
                                 <tr>
                                     <td class="label">DHCP:</td>
-                                    <td><input type="checkbox" name="wifi.dhcp" onchange="toggle_wifi_ip_settings(this)">
+                                    <td><input type="checkbox" name="wifi.dhcp"
+                                            onchange="toggle_wifi_ip_settings(this)">
                                     </td>
                                 </tr>
                                 <tr>
@@ -407,10 +408,18 @@
         xhr.setRequestHeader("Content-Type", "application/json");
         json = JSON.stringify(nestedJson, null, 2);
         xhr.send(json);
-        xhr.onloadend = function () {
+        xhr.onloadend = async function () {
             dataJSON = JSON.parse(this.responseText)
             if (dataJSON["message"]) {
                 alert(dataJSON["message"]);
+                if (dataJSON["populate_readings"]) {
+                    try {
+                        const settings = await settings_get();
+                        readings_populate(settings_json);
+                    } catch (err) {
+                        console.error("Failed to load settings:", err);
+                    }
+                }
                 return;
             } else {
                 document.getElementById("reboot_popup").style.display = "block";
@@ -503,6 +512,55 @@
         return res;
     }
 
+    async function readings_populate(settings_json) {
+        const readings_div = document.querySelector("#readings_div");
+        readings_div.innerHTML = '';
+        settings_json.sensor_settings.forEach((item, index_sensor) => {
+            if (item.enabled) {
+                const readings_sensor_div = document.createElement("div");
+
+                readings_sensor_div.innerHTML = `Serial Interface #${index_sensor + 1}`;
+
+                const readings_table = document.createElement("table");
+                readings_table.innerHTML = `
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align: center;">#</th>
+                                                <th style="text-align: center;">Name</th>
+                                                <th style="text-align: center;">Value</th>
+                                                <th style="text-align: center;">Topic</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    `;
+
+                readings_table.id = `publish_settings_${index_sensor}`;
+                readings_table.style = "width: 100%; max-width: 400px; margin: auto;";
+
+                settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
+                    if (item.enabled) {
+                        const detail_row = document.createElement("tr");
+
+                        detail_row.innerHTML = `
+                                        <td>${index}</td>
+                                        <td>${item.name}</td>
+                                        <td id="s_s[${index_sensor}]p_s[${index}].value"></td>
+                                        <td>${item.topic}</td>
+                                    `;
+
+                        let tbody = readings_table.querySelector("tbody")
+                        tbody.appendChild(detail_row);
+
+                        readings_sensor_div.appendChild(readings_table);
+                    }
+                });
+
+                readings_div.appendChild(readings_sensor_div);
+                readings_div.appendChild(document.createElement("hr"));
+            }
+        });
+    }
+
     function settings_populate(settings_json) {
         document.getElementById('wifi.mac_address').innerHTML = settings_json["wifi"]["mac_address"];
 
@@ -523,7 +581,7 @@
             document.getElementById('eth.mac_address').innerHTML = settings_json["eth"]["mac_address"];
             settings_form.elements["eth.dhcp"].checked = settings_json["eth"]["dhcp"];
             toggle_eth_ip_settings(settings_form.elements["eth.dhcp"]);
-            
+
             settings_form.elements["eth.ip"].value = uint32ToIp(settings_json["eth"]["ip"]);
             settings_form.elements["eth.nm"].value = uint32ToIp(settings_json["eth"]["nm"]);
             settings_form.elements["eth.gw"].value = uint32ToIp(settings_json["eth"]["gw"]);
@@ -614,89 +672,43 @@
 
         setModalEditing();
 
-        const readings_div = document.querySelector("#readings_div");
-        settings_json.sensor_settings.forEach((item, index_sensor) => {
-            if (item.enabled) {
-                const readings_sensor_div = document.createElement("div");
-
-                readings_sensor_div.innerHTML = `Serial Interface #${index_sensor + 1}`;
-
-                const readings_table = document.createElement("table");
-                readings_table.innerHTML = `
-                                        <thead>
-                                            <tr>
-                                                <th style="text-align: center;">#</th>
-                                                <th style="text-align: center;">Name</th>
-                                                <th style="text-align: center;">Value</th>
-                                                <th style="text-align: center;">Topic</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    `;
-
-                readings_table.id = `publish_settings_${index_sensor}`;
-                readings_table.style = "width: 100%; max-width: 400px; margin: auto;";
-
-                settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
-                    if (item.enabled) {
-                        const detail_row = document.createElement("tr");
-
-                        detail_row.innerHTML = `
-                                        <td>${index}</td>
-                                        <td>${item.name}</td>
-                                        <td id="s_s[${index_sensor}]p_s[${index}].value"></td>
-                                        <td>${item.topic}</td>
-                                    `;
-
-                        let tbody = readings_table.querySelector("tbody")
-                        tbody.appendChild(detail_row);
-
-                        readings_sensor_div.appendChild(readings_table);
-                    }
-                });
-
-                readings_div.appendChild(readings_sensor_div);
-                readings_div.appendChild(document.createElement("hr"));
-            }
-        });
+        readings_populate(settings_json);
     }
 
 
-    function settings_get() {
-        let xhr = new XMLHttpRequest();
-        xhr.open("POST", '/settings_get.cgi', true);
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        // Use onreadystatechange instead of onload
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) { // Request is complete
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    // Check if responseText is not empty
-                    if (xhr.responseText) {
-                        try {
-                            // Parse the JSON response
-                            const settings_json = JSON.parse(xhr.responseText);
-                            settings_populate(settings_json)
-
-                        } catch (error) {
-                            console.error("Failed to parse JSON:", error);
-                        }
-                    } else {
-                        console.error("Response is empty");
-                    }
-                } else {
-                    console.error("Request failed with status:", xhr.status);
+    async function settings_get() {
+        try {
+            const response = await fetch('/settings_get.cgi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            }
-        };
+            });
 
-        xhr.send();
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error("Error fetching settings:", error);
+            throw error; // rethrow so caller can handle it
+        }
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+
+    document.addEventListener("DOMContentLoaded", async function () {
         if (window.location.protocol != 'file:') {
             wifi_networks_get();
-            settings_get();
+            try {
+                const settings = await settings_get();
+                settings_populate(settings_json);
+            } catch (err) {
+                console.error("Failed to load settings:", err);
+            }
+
+
         } else {
             let networks_string = '\
         [{"ssid":"CNE_ICI","rssi":-65,"chann":11, "auth_mode":0,"bssid":"00:6b:f1:c0:94:61"},\
@@ -708,9 +720,9 @@
         {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
             wifi_networks_populate(JSON.parse(networks_string));
 
-            let settings_string = '\{"wifi.mac_address" : "99:99:99:99:99:99", eth.mac_address" : "99:99:99:99:99:99"\
-                "initial_config" : true,\
-                "wifi":{"ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
+            let settings_string = '\{"initial_config" : true,\
+                "wifi":{"mac_address":"99:99:99:99:99:99", "ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
+                "eth":{"is_available":true, "mac_address":"99:99:99:99:99:99", "ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
                 "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
                 "sensor_settings":\
                 [{"baudrate":9600, "enabled": true, "publish_settings": \
@@ -755,8 +767,8 @@
     sensors_templates = {
         "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
 
-        "femto-TECH THFS-400": 
-                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+        "femto-TECH THFS-400":
+            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                           {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
@@ -773,8 +785,8 @@
                        }\
                       ]',
 
-        "GRAETZ WS05C-3": 
-                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+        "GRAETZ WS05C-3":
+            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\

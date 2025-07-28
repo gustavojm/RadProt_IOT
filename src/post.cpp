@@ -162,6 +162,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
             } else {    
                 if (memcmp(&old_settings.mqtt, &cs.settings.mqtt, sizeof(mqtt_settings)) != 0) {
                     mqtt_reconnect = true;
+                    responseJson["populate_readings"] = true;
                 }
                 responseJson["message"] = "Settings saved";
             }
