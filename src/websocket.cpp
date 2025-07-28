@@ -1,10 +1,9 @@
 #include "websocket.h"
 
-
 const char *header = "HTTP/1.1 101 Switching Protocols\r\n"
-                      "Upgrade: websocket\r\n"
-                      "Connection: Upgrade\r\n"
-                      "Sec-WebSocket-Accept: ";
+                     "Upgrade: websocket\r\n"
+                     "Connection: Upgrade\r\n"
+                     "Sec-WebSocket-Accept: ";
 
 char *websocket_server::get_key(char *buf, size_t *len) {
     char *p = strstr(buf, "Sec-WebSocket-Key: ");
@@ -16,18 +15,19 @@ char *websocket_server::get_key(char *buf, size_t *len) {
 }
 
 char *websocket_server::create_key_accept(char *inbuf) {
-    static char concat_key[64] = {0};
-    static char hash[22] = {0};
-    static char hash_base64[64] = {0};
+    static char concat_key[64] = { 0 };
+    static char hash[22] = { 0 };
+    static char hash_base64[64] = { 0 };
     size_t len = 0;
 
     char *key = get_key(inbuf, &len);
-    if (!key) return NULL;
+    if (!key)
+        return NULL;
 
     memset(concat_key, 0, sizeof(concat_key));
     strncpy(concat_key, key, len);
     strcat(concat_key, WS_GUID);
-    
+
     sha1_ctx_t ctx;
     sha1_init(&ctx);
     sha1_update(&ctx, (uint8_t *)concat_key, 60);
@@ -64,7 +64,7 @@ uint8_t *websocket_server::get_mask(uint8_t *msg) {
     if ((msg[1] & 0x7F) == 126) {
         return &msg[4];
     } else if ((msg[1] & 0x7F) == 127) {
-        return &msg[10];  // 64-bit length not fully supported
+        return &msg[10]; // 64-bit length not fully supported
     } else {
         return &msg[2];
     }
@@ -72,19 +72,19 @@ uint8_t *websocket_server::get_mask(uint8_t *msg) {
 
 uint8_t *websocket_server::get_payload_ptr(uint8_t *msg) {
     uint8_t *p;
-    
+
     if ((msg[1] & 0x7F) == 126) {
         p = msg + 4;
     } else if ((msg[1] & 0x7F) == 127) {
-        p = msg + 10;  // 64-bit length not fully supported
+        p = msg + 10; // 64-bit length not fully supported
     } else {
         p = msg + 2;
     }
-    
+
     if (is_masked_msg(msg)) {
         p += 4;
     }
-    
+
     return p;
 }
 
@@ -96,23 +96,23 @@ void websocket_server::unmask_message_payload(uint8_t *pld, uint32_t len, uint8_
 
 uint8_t *websocket_server::set_size_to_frame(uint32_t size, uint8_t *out_frame) {
     uint8_t *out_frame_ptr = out_frame;
-    
+
     if (size < 126) {
         *out_frame_ptr = size;
         out_frame_ptr++;
-    } else if (size < 65536) {  // 16-bit length
+    } else if (size < 65536) { // 16-bit length
         out_frame_ptr[0] = 126;
         out_frame_ptr[1] = ((size >> 8) & 0xFF);
         out_frame_ptr[2] = (size & 0xFF);
         out_frame_ptr += 3;
-    } else {  // 64-bit length - not fully implemented
+    } else { // 64-bit length - not fully implemented
         out_frame_ptr[0] = 127;
         memset(&out_frame_ptr[1], 0, 6); // Clear first 6 bytes (most significant)
         out_frame_ptr[7] = ((size >> 8) & 0xFF);
         out_frame_ptr[8] = (size & 0xFF);
         out_frame_ptr += 9;
     }
-    
+
     return out_frame_ptr;
 }
 
@@ -147,7 +147,7 @@ void websocket_server::send_message(websocket_message *msg) {
     timeout.tv_sec = 0;
     timeout.tv_usec = 500000; // 500 ms
     lwip_setsockopt(client.socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-    
+
     int bytes_sent = lwip_send(client.socket, send_buf, packet_size, 0);
     if (bytes_sent < 0) {
         lDebug(Error, "Write failed with err %d (\"%s\")", errno, strerror(errno));
@@ -157,45 +157,46 @@ void websocket_server::send_message(websocket_message *msg) {
 }
 
 void websocket_server::handle_frame(uint8_t *buffer, int length) {
-    if (length < 2) return;
-    
+    if (length < 2)
+        return;
+
     uint8_t *inbuf_ptr = buffer;
-    
+
     // Check if it's a control frame
     if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PING) {
         lDebug(Info, "Received PING, sending PONG");
         // Send PONG response
-        uint8_t pong_frame[2] = {WS_FIN_FLAG | WS_TYPE_PONG, 0};
+        uint8_t pong_frame[2] = { WS_FIN_FLAG | WS_TYPE_PONG, 0 };
         lwip_send(client.socket, pong_frame, 2, 0);
         return;
     }
-    
+
     if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PONG) {
         lDebug(Info, "Received PONG");
         return;
     }
-    
+
     if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_CLOSE) {
         lDebug(Info, "Received CLOSE frame");
         // Echo close frame
-        uint8_t close_frame[2] = {WS_FIN_FLAG | WS_TYPE_CLOSE, 0};
+        uint8_t close_frame[2] = { WS_FIN_FLAG | WS_TYPE_CLOSE, 0 };
         lwip_send(client.socket, close_frame, 2, 0);
         lwip_close(client.socket);
         client.socket = -1;
         client.established = false;
         return;
     }
-    
+
     // Handle data frame
     if (is_fin_msg(inbuf_ptr)) {
         uint32_t len = get_message_len(inbuf_ptr);
         uint8_t *payload = get_payload_ptr(inbuf_ptr);
-        
+
         if (is_masked_msg(inbuf_ptr)) {
             uint8_t *mask = get_mask(inbuf_ptr);
             unmask_message_payload(payload, len, mask);
         }
-        
+
         if (msg_handler) {
             msg_handler(payload, len, (websocket_msg_type)(inbuf_ptr[0] & WS_TYPE_MASK));
         }
@@ -206,33 +207,32 @@ bool websocket_server::process_handshake(uint8_t *buffer) {
     if (strncmp((char *)buffer, "GET /", 5) != 0) {
         return false;
     }
-    
+
     char *ws_key_accept = create_key_accept((char *)buffer);
     if (!ws_key_accept) {
         lDebug(Error, "Invalid WebSocket handshake request");
         return false;
     }
-    
+
     // Create handshake response
-    int response_len = snprintf((char *)send_buf, WS_SEND_BUFFER_SIZE,
-                               "%s%s\r\n\r\n", header, ws_key_accept);
-    
+    int response_len = snprintf((char *)send_buf, WS_SEND_BUFFER_SIZE, "%s%s\r\n\r\n", header, ws_key_accept);
+
     if (lwip_send(client.socket, send_buf, response_len, 0) < 0) {
         lDebug(Error, "Failed to send handshake response");
         return false;
     }
-    
+
     lDebug(Info, "WebSocket handshake completed");
     return true;
 }
 
 void websocket_server::task() {
     websocketQueue = xQueueCreate(10, sizeof(websocket_publish_message));
-    
+
     fd_set read_fds;
     struct timeval timeout;
     websocket_publish_message queued_msg;
-    
+
     // Create listening socket
     int listen_sock = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listen_sock < 0) {
@@ -240,18 +240,18 @@ void websocket_server::task() {
         vTaskDelete(NULL);
         return;
     }
-    
+
     // Set socket options for reuse
     int opt = 1;
     lwip_setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    
+
     // Prepare server address
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(WS_PORT);
-    
+
     // Bind socket
     if (lwip_bind(listen_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         lDebug(Error, "Socket bind failed");
@@ -259,7 +259,7 @@ void websocket_server::task() {
         vTaskDelete(NULL);
         return;
     }
-    
+
     // Listen for connections
     if (lwip_listen(listen_sock, 1) < 0) {
         lDebug(Error, "Listen failed");
@@ -267,30 +267,30 @@ void websocket_server::task() {
         vTaskDelete(NULL);
         return;
     }
-    
+
     lDebug(Info, "WebSocket server started on port %d", WS_PORT);
-    
+
     client.server_ptr = this;
-    
+
     while (1) {
         // Check if we need to accept a new client
         if (client.socket < 0) {
             // lDebug(Info, "Waiting for WebSocket client...");
-            
+
             // Set up for select on listen socket
             FD_ZERO(&read_fds);
             FD_SET(listen_sock, &read_fds);
             timeout.tv_sec = 0;
             timeout.tv_usec = SELECT_TIMEOUT_MS * 1000;
-            
+
             if (lwip_select(listen_sock + 1, &read_fds, NULL, NULL, &timeout) > 0) {
                 struct sockaddr_in client_addr;
                 socklen_t addr_len = sizeof(client_addr);
                 int client_sock = lwip_accept(listen_sock, (struct sockaddr *)&client_addr, &addr_len);
-                
+
                 if (client_sock >= 0) {
                     client.socket = client_sock;
-                    lDebug(Info, "New client connected");                    
+                    lDebug(Info, "New client connected");
                 }
             }
         } else {
@@ -299,41 +299,28 @@ void websocket_server::task() {
             FD_SET(client.socket, &read_fds);
             timeout.tv_sec = 0;
             timeout.tv_usec = SELECT_TIMEOUT_MS * 1000;
-            
+
             int select_result = lwip_select(client.socket + 1, &read_fds, NULL, NULL, &timeout);
-            
+
             if (select_result > 0 && FD_ISSET(client.socket, &read_fds)) {
                 // Data available from client
                 memset(client.recv_buf, 0, WS_RECV_BUFFER_SIZE);
                 int recv_bytes = lwip_recv(client.socket, client.recv_buf, WS_RECV_BUFFER_SIZE, 0);
-                
+
                 if (recv_bytes <= 0) {
                     // Client disconnected
                     lDebug(Info, "Client disconnected");
                     lwip_close(client.socket);
                     client.socket = -1;
                     client.established = false;
-                    //continue;
+                    // continue;
                 }
-                
+
                 // Process received data
                 if (!client.established) {
                     // Handle WebSocket handshake
                     if (process_handshake(client.recv_buf)) {
                         client.established = true;
-
-                        ArduinoJson::MyJsonDocument json = status_get();
-
-                        websocket_publish_message msg;
-                        size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
-                        msg.payload_length = len;
-                        
-                        xQueueReset(websocketQueue);
-
-                        if (xQueueSend(websocketQueue, &msg, 0) == pdPASS) {
-                            lDebug(Info, "Initial status sent");
-                        }
-
                     } else {
                         // Invalid handshake
                         lDebug(Error, "Invalid WebSocket handshake");
@@ -351,7 +338,22 @@ void websocket_server::task() {
                 client.socket = -1;
                 client.established = false;
             }
-        } 
+        }
+
+        TickType_t now = xTaskGetTickCount();
+
+        if (client.established && (now - last_status_sent >= pdMS_TO_TICKS(500))) {
+            last_status_sent = now;
+            ArduinoJson::MyJsonDocument json = status_get();
+
+            websocket_publish_message msg;
+            size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
+            msg.payload_length = len;
+
+            if (xQueueSend(websocketQueue, &msg, 0) == pdPASS) {
+                lDebug(Info, "Status sent");
+            }
+        }
 
         // Check for queued messages to send
         while (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
@@ -363,14 +365,18 @@ void websocket_server::task() {
                 send_message(&ws_msg);
             }
         }
-
     }
 }
 
 void websocket_server::init(ws_callback_t callback) {
     msg_handler = callback;
-    
+
     TaskHandle_t ws_serverTask_handle;
-    xTaskCreate([](void *ws) { static_cast<websocket_server *>(ws)->task(); }, "ws_server", configMINIMAL_STACK_SIZE * 4, 
-                this, (configMAX_PRIORITIES - 1), &ws_serverTask_handle);
+    xTaskCreate(
+        [](void *ws) { static_cast<websocket_server *>(ws)->task(); },
+        "ws_server",
+        configMINIMAL_STACK_SIZE * 4,
+        this,
+        (configMAX_PRIORITIES - 1),
+        &ws_serverTask_handle);
 }

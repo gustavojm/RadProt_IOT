@@ -188,7 +188,7 @@
                         </table>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
-                        <button type="submit">Save and Restart</button>
+                        <button type="submit">Save Settings</button>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column; height: 35px;">
                         <!-- Space to show the slide dots -->
@@ -232,10 +232,9 @@
     <div id="reboot_popup" class="modal-overlay">
         <div class="modal-reset-content">
             <span id="closeModalBtn" class="close">&times;</span>
-            <p>The settings have been updated and the device is restarting.</p>
+            <p>The network settings have changed. The device is restarting...</p>
         </div>
     </div>
-
 
 </body>
 
@@ -415,7 +414,7 @@
                 if (dataJSON["populate_readings"]) {
                     try {
                         const settings = await settings_get();
-                        readings_populate(settings_json);
+                        readings_populate(settings);
                     } catch (err) {
                         console.error("Failed to load settings:", err);
                     }
@@ -703,7 +702,7 @@
             wifi_networks_get();
             try {
                 const settings = await settings_get();
-                settings_populate(settings_json);
+                settings_populate(settings);
             } catch (err) {
                 console.error("Failed to load settings:", err);
             }

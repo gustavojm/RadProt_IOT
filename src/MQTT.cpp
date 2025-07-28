@@ -67,7 +67,7 @@ static void mqtt_task(void *pvParameters) {
                 MqttPublishMessage msg;
 
                 while (true) {
-                    if (xQueueReceive(mqttQueue, &msg, pdMsToTicks(500)) == pdPASS) {
+                    if (xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(500)) == pdPASS) {
                         // Publish the message using your MQTT client library
                         MQTTMessage message;
 

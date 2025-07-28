@@ -9,7 +9,6 @@
 #include "arduinojson_cust_alloc.h"
 
 #include "timers.h"
-#include "status.h"
 
 class Sensor {
     public:

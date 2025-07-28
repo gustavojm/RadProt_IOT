@@ -69,6 +69,7 @@ class websocket_server {
     uint8_t send_buf[WS_SEND_BUFFER_SIZE] = {};
     websocket_client client = {}; 
     ws_callback_t msg_handler = nullptr;
+    TickType_t last_status_sent = 0;
 
 private:
     void task();

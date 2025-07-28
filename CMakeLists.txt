@@ -4,7 +4,7 @@ set(PICO_BOARD pico_w)
 
 # Include build functions from Pico SDK
 
-set(PICO_SDK_PATH ../pico-sdk)
+set(PICO_SDK_PATH ./pico-sdk)
 set(FREERTOS_KERNEL_PATH ../../FreeRTOS-Kernel)
 
 include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
@@ -38,8 +38,8 @@ list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 include(FetchContent)
 
 FetchContent_Declare(ArduinoJson
-    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
-    #SOURCE_DIR ../deps/arduinojson-src
+    #GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    SOURCE_DIR ../deps/arduinojson-src
     GIT_TAG        v7.0.4
 )
 FetchContent_MakeAvailable(ArduinoJson)
@@ -47,8 +47,8 @@ FetchContent_MakeAvailable(ArduinoJson)
 
 FetchContent_Declare(
     etl
-    GIT_REPOSITORY https://github.com/ETLCPP/etl.git
-    #SOURCE_DIR ../deps/etl-src
+    #GIT_REPOSITORY https://github.com/ETLCPP/etl.git
+    SOURCE_DIR ../deps/etl-src
     GIT_TAG master  # You can replace 'master' with a specific version tag
 )
 FetchContent_MakeAvailable(etl)
