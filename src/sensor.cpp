@@ -54,9 +54,9 @@ void Sensor::read_task() {
                     size_t len = snprintf(data, sizeof data, "Val: %i:%i", sensor_num, count++);
 
                     sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, len, 1, false);
-                    vTaskDelay(pdMS_TO_TICKS(2000));
                 }
             }
+            vTaskDelay(pdMS_TO_TICKS(2000));
         } else {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             int bytes_received = uart.read_string(serial_buffer, sizeof(serial_buffer));

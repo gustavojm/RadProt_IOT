@@ -4,6 +4,7 @@
 #include <ArduinoJson.hpp>
 #include "arduinojson_cust_alloc.h"
 
-inline bool mqtt_reconnect = false;
+inline volatile bool initial_config = false;
+inline volatile bool mqtt_reconnect = false;
 
 ArduinoJson::MyJsonDocument status_get();

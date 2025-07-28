@@ -18,8 +18,6 @@
 inline const uint INITIAL_CONFIG_GPIO = 15;     // Pin 20
 inline const uint STATUS_LED_GPIO = 9;          // Pin 12
 
-inline volatile bool initial_config = false;
-
 // Define the map with string as key and array as value
 // Define comparison operator for cyw43_ev_scan_result_t
 inline bool operator<(const cyw43_ev_scan_result_t& lhs, const cyw43_ev_scan_result_t& rhs) {
@@ -69,7 +67,7 @@ struct publish_settings_entry{
     bool is_num;
     float scale;
     int avg_cnt;
-    char topic[10];
+    char topic[30];
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;

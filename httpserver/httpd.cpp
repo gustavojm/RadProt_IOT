@@ -112,7 +112,7 @@
 #include <stdio.h>
 #include <stdlib.h> /* atoi */
 #include <string.h> /* memset */
-#include "settings.h"
+#include "status.h"
 
 #if LWIP_TCP && LWIP_CALLBACK_API
 
