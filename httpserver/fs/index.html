@@ -84,8 +84,7 @@
 
                             <div
                                 style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
-                                <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)"
-                                        class="hide-on-initial-config">Refresh</a></div>
+                                <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)">Refresh</a></div>
                                 <table id="wifiTable" style="width: 100%;">
                                     <thead>
                                         <tr>
@@ -767,7 +766,7 @@
         "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
 
         "femto-TECH THFS-400":
-            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                           {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
@@ -783,9 +782,26 @@
                          ]\
                        }\
                       ]',
+        "Sensetecz 612C":
+                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":0,"topic":"123"},\
+                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/123"}\
+                         ]\
+                       },\
+                       {"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":0,"topic":"456"},\
+                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/456"}\
+                         ]\
+                       },\
+                       {"baudrate":9600,"enabled":true,"publish_settings":\
+                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":0,"topic":"789"},\
+                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/789"}\
+                         ]\
+                       }\
+                      ]',
 
         "GRAETZ WS05C-3":
-            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
@@ -988,7 +1004,7 @@
     });
 
     class WebSocketClient {
-        constructor(path = "", maxReconnectAttempts = 10) {
+        constructor(path = "", maxReconnectAttempts = 100) {
             this.path = path;
 
             if (window.location.protocol === 'file:') {
@@ -1000,7 +1016,7 @@
             } else {
                 this.host = window.location.host;
             }
-            this.port = 8765
+            this.port = 8080;
             this.maxReconnectAttempts = maxReconnectAttempts;
             this.reconnectAttempts = 0;
             this.socket = null;

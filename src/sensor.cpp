@@ -4,7 +4,7 @@ int Sensor::next_sensor_num = 0;
 
 void Sensor::init() {
     TaskHandle_t sensor_task_handle;
-    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, 1024, this, 1, &sensor_task_handle);
+    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, configMINIMAL_STACK_SIZE, this, 1, &sensor_task_handle);
     uart.set_receiving_task_handle(sensor_task_handle);
 }
 

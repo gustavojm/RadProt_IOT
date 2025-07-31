@@ -10,6 +10,6 @@ void vApplicationMallocFailedHook(void) {
 }
 
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
-    printf("Stack overflow in %s", pcTaskName);
+    //printf("Stack overflow in %s", pcTaskName);
     while(1); // Stop here for debugging
 }

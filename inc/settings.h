@@ -232,12 +232,12 @@ struct client_mode_settings {
     
 };
 
-union client_mode_settings_t {
+union client_mode_settings_union {
     client_mode_settings settings;
     char padding[FLASH_SECTOR_SIZE];
 } __attribute__((aligned(FLASH_SECTOR_SIZE)));
 
-static_assert(sizeof(client_mode_settings_t) == FLASH_SECTOR_SIZE, "Size mismatch!");
+static_assert(sizeof(client_mode_settings_union) == FLASH_SECTOR_SIZE, "Size mismatch!");
 
 const client_mode_settings *get_client_mode_settings();
 

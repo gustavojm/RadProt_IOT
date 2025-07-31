@@ -74,90 +74,87 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
     if (error) {
         lDebug(Error, "Error json parse. %s", error.c_str());
     } else {
-        static client_mode_settings_t cs;
-        client_mode_settings old_settings;
-        cs.settings = *get_client_mode_settings();
+        static client_mode_settings_union new_settings;         // defined as static to avoid overflowing the stack 
+        new_settings.settings = *get_client_mode_settings();    
 
-        old_settings = cs.settings;
+        static client_mode_settings old_settings = new_settings.settings;           // defined as static to avoid overflowing the stack 
 
-        strncpy(cs.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof cs.settings.wifi.ssid);
-        strncpy(cs.settings.wifi.password, post_data["wifi"]["password"], sizeof cs.settings.wifi.password);
-        cs.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
+        strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
+        strncpy(new_settings.settings.wifi.password, post_data["wifi"]["password"], sizeof new_settings.settings.wifi.password);
+        new_settings.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
 
-        cs.settings.wifi.ipv4.dhcp = post_data["wifi"]["dhcp"];
+        new_settings.settings.wifi.ipv4.dhcp = post_data["wifi"]["dhcp"];
 
-        ipaddr_aton(post_data["wifi"]["ip"], &cs.settings.wifi.ipv4.ip);
-        ipaddr_aton(post_data["wifi"]["nm"], &cs.settings.wifi.ipv4.nm);
-        ipaddr_aton(post_data["wifi"]["gw"], &cs.settings.wifi.ipv4.gw);
+        ipaddr_aton(post_data["wifi"]["ip"], &new_settings.settings.wifi.ipv4.ip);
+        ipaddr_aton(post_data["wifi"]["nm"], &new_settings.settings.wifi.ipv4.nm);
+        ipaddr_aton(post_data["wifi"]["gw"], &new_settings.settings.wifi.ipv4.gw);
 
-        cs.settings.eth.ipv4.dhcp = post_data["eth"]["dhcp"];
+        new_settings.settings.eth.ipv4.dhcp = post_data["eth"]["dhcp"];
 
-        ipaddr_aton(post_data["eth"]["ip"], &cs.settings.eth.ipv4.ip);
-        ipaddr_aton(post_data["eth"]["nm"], &cs.settings.eth.ipv4.nm);
-        ipaddr_aton(post_data["eth"]["gw"], &cs.settings.eth.ipv4.gw);
+        ipaddr_aton(post_data["eth"]["ip"], &new_settings.settings.eth.ipv4.ip);
+        ipaddr_aton(post_data["eth"]["nm"], &new_settings.settings.eth.ipv4.nm);
+        ipaddr_aton(post_data["eth"]["gw"], &new_settings.settings.eth.ipv4.gw);
 
-        cs.settings.conn_type = post_data["conn_type"] == "WIFI" ? WIFI : ETHERNET;
+        new_settings.settings.conn_type = post_data["conn_type"] == "WIFI" ? WIFI : ETHERNET;
         
-        strncpy(cs.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof cs.settings.mqtt.broker);
-        cs.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
-        strncpy(cs.settings.mqtt.username, post_data["mqtt"]["username"], sizeof cs.settings.mqtt.username);
-        strncpy(cs.settings.mqtt.password, post_data["mqtt"]["password"], sizeof cs.settings.mqtt.password);
+        strncpy(new_settings.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof new_settings.settings.mqtt.broker);
+        new_settings.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
+        strncpy(new_settings.settings.mqtt.username, post_data["mqtt"]["username"], sizeof new_settings.settings.mqtt.username);
+        strncpy(new_settings.settings.mqtt.password, post_data["mqtt"]["password"], sizeof new_settings.settings.mqtt.password);
 
         int elems = post_data["s_s"].size();
 
         for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
             auto s_s = post_data["s_s"][i];        
-            cs.settings.sensor_settings[i].baudrate = atoi(s_s["baud"]);
-            cs.settings.sensor_settings[i].enabled = s_s["enabled"];
+            new_settings.settings.sensor_settings[i].baudrate = atoi(s_s["baud"]);
+            new_settings.settings.sensor_settings[i].enabled = s_s["enabled"];
 
             for (int j = 0; j < MAX_PUBLISH_SETTINGS; j++) {
                 auto p_s = s_s["p_s"][j];
-                cs.settings.sensor_settings[i].publish_settings[j].enabled = p_s["enabled"];
+                new_settings.settings.sensor_settings[i].publish_settings[j].enabled = p_s["enabled"];
 
                 strncpy(
-                    cs.settings.sensor_settings[i].publish_settings[j].name,
+                    new_settings.settings.sensor_settings[i].publish_settings[j].name,
                     p_s["name"],
-                    sizeof cs.settings.sensor_settings->publish_settings->name);
-                cs.settings.sensor_settings[i].publish_settings[j].start = p_s["start"];
-                cs.settings.sensor_settings[i].publish_settings[j].end = p_s["end"];
-                cs.settings.sensor_settings[i].publish_settings[j].is_num = p_s["is_num"];
-                cs.settings.sensor_settings[i].publish_settings[j].avg_cnt = atoi(p_s["avg_cnt"]);
-                cs.settings.sensor_settings[i].publish_settings[j].scale = atof(p_s["scale"]);
+                    sizeof new_settings.settings.sensor_settings->publish_settings->name);
+                new_settings.settings.sensor_settings[i].publish_settings[j].start = p_s["start"];
+                new_settings.settings.sensor_settings[i].publish_settings[j].end = p_s["end"];
+                new_settings.settings.sensor_settings[i].publish_settings[j].is_num = p_s["is_num"];
+                new_settings.settings.sensor_settings[i].publish_settings[j].avg_cnt = atoi(p_s["avg_cnt"]);
+                new_settings.settings.sensor_settings[i].publish_settings[j].scale = atof(p_s["scale"]);
                 strncpy(
-                    cs.settings.sensor_settings[i].publish_settings[j].topic,
+                    new_settings.settings.sensor_settings[i].publish_settings[j].topic,
                     p_s["topic"],
-                    sizeof cs.settings.sensor_settings->publish_settings->topic);
+                    sizeof new_settings.settings.sensor_settings->publish_settings->topic);
             }
         }
 
         bool save_settings = true;
 
-        const client_mode_settings *current_settings = get_client_mode_settings();
-
         if (initial_config) {
-            if (strcmp(post_data["settings"]["password"], "") == 0 && strcmp((char *)current_settings->password, "") == 0) {
+            if (strcmp(post_data["settings"]["password"], "") == 0 && strcmp((char *)old_settings.password, "") == 0) {
                 responseJson["message"] = "Define a Password to Protect Settings";
                 save_settings = false;
             };
 
             if (post_data["settings"]["password"]) {
-                strncpy((char *)cs.settings.password, post_data["settings"]["password"], sizeof cs.settings.password);
+                strncpy((char *)new_settings.settings.password, post_data["settings"]["password"], sizeof new_settings.settings.password);
             }
         } else {
-            if (post_data["settings"]["password"] != current_settings->password) {
+            if (post_data["settings"]["password"] != old_settings.password) {
                 responseJson["message"] = "Wrong Password";
                 save_settings = false;
             } 
         }
 
         if (save_settings) {
-            flash_safe_execute(write_client_mode_settings, &cs, UINT32_MAX);
+            flash_safe_execute(write_client_mode_settings, &new_settings, UINT32_MAX);
 
-            bool network_settings_changed = (old_settings.conn_type != cs.settings.conn_type) ||
-                (memcmp(&old_settings.wifi, &cs.settings.wifi, sizeof(wifi_settings)) != 0) ||
-                (memcmp(&old_settings.eth, &cs.settings.eth, sizeof(ethernet_settings)) != 0);
+            bool network_settings_changed = (old_settings.conn_type != new_settings.settings.conn_type) ||
+                (memcmp(&old_settings.wifi, &new_settings.settings.wifi, sizeof(wifi_settings)) != 0) ||
+                (memcmp(&old_settings.eth, &new_settings.settings.eth, sizeof(ethernet_settings)) != 0);
 
-            bool mqtt_settings_changed = memcmp(&old_settings.mqtt, &cs.settings.mqtt, sizeof(mqtt_settings)) != 0;
+            bool mqtt_settings_changed = memcmp(&old_settings.mqtt, &new_settings.settings.mqtt, sizeof(mqtt_settings)) != 0;
 
             if (network_settings_changed || (mqtt_settings_changed && initial_config)) {
                     responseJson["OK"] = "Rebooting";

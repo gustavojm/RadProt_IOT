@@ -17,7 +17,7 @@
 #include "status.h"
 #include "crypto.h"
 
-#define WS_PORT                 8765
+#define WS_PORT                 8080
 #define WS_GUID                 "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 #define WS_FIN_FLAG             1 << 7
 #define WS_MASKED_FLAG          1 << 7
