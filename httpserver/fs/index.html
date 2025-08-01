@@ -602,8 +602,10 @@
             sensor_div.innerHTML = `
                                 #${index_sensor + 1} 
                                 Enabled:
-                                <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">                                    
+                                <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">
                                 Baud: ${create_baud_option(index_sensor, item.baudrate)}
+                                Simulate Values:
+                                <input name="s_s[${index_sensor}].simulate_values" type="checkbox" ${item.simulate_values ? "checked" : ""}>
                                `;
 
 
@@ -844,6 +846,7 @@
                 toggle_serial_settings(checkbox, index_sensor);
 
                 document.getElementsByName("s_s[" + index_sensor + "].baud")[0].value = sensor_setting.baudrate;
+                document.getElementsByName("s_s[" + index_sensor + "].s")[0].simulate_values = sensor_setting.simulate_values;
                 if (sensor_setting["publish_settings"]) {
                     sensor_setting["publish_settings"].forEach((publish_setting, index_publish) => {
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].enabled")[0].checked = publish_setting.enabled;

@@ -88,12 +88,14 @@ struct sensor_settings_entry {
   public:
     uint baudrate;
     bool enabled;
+    bool simulate_values;
     publish_settings_entry publish_settings[MAX_PUBLISH_SETTINGS];
 
     ArduinoJson::MyJsonDocument to_json() const {
         ArduinoJson::MyJsonDocument json;
         json["baudrate"] = baudrate;
         json["enabled"] = enabled;
+        json["simulate_values"] = simulate_values;
         auto publish_settings_array = json["publish_settings"].to<ArduinoJson::JsonArray>();
     
         for (auto &entry : publish_settings) {

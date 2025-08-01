@@ -108,6 +108,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
             auto s_s = post_data["s_s"][i];        
             new_settings.settings.sensor_settings[i].baudrate = atoi(s_s["baud"]);
             new_settings.settings.sensor_settings[i].enabled = s_s["enabled"];
+            new_settings.settings.sensor_settings[i].simulate_values = s_s["simulate_values"];
 
             for (int j = 0; j < MAX_PUBLISH_SETTINGS; j++) {
                 auto p_s = s_s["p_s"][j];

@@ -88,6 +88,7 @@ const client_mode_settings_union s_Client_Settings = {
 
                     .sensor_settings = { {.baudrate = 9600,
                                         .enabled = true,
+                                        .simulate_values = true,
                                         .publish_settings = { { .enabled = true,
                                                                 .name = "GAMMA",
                                                                 .start = 3,

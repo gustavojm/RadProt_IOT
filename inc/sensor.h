@@ -11,6 +11,15 @@
 #include "timers.h"
 
 class Sensor {
+
+    struct avg_fields_t {
+        int avg_cnt_current;
+        float accum;
+    };
+
+
+    void process_and_publish(const char *data, int index);
+
     public:
 
     Sensor(Serial &uart) : uart(uart), settings(settings) {
@@ -25,10 +34,13 @@ class Sensor {
     void read_task();
     
     void sendToEndpoints(int sensor_num, int pub_setting_num, const char* name, const char *topic, const char *reading, size_t reading_length, uint8_t qos, bool retain);
+
     
+
     Serial &uart;    
     const sensor_settings_entry *settings;    
     int sensor_num = 0;
+    avg_fields_t avg_fields[MAX_PUBLISH_SETTINGS]{};
 
     static int next_sensor_num;
     

@@ -4,16 +4,25 @@ int Sensor::next_sensor_num = 0;
 
 void Sensor::init() {
     TaskHandle_t sensor_task_handle;
-    xTaskCreate([](void *me) { static_cast<Sensor *>(me)->read_task(); }, NULL, configMINIMAL_STACK_SIZE, this, 1, &sensor_task_handle);
+    xTaskCreate(
+        [](void *me) { static_cast<Sensor *>(me)->read_task(); },
+        NULL,
+        configMINIMAL_STACK_SIZE,
+        this,
+        1,
+        &sensor_task_handle);
     uart.set_receiving_task_handle(sensor_task_handle);
 }
 
-struct avg_fields_t {
-    int avg_cnt_current;
-    float accum;
-};
-
-void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* name, const char *topic, const char *value, size_t value_length, uint8_t qos, bool retain) {
+void Sensor::sendToEndpoints(
+    int sensor_num,
+    int pub_setting_num,
+    const char *name,
+    const char *topic,
+    const char *value,
+    size_t value_length,
+    uint8_t qos,
+    bool retain) {
     if (sendToMqttQueue(topic, value, value_length, qos, retain) != pdPASS) {
         lDebug(Warn, "mqttQueue is full");
     }
@@ -29,102 +38,103 @@ void Sensor::sendToEndpoints(int sensor_num, int pub_setting_num, const char* na
     websocket_publish_message msg;
     size_t len = ArduinoJson::serializeJson(json, msg.payload, WS_MAX_PAYLOAD_LENGTH);
     msg.payload_length = len;
-    
+
     if (websocketQueue) {
         if (xQueueSend(websocketQueue, &msg, 0) != pdPASS) {
             lDebug(Warn, "WebsocketQueue is full");
-        }      
+        }
     }
 };
 
+void Sensor::process_and_publish(const char *data, int index) {
+    const publish_settings_entry &pub_settings = settings->publish_settings[index];    
+    char payload_buffer[SERIAL_BUFFERS_SIZE] = {};
+
+    if (pub_settings.is_num) {
+        errno = 0;
+        char *endptr;
+        float val = strtof(data, &endptr);
+
+        if (errno != 0)
+            lDebug(Error, "strtof");
+
+        if (endptr == data)
+            lDebug(Warn, "No digits were found in serial buffer: %s", data);
+
+        val *= pub_settings.scale;
+
+        if (pub_settings.avg_cnt > 0) {
+            avg_fields[index].accum += val;
+            avg_fields[index].avg_cnt_current++;
+
+            if (avg_fields[index].avg_cnt_current == pub_settings.avg_cnt) {
+                float average = avg_fields[index].accum / pub_settings.avg_cnt;
+                lDebug(Info, "Publishing %s average: %f to: %s", pub_settings.name, average, pub_settings.topic);
+                size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
+                sendToEndpoints(sensor_num, index, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
+                avg_fields[index].accum = 0;
+                avg_fields[index].avg_cnt_current = 0;
+            }
+        } else {
+            lDebug(Info, "Publishing %s value: %f to: %s", pub_settings.name, val, pub_settings.topic);
+            size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
+            sendToEndpoints(sensor_num, index, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
+        }
+    } else {
+        lDebug(Info, "Publishing %s value: %s to: %s", pub_settings.name, data, pub_settings.topic);
+        sendToEndpoints(sensor_num, index, pub_settings.name, pub_settings.topic, data, strlen(data), 1, false);
+    }
+}
+
 void Sensor::read_task() {
     char serial_buffer[SERIAL_BUFFERS_SIZE];
-    char payload_buffer[SERIAL_BUFFERS_SIZE] = {};
-    avg_fields_t avg_fields[MAX_PUBLISH_SETTINGS]{};
-
-    bool simulate = true;
 
     while (true) {
-        if (simulate) {
+        if (settings->simulate_values) {
             for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
                 const publish_settings_entry &pub_settings = settings->publish_settings[i];
-                if (pub_settings.enabled) {
-                    static int count = 0;
-                    char data[SERIAL_BUFFERS_SIZE] {};
-                    size_t len = snprintf(data, sizeof data, "Val: %i:%i", sensor_num, count++);
+                if (!pub_settings.enabled || pub_settings.end <= pub_settings.start ||
+                    pub_settings.start >= SERIAL_BUFFERS_SIZE || pub_settings.end > SERIAL_BUFFERS_SIZE)
+                    continue;
 
-                    sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, len, 1, false);
-                }
+                size_t len = pub_settings.end - pub_settings.start;
+                if (len >= SERIAL_BUFFERS_SIZE)
+                    len = SERIAL_BUFFERS_SIZE - 1;
+
+                char data[SERIAL_BUFFERS_SIZE]{};
+                int random_num = rand() % 10;
+                memset(data, '0' + random_num, len);
+                data[len] = '\0';
+
+                lDebug(Info, "****** %s ****** sensor %i: **", data, sensor_num);
+                process_and_publish(data, i);
             }
             vTaskDelay(pdMS_TO_TICKS(2000));
         } else {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             int bytes_received = uart.read_string(serial_buffer, sizeof(serial_buffer));
 
-            if (bytes_received) { // If we received something
+            if (bytes_received) {
                 for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
                     const publish_settings_entry &pub_settings = settings->publish_settings[i];
-                    if (pub_settings.enabled && pub_settings.end >= pub_settings.start &&
-                        pub_settings.start < bytes_received && pub_settings.end < bytes_received) {
-                        size_t len = pub_settings.end - pub_settings.start;
+                    if (!pub_settings.enabled || pub_settings.end <= pub_settings.start ||
+                        pub_settings.start >= bytes_received || pub_settings.end > bytes_received)
+                        continue;
 
-                        char data[SERIAL_BUFFERS_SIZE] {};
-                        memcpy(data, &serial_buffer[pub_settings.start], len);
-                        data[len] = '\0'; // Ensure null-termination
+                    size_t len = pub_settings.end - pub_settings.start;
+                    if (len >= SERIAL_BUFFERS_SIZE)
+                        len = SERIAL_BUFFERS_SIZE - 1;
 
-                        lDebug(Info, "****** %s ****** sensor %i: **", data, sensor_num);
+                    char data[SERIAL_BUFFERS_SIZE]{};
+                    memcpy(data, &serial_buffer[pub_settings.start], len);
+                    data[len] = '\0';
 
-                        if (pub_settings.is_num) {
-                            errno = 0; /* To distinguish success/failure after call */
-                            char *endptr;
-                            float val = strtof(data, &endptr);
-                            /* Check for various possible errors. */
-                            if (errno != 0) {
-                                lDebug(Error, "strtof");
-                            }
-
-                            if (endptr == data) {
-                                lDebug(Warn, "No digits were found in serial buffer: %s", serial_buffer);
-                                // lDebug(Warn, "No digits were found in serial buffer");
-                            }
-
-                            /* If we got here, strtol() successfully parsed a number. */
-                            // lDebug(Info, "strtof() returned %f", val);
-
-                            val = val * pub_settings.scale;
-
-                            if (pub_settings.avg_cnt > 0) {
-                                avg_fields[i].accum += val;
-                                avg_fields[i].avg_cnt_current++;
-
-                                if (avg_fields[i].avg_cnt_current == pub_settings.avg_cnt) {
-                                    float average = avg_fields[i].accum / pub_settings.avg_cnt;
-                                    lDebug(Info, 
-                                        "Publishing %s average: %f to: %s",
-                                        pub_settings.name,
-                                        average,
-                                        pub_settings.topic);
-                                    size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", average);
-                                    sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
-                                    avg_fields[i].accum = 0;
-                                    avg_fields[i].avg_cnt_current = 0;
-                                }
-                            } else {
-                                lDebug(Info, "Publishing %s value: %f to: %s", pub_settings.name, val, pub_settings.topic);
-                                size_t len = snprintf(payload_buffer, sizeof payload_buffer, "%f", val);
-                                sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, payload_buffer, len, 1, false);
-                            }
-
-                        } else {
-                            lDebug(Info, "Publishing %s value: %s to: %s:", pub_settings.name, data, pub_settings.topic);
-                            sendToEndpoints(sensor_num, i, pub_settings.name, pub_settings.topic, data, strlen(data), 1, false);
-                        }
-                    }
+                    lDebug(Info, "****** %s ****** sensor %i: **", data, sensor_num);
+                    process_and_publish(data, i);
                 }
             } else {
                 lDebug(Warn, "Read TIMED OUT");
             }
-
         }
     }
 }
