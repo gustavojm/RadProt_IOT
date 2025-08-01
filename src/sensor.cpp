@@ -118,10 +118,16 @@ void Sensor::read_task() {
                 for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
                     const publish_settings_entry &pub_settings = settings->publish_settings[i];
                     if (!pub_settings.enabled || pub_settings.end <= pub_settings.start ||
-                        pub_settings.start >= bytes_received || pub_settings.end > bytes_received)
+                        pub_settings.start >= bytes_received)
                         continue;
 
-                    size_t len = pub_settings.end - pub_settings.start;
+                    size_t len;
+                    if (pub_settings.end > bytes_received) {
+                        len = bytes_received - pub_settings.start;
+                    } else {
+                        len = pub_settings.end - pub_settings.start;
+                    }                  
+
                     if (len >= SERIAL_BUFFERS_SIZE)
                         len = SERIAL_BUFFERS_SIZE - 1;
 
