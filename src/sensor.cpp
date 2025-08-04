@@ -126,9 +126,12 @@ void Sensor::read_task() {
                         len = bytes_received - pub_settings.start;
                     } else {
                         len = pub_settings.end - pub_settings.start;
-                    }                  
+                    }      
+                    
+                    if (len == 0)
+                        continue;
 
-                    if (len >= SERIAL_BUFFERS_SIZE)
+                    if (len > SERIAL_BUFFERS_SIZE - 1)
                         len = SERIAL_BUFFERS_SIZE - 1;
 
                     char data[SERIAL_BUFFERS_SIZE]{};
