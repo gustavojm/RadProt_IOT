@@ -55,6 +55,7 @@ private:
     RingBuffer<char> *uart_buffer;    
     volatile bool string_finished_ = false;
     volatile int received_chars = 0;
+    volatile bool timeout_detected = false;
     TickType_t timeout_ticks = pdMS_TO_TICKS(1000); 
     char terminationChar = '\n';
 };

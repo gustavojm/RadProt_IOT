@@ -47,9 +47,15 @@ public:
         return capacity - current_size;
     }
 
-
     size_t size() const {
         return current_size;
+    }
+
+    void reset() {
+        // *buffer = {'\0'};
+        read_ptr = 0;
+        write_ptr = 0;
+        current_size = 0;
     }
    
 };

@@ -80,7 +80,7 @@ const client_mode_settings_union s_Client_Settings = {
                             },
                             
 
-                    .mqtt = {.broker = "192.168.2.2",
+                    .mqtt = {.broker = "192.168.137.175",
                             .port = 1883,
                             .username = "jorgito",
                             .password = "pass_",
@@ -135,9 +135,9 @@ const client_mode_settings_union s_Client_Settings = {
                                                 .enabled = true,
                                                 .publish_settings = { { .enabled = true,
                                                                         .name = "GAMMA",
-                                                                        .start = 3,
-                                                                        .end = 9,
-                                                                        .is_num = true,
+                                                                        .start = 0,
+                                                                        .end = 255,
+                                                                        .is_num = false,
                                                                         .scale = 0.1,
                                                                         .avg_cnt = 0,
                                                                         .topic = "789" 

@@ -87,9 +87,9 @@ void Sensor::process_and_publish(const char *data, int index) {
 }
 
 void Sensor::read_task() {
-    char serial_buffer[SERIAL_BUFFERS_SIZE];
-
     while (true) {
+        char serial_buffer[SERIAL_BUFFERS_SIZE] = {'\0'};
+
         if (settings->simulate_values) {
             for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
                 const publish_settings_entry &pub_settings = settings->publish_settings[i];

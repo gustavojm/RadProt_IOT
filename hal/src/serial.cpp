@@ -26,22 +26,31 @@ void Serial::on_uart_rx() {
 
 void Serial::handle_received_char(char c, BaseType_t &xHigherPriorityTaskWoken) {
     portDISABLE_INTERRUPTS();
-    if (c == terminationChar || uart_buffer->space_left() == 1) {  // if we are about to overflow the buffer
-        uart_buffer->push('\0');                               // Null-terminate the string
-        string_finished_ = true;
-        received_chars = 0;
 
-        // Notification for read_string to indicate that a whole string was read or that the buffer is full
-        vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    if (timeout_detected) {
+        uart_buffer->reset();
+        string_finished_ = false;
+        received_chars = 0;
+        timeout_detected = false;
     } else {
-        uart_buffer->push(c);               // Add the character to the buffer        
-        if  (received_chars++ == 1) {
-            // Notification for read_string to indicate that a new string is being received
+        if (c == terminationChar || uart_buffer->space_left() == 1) {  // if we are about to overflow the buffer
+            uart_buffer->push('\0');                               // Null-terminate the string
+            string_finished_ = true;
+            received_chars = 0;
+
+            // Notification for read_string to indicate that a whole string was read or that the buffer is full
             vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        } else {
+            uart_buffer->push(c);               // Add the character to the buffer      
+            if  (received_chars++ == 1) {
+                // Notification for read_string to indicate that a new string is being received
+                vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            }
         }
     }
+    
     portENABLE_INTERRUPTS();
 }
 
@@ -175,13 +184,15 @@ int Serial::read_string(char *buffer, size_t buffer_size) {
     while (!string_finished_) {
         if (xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) != pdFALSE) {
             /* Timed out before the whole string was received, exit the loop. */
-            break;
+            lDebug(Error, "TIMEOUTTTT");
+            timeout_detected = true;
+            return 0;
         }
 
-        ulTaskNotifyTake(pdTRUE, timeout_ticks);
+        ulTaskNotifyTake(pdTRUE, xTicksToWait);
     }
-    taskENTER_CRITICAL();
+
     int bytes_read = read_from_receive_buffer(buffer, buffer_size);
-    taskEXIT_CRITICAL();
+    buffer[bytes_read] = '\0';
     return bytes_read;
 }
