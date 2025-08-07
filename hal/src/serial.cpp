@@ -150,7 +150,7 @@ void Serial::set_receiving_task_handle(TaskHandle_t handle) {
 }
 
 int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) { 
-    vTaskEnterCritical();
+    taskENTER_CRITICAL();
     char c;    
     size_t bytes = 0;
     while (uart_buffer->pop(c) && buffer_size-- > 1) {
@@ -162,7 +162,7 @@ int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) {
         }
     }
     string_finished_ = false;
-    vTaskExitCritical();    
+    taskEXIT_CRITICAL();
     return bytes;
 }
 
@@ -184,7 +184,7 @@ int Serial::read_string(char *buffer, size_t buffer_size) {
     while (!string_finished_) {
         if (xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) != pdFALSE) {
             /* Timed out before the whole string was received, exit the loop. */
-            lDebug(Error, "TIMEOUTTTT");
+            lDebug(Error, "Timeout");
             timeout_detected = true;
             return 0;
         }
@@ -193,6 +193,5 @@ int Serial::read_string(char *buffer, size_t buffer_size) {
     }
 
     int bytes_read = read_from_receive_buffer(buffer, buffer_size);
-    buffer[bytes_read] = '\0';
     return bytes_read;
 }
