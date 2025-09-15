@@ -15,6 +15,13 @@ public:
         write_ptr(0),
         current_size(0) {}
 
+    ~RingBuffer() {
+        delete[] buffer;
+    }   
+
+    RingBuffer(const RingBuffer&) = delete;
+    RingBuffer& operator=(const RingBuffer&) = delete;
+    
     bool push(const T& item) {
         if (is_full()) {
             return false; // Buffer is full

@@ -846,7 +846,7 @@
                 toggle_serial_settings(checkbox, index_sensor);
 
                 document.getElementsByName("s_s[" + index_sensor + "].baud")[0].value = sensor_setting.baudrate;
-                document.getElementsByName("s_s[" + index_sensor + "].s")[0].simulate_values = sensor_setting.simulate_values;
+                document.getElementsByName("s_s[" + index_sensor + "].simulate_values")[0].checked = sensor_setting.simulate_values;
                 if (sensor_setting["publish_settings"]) {
                     sensor_setting["publish_settings"].forEach((publish_setting, index_publish) => {
                         document.getElementsByName("s_s[" + index_sensor + "]p_s[" + index_publish + "].enabled")[0].checked = publish_setting.enabled;

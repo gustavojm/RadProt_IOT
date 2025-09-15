@@ -64,6 +64,11 @@ void Sensor::process_and_publish(const char *data, int index) {
         val *= pub_settings.scale;
 
         if (pub_settings.avg_cnt > 0) {
+            if (avg_fields[index].avg_cnt_current > pub_settings.avg_cnt) { // If settings have changed to a lower avg_cnt, restart averaging
+                avg_fields[index].accum = 0;
+                avg_fields[index].avg_cnt_current = 0;
+            }
+
             avg_fields[index].accum += val;
             avg_fields[index].avg_cnt_current++;
 
