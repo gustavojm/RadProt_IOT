@@ -25,11 +25,10 @@ public:
     bool init(irq_handler_t handler);
     int read_string(char *buffer, size_t buffer_size);
     void on_uart_rx();
-    void handle_received_char(char c, BaseType_t &xHigherPriorityTaskWoken);
+    void handle_received_char(char c);
     bool task_notified = false;
     
     void set_timeout(TickType_t timeout);
-    void set_delimiter(char delimiter);
     void set_receiving_task_handle();
     void set_receiving_task_handle(TaskHandle_t handle);
 
@@ -57,5 +56,4 @@ private:
     volatile int received_chars = 0;
     volatile bool timeout_detected = false;
     TickType_t timeout_ticks = pdMS_TO_TICKS(1000); 
-    char terminationChar = '\n';
 };

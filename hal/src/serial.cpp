@@ -4,8 +4,7 @@
 
 // Function to handle UART IRQ
 void Serial::on_uart_rx() {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
+    
     if (!receiving_task_handle) {
         return;
     }
@@ -14,44 +13,59 @@ void Serial::on_uart_rx() {
     if (uart_num < 2) {     // Hardware UARTS
         while (uart_is_readable(hardware_uart)) {
             c = uart_getc(hardware_uart);
-            handle_received_char(c, xHigherPriorityTaskWoken);
+            handle_received_char(c);
         }
     } else {                // PIO UARTS
         while(!pio_sm_is_rx_fifo_empty(pio_hw, sm)) {   
             c = uart_rx_program_getc(pio_hw, sm);
-            handle_received_char(c, xHigherPriorityTaskWoken);
+            handle_received_char(c);
         }    
     }        
 }
 
-void Serial::handle_received_char(char c, BaseType_t &xHigherPriorityTaskWoken) {
-    portDISABLE_INTERRUPTS();
-
+void Serial::handle_received_char(char c) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    
     if (timeout_detected) {
         uart_buffer->reset();
         string_finished_ = false;
         received_chars = 0;
         timeout_detected = false;
     } else {
-        if (c == terminationChar || uart_buffer->space_left() == 1) {  // if we are about to overflow the buffer
-            uart_buffer->push('\0');                               // Null-terminate the string
+
+        // Check if this is any line termination character
+        if (c == '\r' || c == '\n') {
+            // Only terminate if we actually have data (ignore consecutive terminators)
+            if (received_chars > 0) {
+                uart_buffer->push('\0');
+                string_finished_ = true;
+                received_chars = 0;
+                vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
+            }
+            // Else: ignore empty lines (consecutive \r\n or \n\r)
+        }
+
+        // Check if buffer is nearly full (need space for this char + null terminator)
+        else if (uart_buffer->space_left() == 2) {
+            uart_buffer->push(c);      // Push the last character
+            uart_buffer->push('\0');   // Null-terminate
             string_finished_ = true;
             received_chars = 0;
-
-            // Notification for read_string to indicate that a whole string was read or that the buffer is full
             vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        } else {
-            uart_buffer->push(c);               // Add the character to the buffer      
-            if  (received_chars++ == 1) {
-                // Notification for read_string to indicate that a new string is being received
+        }
+
+        // Normal character processing
+        else {
+            uart_buffer->push(c);
+            received_chars++;
+            
+            if (received_chars == 1) {
                 vTaskNotifyGiveFromISR(receiving_task_handle, &xHigherPriorityTaskWoken);
-                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             }
         }
     }
-    
-    portENABLE_INTERRUPTS();
+
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 Serial::Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size)
@@ -164,10 +178,6 @@ int Serial::read_from_receive_buffer(char *buffer, size_t buffer_size) {
 
 void Serial::set_timeout(TickType_t timeout) {
     timeout_ticks = timeout;
-}
-
-void Serial::set_delimiter(char delimiter) {
-    terminationChar = delimiter;
 }
 
 // Function to read a string with a timeout
