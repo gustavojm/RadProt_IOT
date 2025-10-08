@@ -80,7 +80,7 @@ const client_mode_settings_union s_Client_Settings = {
                             },
                             
 
-                    .mqtt = {.broker = "192.168.137.175",
+                    .mqtt = {.broker = "192.168.137.86",
                             .port = 1883,
                             .username = "jorgito",
                             .password = "pass_",
@@ -88,12 +88,12 @@ const client_mode_settings_union s_Client_Settings = {
 
                     .sensor_settings = { {.baudrate = 9600,
                                         .enabled = true,
-                                        .simulate_values = true,
+                                        .simulate_values = false,
                                         .publish_settings = { { .enabled = true,
                                                                 .name = "GAMMA",
                                                                 .start = 3,
                                                                 .end = 9,
-                                                                .is_num = true,
+                                                                .is_num = false,
                                                                 .scale = 0.1,
                                                                 .avg_cnt = 0,
                                                                 .topic = "123" 
@@ -115,7 +115,7 @@ const client_mode_settings_union s_Client_Settings = {
                                                                     .name = "GAMMA",
                                                                     .start = 3,
                                                                     .end = 9,
-                                                                    .is_num = true,
+                                                                    .is_num = false,
                                                                     .scale = 0.1,
                                                                     .avg_cnt = 0,
                                                                     .topic = "456" 

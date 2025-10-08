@@ -137,7 +137,7 @@ static void main_task(__unused void *params) {
         static Serial my_uart0(0, 0, 1, client_settings->sensor_settings[0].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart0.init([]() { my_uart0.on_uart_rx(); });
         my_uart0.set_timeout(pdMS_TO_TICKS(100));
-        my_uart0.set_delimiter('\n');
+        my_uart0.set_delimiter('\r');
         static Sensor s0(my_uart0);
         s0.init();
     }
@@ -146,7 +146,7 @@ static void main_task(__unused void *params) {
         static Serial my_uart2(2, 2, 3, client_settings->sensor_settings[1].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart2.init([]() { my_uart2.on_uart_rx(); });
         my_uart2.set_timeout(pdMS_TO_TICKS(100));
-        my_uart2.set_delimiter('\n');
+        my_uart2.set_delimiter('\r');
         static Sensor s2(my_uart2);
         s2.init();
     }
@@ -155,7 +155,7 @@ static void main_task(__unused void *params) {
         static Serial my_uart3(3, 6, 7, client_settings->sensor_settings[2].baudrate, SERIAL_BUFFERS_SIZE);
         my_uart3.init([]() { my_uart3.on_uart_rx(); });
         my_uart3.set_timeout(pdMS_TO_TICKS(100));
-        my_uart3.set_delimiter('\n');
+        my_uart3.set_delimiter('\r');
         static Sensor s3(my_uart3);
         s3.init();
     }
@@ -183,7 +183,7 @@ static void main_task(__unused void *params) {
 
 /** 
  * Updates watchdog timer
- * Simulates sensor information sent periodically through UART
+ * Also, simulates sensor information sent periodically through UART
  */
 void feedWatchdogTask(void *params) {
     // Set the TX and RX pins by using the function select on the GPIO
@@ -195,13 +195,14 @@ void feedWatchdogTask(void *params) {
 
     while (true) {
         uart_init(uart1, baud);
+        vTaskDelay(100);        
+        uart_puts(uart1, "Hel987.2233lo, UART!\r");
         vTaskDelay(100);
-        // Send out a string, with CR/LF conversions
-        uart_puts(uart1, "Hel987.2233lo, UART!\n");
+        uart_puts(uart1, "Mes12.34567890 from serial port!\r");
         vTaskDelay(100);
-        uart_puts(uart1, "Mes12.34567890 from serial port!\n");
+        uart_puts(uart1, "Est9999999999inta sentada en el verde limon\r");
         vTaskDelay(100);
-        uart_puts(uart1, "Est9999999999inta sentada en el verde limon\n");
+        uart_puts(uart1, "& 000000 011 060 002 020  000000 496 0080A374F651 000340 103 6967\r");  // Real payload
         vTaskDelay(500);
         watchdog_update();
     }

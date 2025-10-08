@@ -182,6 +182,9 @@ int Serial::read_string(char *buffer, size_t buffer_size) {
             /* Timed out before the whole string was received, exit the loop. */
             lDebug(Error, "Timeout");
             timeout_detected = true;
+            
+            int bytes_read = read_from_receive_buffer(buffer, buffer_size);
+            printf("%.*s\n", bytes_read, buffer);
             return 0;
         }
 
