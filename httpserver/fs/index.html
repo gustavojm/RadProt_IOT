@@ -766,8 +766,9 @@
 
     sensors_templates = {
         "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
-
+        
         "femto-TECH THFS-400":
+                    // & 002645 A=111 S=222 F=374 T=21 G=000003 P=915 V=000 MAC=0080A379C0DF C=000185 R=106 6967
                     '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                           {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
@@ -784,25 +785,28 @@
                          ]\
                        }\
                       ]',
+        
         "Sensetecz 612C":
+                    // & 000000 011 060 002 021  000000 496 0080A374F651 010846 103 6967
                     '\[{"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":0,"topic":"123"},\
-                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/123"}\
+                         [{"enabled":true,"name":"H3","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":0,"topic":"123"},\
+                          {"enabled":true,"name":"H3AVG","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/123"}\
                          ]\
                        },\
                        {"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":0,"topic":"456"},\
-                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/456"}\
+                         [{"enabled":true,"name":"H3","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":0,"topic":"456"},\
+                          {"enabled":true,"name":"H3AVG","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/456"}\
                          ]\
                        },\
                        {"baudrate":9600,"enabled":true,"publish_settings":\
-                         [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":0,"topic":"789"},\
-                          {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/789"}\
+                         [{"enabled":true,"name":"H3","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":0,"topic":"789"},\
+                          {"enabled":true,"name":"H3AVG","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/789"}\
                          ]\
                        }\
                       ]',
 
         "GRAETZ WS05C-3":
+                    // 
                     '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
