@@ -52,7 +52,7 @@ static void mqtt_task(void *pvParameters) {
             MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
             connectData.MQTTVersion = 3;
 
-            connectData.clientID.cstring = const_cast<char *>("RadProt_IOT");
+            connectData.clientID.cstring = const_cast<char *>("RadProt_IoT");
             connectData.username.cstring = const_cast<char *>(client_settings->mqtt.username);
             connectData.password.cstring = const_cast<char *>(client_settings->mqtt.password);
 

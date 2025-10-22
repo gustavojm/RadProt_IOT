@@ -1,7 +1,7 @@
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
-#include <stdarg.h>
+#include <cstdarg>
 
 #include <lwip/dns.h>
 #include <lwip/ip4_addr.h>
@@ -205,7 +205,7 @@ void feedWatchdogTask(void *params) {
     }
 }
 
-int main(void) {
+int main() {
     stdio_init_all();
     TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();

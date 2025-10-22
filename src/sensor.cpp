@@ -1,4 +1,5 @@
 #include "sensor.h"
+#include "projdefs.h"
 
 int Sensor::next_sensor_num = 0;
 
@@ -116,35 +117,37 @@ void Sensor::read_task() {
             }
             vTaskDelay(pdMS_TO_TICKS(2000));
         } else {
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            int bytes_received = uart.read_string(serial_buffer, sizeof(serial_buffer));
+            uint32_t notification_value;
+            if (xTaskNotifyWait(0, ULONG_MAX, &notification_value, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                int bytes_received = uart.read_string(serial_buffer, sizeof(serial_buffer));
 
-            if (bytes_received) {
-                for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
-                    const publish_settings_entry &pub_settings = settings->publish_settings[i];
-                    if (!pub_settings.enabled || pub_settings.end <= pub_settings.start ||
-                        pub_settings.start >= bytes_received)
-                        continue;
+                if (bytes_received) {
+                    for (int i = 0; i < MAX_PUBLISH_SETTINGS; i++) {
+                        const publish_settings_entry &pub_settings = settings->publish_settings[i];
+                        if (!pub_settings.enabled || pub_settings.end <= pub_settings.start ||
+                            pub_settings.start >= bytes_received)
+                            continue;
 
-                    size_t len;
-                    if (pub_settings.end > bytes_received) {
-                        len = bytes_received - pub_settings.start;
-                    } else {
-                        len = pub_settings.end - pub_settings.start;
-                    }      
-                    
-                    if (len == 0)
-                        continue;
+                        size_t len;
+                        if (pub_settings.end > bytes_received) {
+                            len = bytes_received - pub_settings.start;
+                        } else {
+                            len = pub_settings.end - pub_settings.start;
+                        }      
+                        
+                        if (len == 0)
+                            continue;
 
-                    if (len > SERIAL_BUFFERS_SIZE - 1)
-                        len = SERIAL_BUFFERS_SIZE - 1;
+                        if (len > SERIAL_BUFFERS_SIZE - 1)
+                            len = SERIAL_BUFFERS_SIZE - 1;
 
-                    char data[SERIAL_BUFFERS_SIZE]{};
-                    memcpy(data, &serial_buffer[pub_settings.start], len);
-                    data[len] = '\0';
+                        char data[SERIAL_BUFFERS_SIZE]{};
+                        memcpy(data, &serial_buffer[pub_settings.start], len);
+                        data[len] = '\0';
 
-                    lDebug(Info, "****** %s ****** sensor %i: **", data, sensor_num);
-                    process_and_publish(data, i);
+                        lDebug(Info, "****** %s ****** sensor %i: **", data, sensor_num);
+                        process_and_publish(data, i);
+                    }
                 }
             } else {
                 lDebug(Warn, "Read TIMED OUT");

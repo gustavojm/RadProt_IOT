@@ -51,6 +51,7 @@
 #include "post.h"
 #include "status.h"
 #include "watchdog.h"
+#include "serial.h"
 
 namespace json = ArduinoJson;
 

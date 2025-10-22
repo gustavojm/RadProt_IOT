@@ -17,7 +17,7 @@ pico_sdk_init()
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-project(RadProt_IOT C CXX ASM)
+project(RadProt_IoT C CXX ASM)
 
 #
 # Static analyzers
@@ -97,7 +97,7 @@ add_executable(${PROJECT_NAME}
 pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/uart_rx.pio)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-        WIFI_SSID="RadProt_IOT"
+        WIFI_SSID="RadProt_IoT"
         WIFI_PASSWORD="NASA1234"
         NO_SYS=0
         ETL_NO_STL
