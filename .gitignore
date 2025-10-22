@@ -5,3 +5,4 @@ build
 CMakeLists.txt.old
 pico-sdk
 deps/
+.cache/
