@@ -68,7 +68,7 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
 }
 
 json::MyJsonDocument settings_save_fn(struct http_state *hs) {
-    auto responseJson = json::MyJsonDocument();
+    auto responseJson= json::MyJsonDocument();
     auto post_data = json::MyJsonDocument();
     json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
@@ -208,7 +208,18 @@ json::MyJsonDocument wifi_nets_scan_fn(struct http_state *hs) {
 
     return wifi_nets_fn(hs);
 }
+
+json::MyJsonDocument restart_fn(struct http_state *hs) {
+    auto responseJson = json::MyJsonDocument();
     
+    watchdog_reboot(0, SRAM_END, 1000);
+    vTaskSuspend(feedWdTask_handle);
+
+    responseJson.to<json::JsonObject>();      // Because we have not created any keys, it is just empty
+    return responseJson;
+}
+
+
 // @formatter:off
 const post_handler_entry post_handlers[] = {
     {
@@ -226,6 +237,10 @@ const post_handler_entry post_handlers[] = {
     {
         "/wifi_nets_scan.cgi",
         &wifi_nets_scan_fn,
+    },
+    {
+        "/restart.cgi",
+        &restart_fn,
     },
 
 };

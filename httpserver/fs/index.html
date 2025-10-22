@@ -193,6 +193,7 @@
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
                         <button type="submit">Save Settings</button>
+                        <button type="button" id="restart_button">Restart</button>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column; height: 35px;">
                         <!-- Space to show the slide dots -->
@@ -236,7 +237,7 @@
     <div id="reboot_popup" class="modal-overlay">
         <div class="modal-reset-content">
             <span id="closeModalBtn" class="close">&times;</span>
-            <p>The network settings have changed. The device is restarting...</p>
+            <p>The device is restarting...</p>
         </div>
     </div>
 
@@ -415,20 +416,30 @@
             dataJSON = JSON.parse(this.responseText)
             if (dataJSON["message"]) {
                 alert(dataJSON["message"]);
-                if (dataJSON["populate_readings"]) {
-                    try {
-                        const settings = await settings_get();
-                        readings_populate(settings);
-                    } catch (err) {
-                        console.error("Failed to load settings:", err);
-                    }
-                }
                 return;
             } else {
                 document.getElementById("reboot_popup").style.display = "block";
             }
         };
     });
+
+    document.getElementById('restart_button').addEventListener('click', function (event) {
+
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", '/restart.cgi', true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send();
+        xhr.onloadend = async function () {
+            dataJSON = JSON.parse(this.responseText)
+            if (dataJSON["message"]) {
+                alert(dataJSON["message"]);
+                return;
+            } else {
+                document.getElementById("reboot_popup").style.display = "block";
+            }
+        };
+    });
+
 
 
     function apply_settings() {
