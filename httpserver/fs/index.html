@@ -31,17 +31,17 @@
                             <h2>MAC Address: <span id="wifi.mac_address"></span> </h2>
                             <table cellspacing="0" cellpadding="3" style="width: 100%;">
                                 <tr>
-                                    <td class="label">SSID:</td>
-                                    <td><input type="text" name="wifi.ssid" value=""></td>
+                                    <td class="label"><label for="wifi.ssid">SSID: </label></td>
+                                    <td><input type="text" name="wifi.ssid" id="wifi.ssid" value=""></td>
                                 </tr>
                                 <tr>
-                                    <td class="label">Password:</td>
-                                    <td><input type="password" name="wifi.password" value=""></td>
+                                    <td class="label"><label for="wifi.password">Password: </label></td>
+                                    <td><input type="password" name="wifi.password" id="wifi.password" value=""></td>
                                 </tr>
                                 <tr>
-                                    <td class="label">Security:</td>
+                                    <td class="label"><label for="wifi.auth_mode">Security: </label></td>
                                     <td>
-                                        <select name="wifi.auth_mode">
+                                        <select name="wifi.auth_mode" id="wifi.auth_mode">
                                             <option value="0" title="No authorisation required (open)">OPEN</option>
                                             <option value="1" title="WPA authorisation">WPA TKIP PSK</option>
                                             <option value="2" title="WPA2 authorisation (prefered)">WPA AES PSK</option>
@@ -54,37 +54,38 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">DHCP:</td>
-                                    <td><input type="checkbox" name="wifi.dhcp"
+                                    <td class="label"><label for="wifi.dhcp">DHCP: </label></td>
+                                    <td><input type="checkbox" name="wifi.dhcp" id="wifi.dhcp"
                                             onchange="toggle_wifi_ip_settings(this)">
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">IP: </td>
+                                    <td class="label"><label for="wifi.ip">IP: </label></td>
                                     <td>
-                                        <input type="text" name="wifi.ip" placeholder="192.168.1.20" size="12"
-                                            class="ip-addr">
+                                        <input type="text" name="wifi.ip" id="wifi.ip" placeholder="192.168.1.20"
+                                            size="12" class="ip-addr">
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">Netmask:</td>
+                                    <td class="label"><label for="wifi.nm">Netmask: </label></td>
                                     <td>
-                                        <input type="text" name="wifi.nm" placeholder="255.255.255.0" size="12"
-                                            class="ip-addr">
+                                        <input type="text" name="wifi.nm" id="wifi.nm" placeholder="255.255.255.0"
+                                            size="12" class="ip-addr">
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">Gateway:</td>
+                                    <td class="label"><label for="wifi.gw">Gateway: </label></td>
                                     <td>
-                                        <input type="text" name="wifi.gw" placeholder="192.168.1.1" size="12"
-                                            class="ip-addr">
+                                        <input type="text" name="wifi.gw" id="wifi.gw" placeholder="192.168.1.1"
+                                            size="12" class="ip-addr">
                                     </td>
                                 </tr>
                             </table>
 
                             <div
                                 style="display: flex; justify-content: center; flex-direction: column; overflow-x: visible;">
-                                <div><strong>WiFi Networks: </strong><a href="#" onclick="wifi_networks_get(true)">Refresh</a></div>
+                                <div><strong>WiFi Networks: </strong><a href="#"
+                                        onclick="wifi_networks_get(true)">Refresh</a></div>
                                 <table id="wifiTable" style="width: 100%;">
                                     <thead>
                                         <tr>
@@ -107,28 +108,29 @@
                             <h2>MAC Address: <span id="eth.mac_address"></span> </h2>
                             <table cellspacing="0" cellpadding="3" style="width: 100%;">
                                 <tr>
-                                    <td class="label">DHCP:</td>
-                                    <td><input type="checkbox" name="eth.dhcp" onchange="toggle_eth_ip_settings(this)">
+                                    <td class="label"><label for="eth.dhcp">DHCP: </label></td>
+                                    <td><input type="checkbox" name="eth.dhcp" id="eth.dhcp"
+                                            onchange="toggle_eth_ip_settings(this)">
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">IP: </td>
+                                    <td class="label"><label for="eth.ip">IP: </label></td>
                                     <td>
-                                        <input type="text" name="eth.ip" placeholder="192.168.1.20" size="12"
-                                            class="ip-addr">
+                                        <input type="text" name="eth.ip" id="eth.ip" placeholder="192.168.1.20"
+                                            size="12" class="ip-addr">
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">Netmask:</td>
+                                    <td class="label"><label for="eth.nm">Netmask: </label></td>
                                     <td>
-                                        <input type="text" name="eth.nm" placeholder="255.255.255.0" size="12"
-                                            class="ip-addr">
+                                        <input type="text" name="eth.nm" id="eth.nm" placeholder="255.255.255.0"
+                                            size="12" class="ip-addr">
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="label">Gateway:</td>
+                                    <td class="label"><label for="eth.gw">Gateway: </label></td>
                                     <td>
-                                        <input type="text" name="eth.gw" placeholder="192.168.1.1" size="12"
+                                        <input type="text" name="eth.gw" id="eth.gw" placeholder="192.168.1.1" size="12"
                                             class="ip-addr">
                                     </td>
                                 </tr>
@@ -140,21 +142,21 @@
                         <strong>MQTT Settings:</strong>
                         <table cellspacing="0" cellpadding="3" style="width:100%">
                             <tr>
-                                <td class="label">Broker:</td>
-                                <td><input type="text" name="mqtt.broker" value=""><span
+                                <td class="label"><label for="mqtt.broker">Broker: </label></td>
+                                <td><input type="text" name="mqtt.broker" id="mqtt.broker" value=""><span
                                         id="mqtt_connection_status"></span></td>
                             </tr>
                             <tr>
-                                <td class="label">Port:</td>
-                                <td><input type="number" name="mqtt.port" style="width: 5em" min="0" max="65535"
-                                        value=""></td>
+                                <td class="label"><label for="mqtt.port">Port: </label></td>
+                                <td><input type="number" name="mqtt.port" id="mqtt.port" style="width: 5em" min="0"
+                                        max="65535" value=""></td>
                             </tr>
                             <tr>
-                                <td class="label">User Name:</td>
-                                <td><input type="text" name="mqtt.username" value=""></td>
+                                <td class="label"><label for="mqtt.username">User Name: </label></td>
+                                <td><input type="text" name="mqtt.username" id="mqtt.username" value=""></td>
                             </tr>
-                            <td class="label">Password:</td>
-                            <td><input type="password" name="mqtt.password" value=""></td>
+                            <td class="label"><label for="mqtt.password">Password </label></td>
+                            <td><input type="password" name="mqtt.password" id="mqtt.password" value=""></td>
                         </table>
                     </div>
 
@@ -175,13 +177,16 @@
                         <table cellspacing="0" cellpadding="3">
                             <tbody>
                                 <tr>
-                                    <td class="label">Password:</td>
-                                    <td><input type="password" name="settings.password" value=""></td>
+                                    <td class="label"><label for="settings.password">Password: </label></td>
+                                    <td><input type="password" name="settings.password" id="settings.password" value="">
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <td class="label show-on-initial-config">Confirm Password:</td>
+                                    <td class="label show-on-initial-config"><label
+                                            for="settings.password_confirm">Confirm Password:</label></td>
                                     <td class="label show-on-initial-config"><input type="password"
-                                            name="settings.password_confirm" value=""></td>
+                                            name="settings.password_confirm" id="settings.password_confirm" value="">
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -601,11 +606,18 @@
 
             sensor_div.innerHTML = `
                                 #${index_sensor + 1} 
-                                Enabled:
-                                <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">
-                                Baud: ${create_baud_option(index_sensor, item.baudrate)}
+                                <label>
+                                    Enabled:
+                                    <input name="s_s[${index_sensor}].enabled" type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggle_serial_settings(this, ${index_sensor})">
+                                </label>
+                                <br>
+                                <label>
+                                    Baud: ${create_baud_option(index_sensor, item.baudrate)}
+                                </label>
+                                <label>
                                 Simulate Values:
-                                <input name="s_s[${index_sensor}].simulate_values" type="checkbox" ${item.simulate_values ? "checked" : ""}>
+                                    <input name="s_s[${index_sensor}].simulate_values" type="checkbox" ${item.simulate_values ? "checked" : ""}>
+                                </label>
                                `;
 
 
@@ -635,17 +647,115 @@
             settings_json.sensor_settings[index_sensor]["publish_settings"].forEach((item, index) => {
                 const detail_row = document.createElement("tr");
 
-                detail_row.innerHTML = `
-                                    <td>${index}</td>
-                                    <td style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].enabled" type="checkbox" ${item.enabled ? "checked" : ""}></a></td>
-                                    <td><input name="s_s[${index_sensor}]p_s[${index}].name" size="6" value="${item.name}" maxlength="10"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].start" min="0" max="255" style="width: 3em" value="${item.start}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].end" min="0" max="255" style="width: 3em" value="${item.end}"></td>
-                                    <td class="hide-on-small" style="text-align: center;"><input name="s_s[${index_sensor}]p_s[${index}].is_num" type="checkbox" ${item.is_num ? "checked" : ""} onchange="toggle_numeric_settings(this, ${index_sensor}, ${index})"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].scale" step="any" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${Math.round((item.scale + Number.EPSILON) * 10000) / 10000}"></td>
-                                    <td class="hide-on-small"><input type="number" name="s_s[${index_sensor}]p_s[${index}].avg_cnt" min="0" style="width: 4em" ${item.is_num ? "" : "disabled"} value="${item.avg_cnt}"></td>
-                                    <td><input name="s_s[${index_sensor}]p_s[${index}].topic" size="6" value="${item.topic}" maxlength="30"></td>
-                                   `;
+                // Index cell
+                const indexCell = document.createElement("td");
+                indexCell.textContent = index;
+                detail_row.appendChild(indexCell);
+
+                // Enabled checkbox cell
+                const enabledCell = document.createElement("td");
+                enabledCell.style.textAlign = "center";
+                const enabledInput = document.createElement("input");
+                enabledInput.name = `s_s[${index_sensor}]p_s[${index}].enabled`;
+                enabledInput.id = enabledInput.name;
+                enabledInput.type = "checkbox";
+                enabledInput.checked = item.enabled;
+                enabledCell.appendChild(enabledInput);
+                detail_row.appendChild(enabledCell);
+
+                // Name cell
+                const nameCell = document.createElement("td");
+                const nameInput = document.createElement("input");
+                nameInput.name = `s_s[${index_sensor}]p_s[${index}].name`;
+                nameInput.id = nameInput.name;
+                nameInput.size = "6";
+                nameInput.value = item.name;
+                nameInput.maxLength = 10;
+                nameCell.appendChild(nameInput);
+                detail_row.appendChild(nameCell);
+                
+
+                // Start cell
+                const startCell = document.createElement("td");
+                startCell.className = "hide-on-small";
+                const startInput = document.createElement("input");
+                startInput.type = "number";
+                startInput.name = `s_s[${index_sensor}]p_s[${index}].start`;
+                startInput.id = startInput.name;
+                startInput.min = "0";
+                startInput.max = "255";
+                startInput.style.width = "3em";
+                startInput.value = item.start;
+                startCell.appendChild(startInput);
+                detail_row.appendChild(startCell);
+
+                // End cell
+                const endCell = document.createElement("td");
+                endCell.className = "hide-on-small";
+                const endInput = document.createElement("input");
+                endInput.type = "number";
+                endInput.name = `s_s[${index_sensor}]p_s[${index}].end`;
+                endInput.id = endInput.name;
+                endInput.min = "0";
+                endInput.max = "255";
+                endInput.style.width = "3em";
+                endInput.value = item.end;
+                endCell.appendChild(endInput);
+                detail_row.appendChild(endCell);
+
+                // Is Numeric checkbox cell
+                const isNumCell = document.createElement("td");
+                isNumCell.className = "hide-on-small";
+                isNumCell.style.textAlign = "center";
+                const isNumInput = document.createElement("input");
+                isNumInput.name = `s_s[${index_sensor}]p_s[${index}].is_num`;
+                isNumInput.id = isNumInput.name;
+                isNumInput.type = "checkbox";
+                isNumInput.checked = item.is_num;
+                isNumInput.onchange = function () {
+                    toggle_numeric_settings(this, index_sensor, index);
+                };
+                isNumCell.appendChild(isNumInput);
+                detail_row.appendChild(isNumCell);
+
+                // Scale cell
+                const scaleCell = document.createElement("td");
+                scaleCell.className = "hide-on-small";
+                const scaleInput = document.createElement("input");
+                scaleInput.type = "number";
+                scaleInput.name = `s_s[${index_sensor}]p_s[${index}].scale`;
+                scaleInput.id = scaleInput.name;
+                scaleInput.step = "any";
+                scaleInput.style.width = "4em";
+                scaleInput.disabled = !item.is_num;
+                scaleInput.value = Math.round((item.scale + Number.EPSILON) * 10000) / 10000;
+                scaleCell.appendChild(scaleInput);
+                detail_row.appendChild(scaleCell);
+
+                // Average Count cell
+                const avgCntCell = document.createElement("td");
+                avgCntCell.className = "hide-on-small";
+                const avgCntInput = document.createElement("input");
+                avgCntInput.type = "number";
+                avgCntInput.name = `s_s[${index_sensor}]p_s[${index}].avg_cnt`;
+                avgCntInput.id = avgCntInput.name;
+                avgCntInput.min = "0";
+                avgCntInput.style.width = "4em";
+                avgCntInput.disabled = !item.is_num;
+                avgCntInput.value = item.avg_cnt;
+                avgCntCell.appendChild(avgCntInput);
+                detail_row.appendChild(avgCntCell);
+
+                // Topic cell
+                const topicCell = document.createElement("td");
+                const topicInput = document.createElement("input");
+                topicInput.name = `s_s[${index_sensor}]p_s[${index}].topic`;
+                topicInput.id = topicInput.name;
+                topicInput.size = "6";
+                topicInput.value = item.topic;
+                topicInput.maxLength = 30;
+                topicCell.appendChild(topicInput);
+                detail_row.appendChild(topicCell);
 
                 let tbody = publish_settings_table.querySelector("tbody")
                 tbody.appendChild(detail_row);
@@ -766,10 +876,10 @@
 
     sensors_templates = {
         "Empty": '[{"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}, {"enabled":false, "baudrate":0}]',
-        
+
         "femto-TECH THFS-400":
-                    // & 002645 A=111 S=222 F=374 T=21 G=000003 P=915 V=000 MAC=0080A379C0DF C=000185 R=106 6967
-                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+            // & 002645 A=111 S=222 F=374 T=21 G=000003 P=915 V=000 MAC=0080A379C0DF C=000185 R=106 6967
+            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"H3","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                           {"enabled":true,"name":"H3AVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
@@ -785,10 +895,10 @@
                          ]\
                        }\
                       ]',
-        
+
         "Sensetecz 612C":
-                    // & 000000 011 060 002 021  000000 496 0080A374F651 010846 103 6967
-                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+            // & 000000 011 060 002 021  000000 496 0080A374F651 010846 103 6967
+            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"H3","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":0,"topic":"123"},\
                           {"enabled":true,"name":"H3AVG","start":2,"end":8,"is_num":true,"scale":1,"avg_cnt":180,"topic":"r/123"}\
                          ]\
@@ -806,8 +916,8 @@
                       ]',
 
         "GRAETZ WS05C-3":
-                    // 
-                    '\[{"baudrate":9600,"enabled":true,"publish_settings":\
+            // 
+            '\[{"baudrate":9600,"enabled":true,"publish_settings":\
                          [{"enabled":true,"name":"GAMMA","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":0,"topic":"123"},\
                              {"enabled":true,"name":"GAMMAAVG","start":3,"end":9,"is_num":true,"scale":0.10,"avg_cnt":180,"topic":"r/123"}\
                          ]\
@@ -929,6 +1039,9 @@
                 clonedInput = td.firstChild.cloneNode(true);
                 clonedInput.classList = []; // This removes the hide-on-small class
                 clonedInput.readOnly = false
+                if (clonedInput.id !== undefined) {
+                    label.setAttribute('for', clonedInput.id);
+                }                
             }
 
             pair = document.createElement("div");
