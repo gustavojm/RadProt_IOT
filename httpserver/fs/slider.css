@@ -19,6 +19,7 @@ body {
     width: 200vw;
     position: relative;
     transition: transform 0.3s ease-out;
+    background-color: red;
 }
 
 .slide {

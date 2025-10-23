@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 
+<style>
+    body {
+        transition: background-color 0.1s ease-in-out;   /* Smooth transition for color changes */
+    }
+</style>
+
 <body>
 
     <div class="slider-container">
@@ -245,6 +251,8 @@
 
 <script type="text/javascript">
     var initial_config = false;
+    var flashInterval;
+
     const smallScreenLimit = 600
 
     function getWifiSignalBars(rssi) {
@@ -684,7 +692,7 @@
                 nameInput.maxLength = 10;
                 nameCell.appendChild(nameInput);
                 detail_row.appendChild(nameCell);
-                
+
 
                 // Start cell
                 const startCell = document.createElement("td");
@@ -1052,7 +1060,7 @@
                 clonedInput.readOnly = false
                 if (clonedInput.id !== undefined) {
                     label.setAttribute('for', clonedInput.id);
-                }                
+                }
             }
 
             pair = document.createElement("div");
@@ -1231,6 +1239,28 @@
                 document.getElementById("mqtt_connection_status").innerHTML = mqtt.connected ? "🟢" : "❌";
                 document.getElementById("mqtt_connection_status").style = "padding:5px;"
                 document.getElementById("mqtt_connection_status").title = mqtt.connected ? "Connected" : "Disconnected";
+            }
+
+            if (dataJSON.button) {
+                if (flashInterval === undefined) {
+                    flashInterval = setInterval(() => {
+                        let slides = document.querySelectorAll(".slide");
+                        slides.forEach(slide => {
+                            slide.style.backgroundColor = "transparent";
+                        });
+                        setTimeout(() => {
+                            let slides = document.querySelectorAll(".slide");
+                            slides.forEach(slide => {
+                                slide.style.backgroundColor = "";
+                            });
+                        }, 200); // Flash for 200ms
+                    }, 400); // Repeat every 400ms (200ms flash + 200ms original color)
+                }
+            } else {
+                if (flashInterval) {
+                    clearInterval(flashInterval);
+                    flashInterval = undefined;
+                }
             }
         }
     }
