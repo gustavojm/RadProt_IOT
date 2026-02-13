@@ -60,27 +60,28 @@ const client_mode_settings_union s_Client_Settings = {
                 .settings = {
                     .conn_type = WIFI, 
                     .wifi = {                        
-                        .ssid = "C14017750 7261",
-                        .password = "malamala",
+                        .ssid = "",
+                        .password = "",
                         .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
-                        .ipv4 = {.dhcp = false,
-                                .ip = 0xC889A8C0,      // 192.168.137.200
-                                .nm = 0x00FFFFFF,      // 255.255.255.0
-                                .gw = 0x0189A8C0,      // 192.168.137.1
-                                .dns = 0x0189A8C0      // 192.168.137.1
+                        .ipv4 = {.dhcp = true,
+                                //.ip = 0xC889A8C0,      // 192.168.137.200
+                                //.nm = 0x00FFFFFF,      // 255.255.255.0
+                                //.gw = 0x0189A8C0,      // 192.168.137.1
+                                //.dns = 0x0189A8C0      // 192.168.137.1
                                 }
                         },
                         .eth = {
                             .ipv4 = {.dhcp = true,
-                                    .ip = 0xC889A8C0,      // 192.168.137.200
-                                    .nm = 0x00FFFFFF,      // 255.255.255.0
-                                    .gw = 0x0189A8C0,      // 192.168.137.1
-                                    .dns = 0x0189A8C0      // 192.168.137.1
+                                    //.ip = 0xC889A8C0,      // 192.168.137.200
+                                    //.nm = 0x00FFFFFF,      // 255.255.255.0
+                                    //.gw = 0x0189A8C0,      // 192.168.137.1
+                                    //.dns = 0x0189A8C0      // 192.168.137.1
                                     }
                             },
                             
 
-                    .mqtt = {.broker = "192.168.137.86",
+                    .mqtt = {
+                            //.broker = "192.168.137.86",
                             .port = 1883,
                             .username = "",
                             .password = "",
@@ -90,65 +91,65 @@ const client_mode_settings_union s_Client_Settings = {
                                         .enabled = true,
                                         .simulate_values = false,
                                         .publish_settings = { { .enabled = true,
-                                                                .name = "GAMMA",
-                                                                .start = 3,
-                                                                .end = 9,
+                                                                .name = "H3",
+                                                                .start = 2,
+                                                                .end = 8,
                                                                 .is_num = false,
-                                                                .scale = 0.1,
+                                                                .scale = 1,
                                                                 .avg_cnt = 0,
                                                                 .topic = "123" 
                                                               }, { 
                                                                 .enabled = true,
-                                                                .name = "GAMMAAVG",
-                                                                .start = 3,
-                                                                .end = 9,
+                                                                .name = "H3AVG",
+                                                                .start = 2,
+                                                                .end = 8,
                                                                 .is_num = true,
-                                                                .scale = 0.1,
-                                                                .avg_cnt = 5,
+                                                                .scale = 1,
+                                                                .avg_cnt = 180,
                                                                 .topic = "r/123" 
                                                               }
                                                             },                                                                
                                         },
                                         {.baudrate = 9600,
-                                            .enabled = true,
+                                            .enabled = false,
                                             .publish_settings = { { .enabled = true,
-                                                                    .name = "GAMMA",
-                                                                    .start = 3,
-                                                                    .end = 9,
-                                                                    .is_num = false,
-                                                                    .scale = 0.1,
+                                                                    .name = "H3",
+                                                                    .start = 2,
+                                                                    .end = 8,
+                                                                    .is_num = true,
+                                                                    .scale = 1,
                                                                     .avg_cnt = 0,
                                                                     .topic = "456" 
                                                                 }, { 
                                                                     .enabled = true,
-                                                                    .name = "GAMMAAVG",
-                                                                    .start = 3,
-                                                                    .end = 9,
+                                                                    .name = "H3AVG",
+                                                                    .start = 2,
+                                                                    .end = 8,
                                                                     .is_num = true,
-                                                                    .scale = 0.1,
-                                                                    .avg_cnt = 5,
+                                                                    .scale = 1,
+                                                                    .avg_cnt = 180,
                                                                     .topic = "r/456" 
                                                                 }
                                                                 },                                                                
                                             },
                                             {.baudrate = 9600,
-                                                .enabled = true,
+                                                .enabled = false,
                                                 .publish_settings = { { .enabled = true,
-                                                                        .name = "GAMMA",
-                                                                        .start = 0,
-                                                                        .end = 255,
+                                                                        .name = "H3",
+                                                                        .start = 2,
+                                                                        .end = 8,
                                                                         .is_num = false,
-                                                                        .scale = 0.1,
+                                                                        .scale = 1,
                                                                         .avg_cnt = 0,
                                                                         .topic = "789" 
                                                                     }, { 
                                                                         .enabled = true,
-                                                                        .name = "GAMMAAVG",
-                                                                        .start = 3,
-                                                                        .end = 9,
+                                                                        .name = "H3AVG",
+                                                                        .start = 2,
+                                                                        .end = 8,
                                                                         .is_num = true,
-                                                                        .scale = 0.1,
-                                                                        .avg_cnt = 5,
+                                                                        .scale = 1,
+                                                                        .avg_cnt = 180,
                                                                         .topic = "r/789" 
                                                                     }
                                                                     },                                                                
