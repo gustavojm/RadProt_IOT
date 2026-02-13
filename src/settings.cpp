@@ -62,7 +62,7 @@ const client_mode_settings_union s_Client_Settings = {
                     .wifi = {                        
                         .ssid = "",
                         .password = "",
-                        .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
+                        //.auth_mode = CYW43_AUTH_WPA2_AES_PSK,
                         .ipv4 = {.dhcp = true,
                                 //.ip = 0xC889A8C0,      // 192.168.137.200
                                 //.nm = 0x00FFFFFF,      // 255.255.255.0
