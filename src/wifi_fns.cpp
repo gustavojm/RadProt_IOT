@@ -1,7 +1,7 @@
 #include "wifi_fns.h"
 
 static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
-    if (result) {
+    if (result && !wifi_networks.full()) {
         auto result_ins = wifi_networks.insert(*result);
     }
     return 0;
