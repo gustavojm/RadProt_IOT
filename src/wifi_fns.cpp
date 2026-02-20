@@ -24,7 +24,7 @@ void wifi_networks_scan(bool active) {
     lDebug(Info, "Detected WIFI Networks: ");
 
     for (auto wifi_net : wifi_networks) {
-        debugPrintf("ssid: %s, signal: %i channel: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel);
+        debugPrintf("ssid: %s, signal: %i channel: %i, auth: %i bssid: ", wifi_net.ssid, wifi_net.rssi, wifi_net.channel, wifi_net.auth_mode);
         for (int i = 0; i < 6; i++) {
             debugPrintf("%02x", wifi_net.bssid[i]);
             if (i < 5) {
@@ -77,13 +77,15 @@ bool wifi_connect() {
 int scan_auth_mode_to_connect_auth_mode(int scan_auth_mode) {
     uint32_t connect_auth_mode;
 
+    // 4 WPA2
+    // 2 WPA
+    // 1 WEP
+
     switch (scan_auth_mode) {
     case 0: connect_auth_mode = CYW43_AUTH_OPEN; break;
-    case 1: connect_auth_mode = CYW43_AUTH_WPA_TKIP_PSK; break;
-    case 2: connect_auth_mode = CYW43_AUTH_WPA2_AES_PSK; break;
-    case 3: connect_auth_mode = CYW43_AUTH_WPA2_MIXED_PSK; break;
-    case 4: connect_auth_mode = CYW43_AUTH_WPA3_SAE_AES_PSK; break;
-    case 5: connect_auth_mode = CYW43_AUTH_WPA3_WPA2_AES_PSK; break;
+    case 3: connect_auth_mode = CYW43_AUTH_WPA_TKIP_PSK; break;
+    case 5: connect_auth_mode = CYW43_AUTH_WPA3_WPA2_AES_PSK; break;    // CYW43_AUTH_WPA2_AES_PSK
+    case 7: connect_auth_mode = CYW43_AUTH_WPA2_MIXED_PSK; break;
     default:
         // Handle unknown auth type
         connect_auth_mode = -1;
@@ -96,11 +98,9 @@ int connect_auth_mode_to_scan_auth_mode(int connect_auth_mode) {
 
     switch (connect_auth_mode) {
     case CYW43_AUTH_OPEN: scan_auth_mode = 0; break;
-    case CYW43_AUTH_WPA_TKIP_PSK: scan_auth_mode = 1; break;
-    case CYW43_AUTH_WPA2_AES_PSK: scan_auth_mode = 2; break;
-    case CYW43_AUTH_WPA2_MIXED_PSK: scan_auth_mode = 3; break;
-    case CYW43_AUTH_WPA3_SAE_AES_PSK: scan_auth_mode = 4; break;
+    case CYW43_AUTH_WPA_TKIP_PSK: scan_auth_mode = 3; break;
     case CYW43_AUTH_WPA3_WPA2_AES_PSK: scan_auth_mode = 5; break;
+    case CYW43_AUTH_WPA2_MIXED_PSK: scan_auth_mode = 7; break;
     default:
         // Handle unknown auth type
         scan_auth_mode = -1;
