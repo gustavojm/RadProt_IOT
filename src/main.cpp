@@ -85,6 +85,10 @@ static void main_task(__unused void *params) {
 
     const ap_mode_settings *ap_settings = get_ap_mode_settings();
     const client_mode_settings *client_settings = get_client_mode_settings();
+ 
+    if (client_settings->conn_type==WIFI && strcmp(client_settings->wifi.ssid, "") == 0) {       // If no WiFi network to connect is defined
+        initial_config = true;
+    }
 
     httpd_init(ap_settings->hostname, ap_settings->domain_name);
     ws_server.init(ws_message_handler);

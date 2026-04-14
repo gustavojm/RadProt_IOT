@@ -36,6 +36,7 @@
 #include "lwip/err.h"
 #include "lwip/mem.h"
 
+#include "hardware/flash.h"
 #include "httpd.h"
 #include "httpd_structs.h"
 #include <ArduinoJson.hpp>
@@ -44,17 +45,15 @@
 #include <settings.h>
 #include <stdio.h>
 #include <string.h>
-#include "hardware/flash.h"
 
 #include "wifi_fns.h"
 
 #include "post.h"
+#include "serial.h"
 #include "status.h"
 #include "watchdog.h"
-#include "serial.h"
 
 namespace json = ArduinoJson;
-
 
 /* POST handlers functions */
 
@@ -68,20 +67,21 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
 }
 
 json::MyJsonDocument settings_save_fn(struct http_state *hs) {
-    auto responseJson= json::MyJsonDocument();
+    auto responseJson = json::MyJsonDocument();
     auto post_data = json::MyJsonDocument();
     json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
 
     if (error) {
         lDebug(Error, "Error json parse. %s", error.c_str());
     } else {
-        static client_mode_settings_union new_settings;         // defined as static to avoid overflowing the stack 
-        new_settings.settings = *get_client_mode_settings();    
+        static client_mode_settings_union new_settings; // defined as static to avoid overflowing the stack
+        new_settings.settings = *get_client_mode_settings();
 
-        static client_mode_settings old_settings = new_settings.settings;           // defined as static to avoid overflowing the stack 
+        static client_mode_settings old_settings = new_settings.settings; // defined as static to avoid overflowing the stack
 
         strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
-        strncpy(new_settings.settings.wifi.password, post_data["wifi"]["password"], sizeof new_settings.settings.wifi.password);
+        strncpy(
+            new_settings.settings.wifi.password, post_data["wifi"]["password"], sizeof new_settings.settings.wifi.password);
         new_settings.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
 
         new_settings.settings.wifi.ipv4.dhcp = post_data["wifi"]["dhcp"];
@@ -97,16 +97,18 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         ipaddr_aton(post_data["eth"]["gw"], &new_settings.settings.eth.ipv4.gw);
 
         new_settings.settings.conn_type = post_data["conn_type"] == "WIFI" ? WIFI : ETHERNET;
-        
+
         strncpy(new_settings.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof new_settings.settings.mqtt.broker);
         new_settings.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
-        strncpy(new_settings.settings.mqtt.username, post_data["mqtt"]["username"], sizeof new_settings.settings.mqtt.username);
-        strncpy(new_settings.settings.mqtt.password, post_data["mqtt"]["password"], sizeof new_settings.settings.mqtt.password);
+        strncpy(
+            new_settings.settings.mqtt.username, post_data["mqtt"]["username"], sizeof new_settings.settings.mqtt.username);
+        strncpy(
+            new_settings.settings.mqtt.password, post_data["mqtt"]["password"], sizeof new_settings.settings.mqtt.password);
 
         int elems = post_data["s_s"].size();
 
         for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
-            auto s_s = post_data["s_s"][i];        
+            auto s_s = post_data["s_s"][i];
             new_settings.settings.sensor_settings[i].baudrate = atoi(s_s["baud"]);
             new_settings.settings.sensor_settings[i].enabled = s_s["enabled"];
             new_settings.settings.sensor_settings[i].simulate_values = s_s["simulate_values"];
@@ -140,41 +142,51 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
             };
 
             if (post_data["settings"]["password"]) {
-                strncpy((char *)new_settings.settings.password, post_data["settings"]["password"], sizeof new_settings.settings.password);
+                strncpy(
+                    (char *)new_settings.settings.password,
+                    post_data["settings"]["password"],
+                    sizeof new_settings.settings.password);
             }
         } else {
             if (post_data["settings"]["password"] != old_settings.password) {
                 responseJson["message"] = "Wrong Password";
                 save_settings = false;
-            } 
+            }
         }
 
         if (save_settings) {
             flash_safe_execute(write_client_mode_settings, &new_settings, UINT32_MAX);
 
-            bool network_settings_changed = (old_settings.conn_type != new_settings.settings.conn_type) ||
+            bool network_settings_changed =
+                (old_settings.conn_type != new_settings.settings.conn_type) ||
                 (memcmp(&old_settings.wifi, &new_settings.settings.wifi, sizeof(wifi_settings)) != 0) ||
                 (memcmp(&old_settings.eth, &new_settings.settings.eth, sizeof(ethernet_settings)) != 0);
 
             bool mqtt_settings_changed = memcmp(&old_settings.mqtt, &new_settings.settings.mqtt, sizeof(mqtt_settings)) != 0;
 
-            if (network_settings_changed || (mqtt_settings_changed && initial_config)) {
-                    responseJson["OK"] = "Rebooting";
-                    watchdog_reboot(0, SRAM_END, 1000);
-                    vTaskSuspend(feedWdTask_handle);
-            } else {    
+            bool sensors_settings_changed = false;
+            for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
+                sensors_settings_changed |= old_settings.sensor_settings[i].communication_settings_changed(new_settings.settings.sensor_settings[i]);
+
+            }
+
+            if (network_settings_changed || sensors_settings_changed || (mqtt_settings_changed)) {
+                responseJson["OK"] = "Rebooting";
+                watchdog_reboot(0, SRAM_END, 1000);
+                vTaskSuspend(feedWdTask_handle);
+            } else {
                 if (mqtt_settings_changed) {
                     mqtt_reconnect = true;
                 }
                 responseJson["populate_readings"] = true;
                 responseJson["message"] = "Settings saved";
             }
-        }        
+        }
     }
     return responseJson;
 }
 
-json::MyJsonDocument wifi_nets_fn(struct http_state *hs) {    
+json::MyJsonDocument wifi_nets_fn(struct http_state *hs) {
     auto responseJson = json::MyJsonDocument();
     auto wifi_nets_array = responseJson.to<json::JsonArray>();
 
@@ -211,14 +223,13 @@ json::MyJsonDocument wifi_nets_scan_fn(struct http_state *hs) {
 
 json::MyJsonDocument restart_fn(struct http_state *hs) {
     auto responseJson = json::MyJsonDocument();
-    
+
     watchdog_reboot(0, SRAM_END, 1000);
     vTaskSuspend(feedWdTask_handle);
 
-    responseJson.to<json::JsonObject>();      // Because we have not created any keys, it is just empty
+    responseJson.to<json::JsonObject>(); // Because we have not created any keys, it is just empty
     return responseJson;
 }
-
 
 // @formatter:off
 const post_handler_entry post_handlers[] = {
@@ -248,7 +259,7 @@ const post_handler_entry post_handlers[] = {
 err_t httpd_process_post_data(struct http_state *hs) {
     if (hs->post_uri) {
         for (auto &entry : post_handlers) {
-            if (strncmp (hs->post_uri, entry.handler_name, strlen(entry.handler_name)) == 0) {
+            if (strncmp(hs->post_uri, entry.handler_name, strlen(entry.handler_name)) == 0) {
                 auto responseJson = entry.handler_function(hs);
 
                 char *response = nullptr;

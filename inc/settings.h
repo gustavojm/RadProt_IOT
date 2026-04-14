@@ -103,6 +103,10 @@ struct sensor_settings_entry {
         }
         return json;
     }
+
+    bool communication_settings_changed(sensor_settings_entry& other) {
+        return ((baudrate != other.baudrate) || (enabled != other.enabled) || simulate_values != other.simulate_values);
+    }
     
 };
 
@@ -230,7 +234,7 @@ struct client_mode_settings {
         }
     
         return json;
-    }
+    }    
     
 };
 

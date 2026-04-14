@@ -81,7 +81,7 @@ const client_mode_settings_union s_Client_Settings = {
                             
 
                     .mqtt = {
-                            //.broker = "192.168.137.86",
+                            .broker = "",   // 192.168.137.86
                             .port = 1883,
                             .username = "",
                             .password = "",

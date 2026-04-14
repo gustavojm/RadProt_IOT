@@ -47,58 +47,60 @@ static void mqtt_task(void *pvParameters) {
     const client_mode_settings *client_settings = get_client_mode_settings();
 
     while (true) {        
-        if ((rc = NetworkConnectWithTimeout(&network, client_settings->mqtt.broker, client_settings->mqtt.port, 1000)) == 0) {
+        if (memcmp(client_settings->mqtt.broker, "", sizeof(client_settings->mqtt.broker)) !=0 ) {
+            if ((rc = NetworkConnectWithTimeout(&network, client_settings->mqtt.broker, client_settings->mqtt.port, 1000)) == 0) {
 
-            MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
-            connectData.MQTTVersion = 3;
+                MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
+                connectData.MQTTVersion = 3;
 
-            connectData.clientID.cstring = const_cast<char *>("RadProt_IoT");
-            connectData.username.cstring = const_cast<char *>(client_settings->mqtt.username);
-            connectData.password.cstring = const_cast<char *>(client_settings->mqtt.password);
+                connectData.clientID.cstring = const_cast<char *>("RadProt_IoT");
+                connectData.username.cstring = const_cast<char *>(client_settings->mqtt.username);
+                connectData.password.cstring = const_cast<char *>(client_settings->mqtt.password);
 
-            if ((rc = MQTTConnect(&client, &connectData)) == 0) {
-                lDebug(Info, "MQTT Connected");
-                mqtt_connection_status = true;
+                if ((rc = MQTTConnect(&client, &connectData)) == 0) {
+                    lDebug(Info, "MQTT Connected");
+                    mqtt_connection_status = true;
 
-                // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
-                //     lDebug(Error, "Error MQTT subscribe: %d", rc);
-                // }
+                    // if ((rc = MQTTSubscribe(&client, "FreeRTOS/sample/#", QOS0, messageArrived)) != 0) {
+                    //     lDebug(Error, "Error MQTT subscribe: %d", rc);
+                    // }
 
-                MqttPublishMessage msg;
+                    MqttPublishMessage msg;
 
-                while (true) {
-                    if (xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(500)) == pdPASS) {
-                        // Publish the message using your MQTT client library
-                        MQTTMessage message;
+                    while (true) {
+                        if (xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(500)) == pdPASS) {
+                            // Publish the message using your MQTT client library
+                            MQTTMessage message;
 
-                        message.qos = (enum QoS)msg.qos;
-                        message.retained = 0;
-                        message.payload = msg.payload;
-                        message.payloadlen = strlen(msg.payload);
+                            message.qos = (enum QoS)msg.qos;
+                            message.retained = 0;
+                            message.payload = msg.payload;
+                            message.payloadlen = strlen(msg.payload);
 
-                        if ((rc = MQTTPublish(&client, msg.topic, &message)) == 0) {
-                            gpio_put(STATUS_LED_GPIO, true);
-                            xTimerStart(status_led_off_timer, 0);
-                            lDebug(Info, "--MQTT-->");
+                            if ((rc = MQTTPublish(&client, msg.topic, &message)) == 0) {
+                                gpio_put(STATUS_LED_GPIO, true);
+                                xTimerStart(status_led_off_timer, 0);
+                                lDebug(Info, "--MQTT-->");
+                            } else {
+                                lDebug(Error, "Error publishing: %d", rc);
+                                goto close_socket;
+                                // break;
+                            }
                         } else {
-                            lDebug(Error, "Error publishing: %d", rc);
-                            goto close_socket;
-                            // break;
-                        }
-                    } else {
-                        if (mqtt_reconnect) {
-                            mqtt_reconnect = false;
-                            goto close_socket;
+                            if (mqtt_reconnect) {
+                                mqtt_reconnect = false;
+                                goto close_socket;
+                            }
                         }
                     }
+                } else {
+                    lDebug(Error, "Error connecting: %d", rc);
+                    mqtt_connection_status = false;
                 }
             } else {
-                lDebug(Error, "Error connecting: %d", rc);
+                lDebug(Error, "Error in network connection: %d", rc);
                 mqtt_connection_status = false;
             }
-        } else {
-            lDebug(Error, "Error in network connection: %d", rc);
-            mqtt_connection_status = false;
         }
     close_socket:
         network.disconnect(&network);
