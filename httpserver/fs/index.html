@@ -366,7 +366,7 @@
         ip_inputs = document.querySelectorAll(".ip-addr");
 
         for (let i = 0; i < ip_inputs.length; i++) {
-            if (!isValidIP(ip_inputs[i].value)) {
+            if (ip_inputs[i].value!="" && !isValidIP(ip_inputs[i].value)) {
                 ip_inputs[i].focus();
                 return;
             }

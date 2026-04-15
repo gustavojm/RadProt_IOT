@@ -73,6 +73,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
 
     if (error) {
         lDebug(Error, "Error json parse. %s", error.c_str());
+        printf("%.*s", hs->post_content_len, hs->post_content);
     } else {
         static client_mode_settings_union new_settings; // defined as static to avoid overflowing the stack
         new_settings.settings = *get_client_mode_settings();
