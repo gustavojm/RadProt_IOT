@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Pico Debug",
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}",
             "executable": "${command:cmake.launchTargetPath}",
             "request": "launch",
             "type": "cortex-debug",
@@ -26,11 +26,12 @@
                 "continue"
             ],
             "searchDir": ["/home/gustavo/pico/openocd/tcl"],
-            "openOCDLaunchCommands": ["adapter speed 5000"]
+            "openOCDLaunchCommands": ["adapter speed 5000"],
+            "showDevDebugOutput": "raw"
         },
         {
             "name": "Attach Pico Debug",
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}",
             "executable": "${command:cmake.launchTargetPath}",
             "request": "attach",
             "type": "cortex-debug",
@@ -50,7 +51,8 @@
                 "continue"
             ],
             "searchDir": ["/home/gustavo/pico/openocd/tcl"],
-            "openOCDLaunchCommands": ["adapter speed 5000"]
+            "openOCDLaunchCommands": ["adapter speed 5000"],
+            "showDevDebugOutput": "raw"
         }
     ]
 }

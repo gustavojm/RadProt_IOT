@@ -99,6 +99,7 @@
 
 #include "lwip/altcp.h"
 #include "lwip/altcp_tcp.h"
+#include <cstdint>
 #if HTTPD_ENABLE_HTTPS
 #include "lwip/altcp_tls.h"
 #endif
@@ -1734,6 +1735,14 @@ static void http_continue(void *connection) {
 
 static bool host_name_matches(char *host) {
     if (initial_config) {       // Initial config means that we are using the captive portal
+
+        ip4_addr_t addr;
+        ip4addr_aton(host, &addr);
+
+        if (s_HTTPServerSettings.ip_address == addr.addr) {
+            return true;
+        }
+        
         int len = strlen(s_HTTPServerSettings.hostname);
         if (strncasecmp(host, s_HTTPServerSettings.hostname, len))
             return false;
@@ -2487,9 +2496,10 @@ static void httpd_init_pcb(struct altcp_pcb *pcb, u16_t port) {
  * @ingroup httpd
  * Initialize the httpd: set up a listening PCB and bind it to the defined port
  */
-void httpd_init(const char *hostname, const char *domain_name) {
+void httpd_init(const char *hostname, const char *domain_name, const uint32_t ip_address) {
     s_HTTPServerSettings.hostname = hostname;
     s_HTTPServerSettings.domain_name = domain_name;
+    s_HTTPServerSettings.ip_address = ip_address;
     struct altcp_pcb *pcb;
 
 #if HTTPD_USE_MEM_POOL

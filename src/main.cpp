@@ -66,13 +66,16 @@ static void main_task(__unused void *params) {
         return;
     }
 
+    // No power management (No powersave mode for WiFi)
+    cyw43_wifi_pm(&cyw43_state ,CYW43_NONE_PM);
+
     if (!enc28j60_state.init()) {
         lDebug(Error, "Failed to initialise ENC28J60 or not available");
     }    
 
     if (watchdog_enable_caused_reboot()) {
         // Turn on-board led to indicate reboot by watchdog timer expired
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, true);
         lDebug(Warn, "Rebooted by Watchdog!");
     }
 
@@ -90,7 +93,7 @@ static void main_task(__unused void *params) {
         initial_config = true;
     }
 
-    httpd_init(ap_settings->hostname, ap_settings->domain_name);
+    httpd_init(ap_settings->hostname, ap_settings->domain_name, ap_settings->ip);
     ws_server.init(ws_message_handler);
 
     if (initial_config) {

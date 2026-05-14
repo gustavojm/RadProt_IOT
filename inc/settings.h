@@ -25,7 +25,7 @@ inline bool operator<(const cyw43_ev_scan_result_t& lhs, const cyw43_ev_scan_res
     return std::memcmp(lhs.bssid, rhs.bssid, sizeof(lhs.bssid)) < 0;
 }
 
-constexpr size_t MAX_WIFI_NETWORKS = 10;
+constexpr size_t MAX_WIFI_NETWORKS = 20;
 
 inline etl::set<cyw43_ev_scan_result_t, MAX_WIFI_NETWORKS> wifi_networks;
 

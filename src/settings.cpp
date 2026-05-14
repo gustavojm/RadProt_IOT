@@ -15,14 +15,15 @@ const union {
     char padding[FLASH_SECTOR_SIZE];
 } __attribute__((aligned(FLASH_SECTOR_SIZE)))
 s_Settings = { .settings = {
-                   .ip = 0x017BA8C0,
-                   .nm = 0x00FFFFFF,
+                   .ip = PP_HTONL(LWIP_MAKEU32(192, 168, 123, 1)),
+                   .nm = PP_HTONL(LWIP_MAKEU32(255, 255, 255, 0)),
                    .secondary_address =
-                       0x006433c6, // TEST-NET-2. See the comment before 'secondary_address' definition for details.
+                       PP_HTONL(LWIP_MAKEU32(198, 51, 100, 0)), // TEST-NET-2. See the comment before 'secondary_address'
+                                                                // definition for details.
                    .ssid = WIFI_SSID,
                    .password = WIFI_PASSWORD,
                    .hostname = "config",
-                   .domain_name = "radprot.local",
+                   .domain_name = "radprot.net",
                    .dns_ignores_network_suffix = true,
                } };
 
@@ -64,18 +65,18 @@ const client_mode_settings_union s_Client_Settings = {
                         .password = "",
                         //.auth_mode = CYW43_AUTH_WPA2_AES_PSK,
                         .ipv4 = {.dhcp = true,
-                                //.ip = 0xC889A8C0,      // 192.168.137.200
-                                //.nm = 0x00FFFFFF,      // 255.255.255.0
-                                //.gw = 0x0189A8C0,      // 192.168.137.1
-                                //.dns = 0x0189A8C0      // 192.168.137.1
+                                .ip = PP_HTONL(LWIP_MAKEU32(192,168,137,200)),
+                                .nm = PP_HTONL(LWIP_MAKEU32(255,255,255,0)),
+                                .gw = PP_HTONL(LWIP_MAKEU32(192,168,137,1)),
+                                .dns = PP_HTONL(LWIP_MAKEU32(192,168,137,1))
                                 }
                         },
                         .eth = {
                             .ipv4 = {.dhcp = true,
-                                    //.ip = 0xC889A8C0,      // 192.168.137.200
-                                    //.nm = 0x00FFFFFF,      // 255.255.255.0
-                                    //.gw = 0x0189A8C0,      // 192.168.137.1
-                                    //.dns = 0x0189A8C0      // 192.168.137.1
+                                    .ip = PP_HTONL(LWIP_MAKEU32(192,168,137,200)),
+                                    .nm = PP_HTONL(LWIP_MAKEU32(255,255,255,0)),
+                                    .gw = PP_HTONL(LWIP_MAKEU32(192,168,137,1)),
+                                    .dns = PP_HTONL(LWIP_MAKEU32(192,168,137,1))
                                     }
                             },
                             

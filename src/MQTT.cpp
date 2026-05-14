@@ -47,7 +47,7 @@ static void mqtt_task(void *pvParameters) {
     const client_mode_settings *client_settings = get_client_mode_settings();
 
     while (true) {        
-        if (memcmp(client_settings->mqtt.broker, "", sizeof(client_settings->mqtt.broker)) !=0 ) {
+        if (client_settings->mqtt.broker[0] != '\0') {
             if ((rc = NetworkConnectWithTimeout(&network, client_settings->mqtt.broker, client_settings->mqtt.port, 1000)) == 0) {
 
                 MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;

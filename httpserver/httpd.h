@@ -50,6 +50,7 @@
 
 #include "lwip/altcp.h"
 #include "lwip/altcp_tcp.h"
+#include <cstdint>
 #if HTTPD_ENABLE_HTTPS
 #include "lwip/altcp_tls.h"
 #endif
@@ -63,6 +64,7 @@ extern "C" {
 inline struct {
   const char *hostname;
 	const char *domain_name;
+  uint32_t ip_address;
 } s_HTTPServerSettings;
 
 typedef struct {
@@ -442,7 +444,7 @@ void httpd_post_data_recved(void *connection, u16_t recved_len);
 
 #endif /* LWIP_HTTPD_SUPPORT_POST */
 
-void httpd_init(const char *hostname, const char *domain_name);
+void httpd_init(const char *hostname, const char *domain_name, const uint32_t ip_address);
 
 #if HTTPD_ENABLE_HTTPS
 struct altcp_tls_config;
