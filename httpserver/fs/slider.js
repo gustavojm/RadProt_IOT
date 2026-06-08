@@ -89,14 +89,14 @@ class TouchSlider {
         });
 
         this.slider.addEventListener('mouseup', (e) => {            
-            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+            if (!this.isDragging || !e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
             
             this.handleEnd();
         });
         
         
         this.slider.addEventListener('mouseleave', (e) => {
-            if (!e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
+            if (!this.isDragging || !e.currentTarget.contains(e.target) || e.target.tagName === 'INPUT') return;
 
             this.handleEnd();
         });
@@ -117,7 +117,7 @@ class TouchSlider {
         const currentX = parseFloat(this.slider.style.transform?.replace('translateX(', '') || 0);
         const movement = currentX + (this.currentSlide * 100);
 
-        if (Math.abs(movement) > this.threshold / window.innerWidth * 100) {
+        if (Math.abs(movement) >= this.threshold / window.innerWidth * 100) {
             if (movement > 0 && this.currentSlide > 0) {
                 this.currentSlide--;
             } else if (movement < 0 && this.currentSlide < this.slides.length - 1) {
