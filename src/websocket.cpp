@@ -9,13 +9,17 @@ char *websocket_server::get_key(char *buf, size_t *len) {
     char *p = strstr(buf, "Sec-WebSocket-Key: ");
     if (p) {
         p = p + strlen("Sec-WebSocket-Key: ");
-        *len = strchr(p, '\r') - p;
+        char *end = strchr(p, '\r');
+        if (!end) {
+            return NULL;
+        }
+        *len = end - p;
     }
     return p;
 }
 
 char *websocket_server::create_key_accept(char *inbuf) {
-    static char concat_key[64] = { 0 };
+    static char concat_key[128] = { 0 };
     static char hash[22] = { 0 };
     static char hash_base64[64] = { 0 };
     size_t len = 0;
@@ -25,12 +29,14 @@ char *websocket_server::create_key_accept(char *inbuf) {
         return NULL;
 
     memset(concat_key, 0, sizeof(concat_key));
-    strncpy(concat_key, key, len);
-    strcat(concat_key, WS_GUID);
+    size_t copy_len = (len < sizeof(concat_key) - strlen(WS_GUID) - 1) ? len : (sizeof(concat_key) - strlen(WS_GUID) - 1);
+    memcpy(concat_key, key, copy_len);
+    concat_key[copy_len] = '\0';
+    memcpy(concat_key + copy_len, WS_GUID, strlen(WS_GUID));
 
     sha1_ctx_t ctx;
     sha1_init(&ctx);
-    sha1_update(&ctx, (uint8_t *)concat_key, 60);
+    sha1_update(&ctx, (uint8_t *)concat_key, copy_len + strlen(WS_GUID));
     sha1_final(&ctx, (uint8_t *)hash);
 
     base64_encode((uint8_t *)hash, 20, hash_base64);
@@ -160,6 +166,20 @@ void websocket_server::handle_frame(uint8_t *buffer, int length) {
     if (length < 2)
         return;
 
+    // Check extended length bytes are available
+    uint8_t len_byte = buffer[1] & 0x7F;
+    int required = 2;
+    if (len_byte == 126) {
+        required = 4;
+    } else if (len_byte == 127) {
+        required = 10;
+    }
+    if (is_masked_msg(buffer)) {
+        required += 4;
+    }
+    if (length < required)
+        return;
+
     uint8_t *inbuf_ptr = buffer;
 
     // Check if it's a control frame
@@ -215,7 +235,8 @@ bool websocket_server::process_handshake(uint8_t *buffer) {
     }
 
     // Create handshake response
-    int response_len = snprintf((char *)send_buf, WS_SEND_BUFFER_SIZE, "%s%s\r\n\r\n", header, ws_key_accept);
+    int written = snprintf((char *)send_buf, WS_SEND_BUFFER_SIZE, "%s%s\r\n\r\n", header, ws_key_accept);
+    int response_len = (written < WS_SEND_BUFFER_SIZE) ? written : WS_SEND_BUFFER_SIZE - 1;
 
     if (lwip_send(client.socket, send_buf, response_len, 0) < 0) {
         lDebug(Error, "Failed to send handshake response");

@@ -322,6 +322,12 @@ static void http_state_eof(struct http_state *hs) {
         hs->req = NULL;
     }
 #endif /* LWIP_HTTPD_SUPPORT_REQUESTLIST */
+#if LWIP_HTTPD_SUPPORT_POST
+    if (hs->post_response_buf) {
+        delete[] hs->post_response_buf;
+        hs->post_response_buf = NULL;
+    }
+#endif /* LWIP_HTTPD_SUPPORT_POST */
 }
 
 /** Free a struct http_state.
@@ -1858,16 +1864,20 @@ static err_t http_parse_request(struct pbuf *inp, struct http_state *hs, struct 
                 return http_find_error_file(hs, 501);
             }
             /* Get the host name */
-            char host[32];
-            char *host_start = lwip_strnstr(data, "Host: ", data_len) + 6;
-            char *host_end = lwip_strnstr(host_start, CRLF, data_len);
+            char host[32] = {0};
+            char *host_start = lwip_strnstr(data, "Host: ", data_len);
+            if (!host_start)
+                goto badrequest;
+            host_start += 6;
+            char *host_end = lwip_strnstr(host_start, CRLF, data_len - (host_start - data));
+            if (!host_end)
+                goto badrequest;
             int host_len = host_end - host_start;
+            if (host_len >= (int)sizeof(host))
+                host_len = sizeof(host) - 1;
 
-            if (host_start) {
-                memcpy(host, host_start, host_len);
-            }
-
-            host[host_end - host_start] = 0; // null terminate
+            memcpy(host, host_start, host_len);
+            host[host_len] = 0; // null terminate
 
             LWIP_DEBUGF(HTTPD_DEBUG, ("httpd: host %s\n", host));
 
@@ -2625,6 +2635,7 @@ void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, cons
         
         hs->file = body;
         hs->left = body_len;
+        hs->post_response_buf = body;
 
         size_t len;
         lwip_itoa(hs->hdr_content_len, (size_t)LWIP_HTTPD_MAX_CONTENT_LEN_SIZE, hs->left);
@@ -2655,14 +2666,17 @@ void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, cons
 }
 
 err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri) {
-    err_t ret;
-    static int calls = 0;
+    err_t ret = ERR_OK;
     LWIP_ASSERT("NULL pbuf", p != NULL);
-    //LWIP_ASSERT("INVALID total len", p->tot_len <= 0);
+    LWIP_UNUSED_ARG(uri);
     
-    int32_t already_received = hs->post_content_len - hs->post_content_len_left;
-    void *start = &hs->post_content[already_received - p->tot_len];
-    memcpy(start, p->payload, p->tot_len);
+    int32_t offset = hs->post_content_len - hs->post_content_len_left - p->tot_len;
+    if (offset < 0 || (uint32_t)(offset + p->tot_len) > hs->post_content_len) {
+        ret = ERR_VAL;
+        pbuf_free(p);
+        return ret;
+    }
+    memcpy(&hs->post_content[offset], p->payload, p->tot_len);
 
     /* this function must ALWAYS free the pbuf it is passed or it will leak memory */
     pbuf_free(p);

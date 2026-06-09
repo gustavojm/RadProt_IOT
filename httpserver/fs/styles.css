@@ -226,3 +226,15 @@ input::-webkit-inner-spin-button {
 input[type=number] {
   -moz-appearance: textfield;
 }
+
+.slider {
+    touch-action: pan-y pinch-zoom;  /* Allow vertical scroll, block horizontal browser handling */
+    /* OR use 'none' if the slider is full-screen and you handle all scrolling */
+}
+
+/* If your slider contains scrollable areas, add this to those containers */
+.scroll-container {
+    touch-action: pan-y;  /* Re-enable vertical scrolling inside nested containers */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}

@@ -20,13 +20,14 @@ struct FreeRTOSAllocator : ArduinoJson::Allocator {
             return NULL;
         }
 
-        void *new_ptr;
-        new_ptr = pvPortMalloc(new_size);
+        void *new_ptr = pvPortMalloc(new_size);
         if (new_ptr) {
             if (ptr != NULL) {
                 memcpy(new_ptr, ptr, new_size);
                 vPortFree(ptr);
             }
+        } else {
+            // Allocation failed; do not free the old pointer (caller still owns it)
         }
         return new_ptr;
     }

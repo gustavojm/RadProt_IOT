@@ -14,7 +14,7 @@
 class Serial {
 public:
     Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate, size_t uart_buffer_size);
-    ~Serial() = default;
+    ~Serial();
 
     // Delete the copy constructor
     Serial(const Serial&) = delete;

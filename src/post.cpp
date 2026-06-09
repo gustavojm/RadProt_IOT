@@ -75,10 +75,10 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         lDebug(Error, "Error json parse. %s", error.c_str());
         printf("%.*s", hs->post_content_len, hs->post_content);
     } else {
-        static client_mode_settings_union new_settings; // defined as static to avoid overflowing the stack
+        client_mode_settings_union new_settings;
         new_settings.settings = *get_client_mode_settings();
 
-        static client_mode_settings old_settings = new_settings.settings; // defined as static to avoid overflowing the stack
+        client_mode_settings old_settings = new_settings.settings;
 
         strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
         strncpy(
@@ -121,7 +121,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
                 strncpy(
                     new_settings.settings.sensor_settings[i].publish_settings[j].name,
                     p_s["name"],
-                    sizeof new_settings.settings.sensor_settings->publish_settings->name);
+                    sizeof new_settings.settings.sensor_settings[i].publish_settings[j].name);
                 new_settings.settings.sensor_settings[i].publish_settings[j].start = p_s["start"];
                 new_settings.settings.sensor_settings[i].publish_settings[j].end = p_s["end"];
                 new_settings.settings.sensor_settings[i].publish_settings[j].is_num = p_s["is_num"];
@@ -130,7 +130,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
                 strncpy(
                     new_settings.settings.sensor_settings[i].publish_settings[j].topic,
                     p_s["topic"],
-                    sizeof new_settings.settings.sensor_settings->publish_settings->topic);
+                    sizeof new_settings.settings.sensor_settings[i].publish_settings[j].topic);
             }
         }
 
@@ -275,7 +275,6 @@ err_t httpd_process_post_data(struct http_state *hs) {
                 }
                 lDebug(Debug, "POST DATA: %*.s \n", response_len, response);
                 httpd_post_response(hs, response, response_len, "json");
-                delete[] response;
                 return ERR_OK;
             }
         }

@@ -80,6 +80,10 @@ Serial::Serial(unsigned int uart_num, uint gpio_tx, uint gpio_rx, uint baud_rate
 
 }
 
+Serial::~Serial() {
+    delete uart_buffer;
+}
+
 bool Serial::init(irq_handler_t handler) {
     // Initialize UART    
     uint pio_irq_index;

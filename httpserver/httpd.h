@@ -241,6 +241,7 @@ struct http_state {
   char *post_content;
   u32_t post_content_len;
   u32_t post_content_len_left;
+  char *post_response_buf;   /* Dynamically allocated POST response buffer, freed in http_state_eof */
 #if LWIP_HTTPD_POST_MANUAL_WND
   u32_t unrecved_bytes;
   u8_t no_auto_wnd;
