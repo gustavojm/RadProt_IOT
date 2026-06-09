@@ -75,10 +75,14 @@ err_t enc28j60_driver_os_init(ip4_addr_t ipaddr, ip4_addr_t netmask, ip4_addr_t 
     // xSemaphoreTake(init_sem, portMAX_DELAY);
 
     irq_loop_sem = xSemaphoreCreateBinary();
+    if (!irq_loop_sem) {
+        printf("Failed to create irq_loop semaphore\n");
+        return ERR_ABRT;
+    }
 
     TaskHandle_t irq_loop_task_handle{};
     if (xTaskCreate([](void *me) { static_cast<drivers::enc28j60 *>(me)->irq_deferred_handler(); },
-                    "irq_loop", 2048, (void *)&enc28j60_state, configMAX_PRIORITIES - 1,
+                    "irq_loop", 4096, (void *)&enc28j60_state, configMAX_PRIORITIES - 1,
                     &irq_loop_task_handle) != pdPASS) {
         return ERR_ABRT;
     }

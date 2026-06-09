@@ -48,7 +48,7 @@ namespace drivers {
 
     int enc28j60::rx_interrupt() {
         /* RX handler */ 
-        int ret;
+        int ret = 0;
         int pk_counter = regb_read(EPKTCNT);
         while (pk_counter-- > 0) {
             auto packet_info = get_incoming_packet_info();
@@ -440,8 +440,12 @@ void enc28j60::set_bank(uint8_t addr)
         /** 3. Wait 10.24 μs. Poll the MISTAT.BUSY bit to be certain that the operation is complete.
          While busy, the host controller should not start any MIISCAN operations or write to the MIWRH
         register. When the MAC has obtained the register contents, the BUSY bit will clear itself.  */
-        while (enc28j60::regb_read(MISTAT) & MISTAT_BUSY)
-            ;
+        int phy_retry = 1000;
+        while (enc28j60::regb_read(MISTAT) & MISTAT_BUSY) {
+            if (--phy_retry <= 0)
+                break;
+            asm("nop");
+        }
 
         /** 4. Clear the MICMD.MIIRD bit. */
         enc28j60::regb_write(MICMD, 0x00);
@@ -488,7 +492,7 @@ void enc28j60::set_bank(uint8_t addr)
         next_packet_pointer = info.next_packet_pointer;
         regw_write(ERXRDPT, info.next_packet_pointer);
 
-        size_t bytes_read;
+        size_t bytes_read = 0;
         if (dst != nullptr) {
             bytes_read = read_buff(dst, length);
         }
