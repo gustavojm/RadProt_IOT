@@ -1,4 +1,5 @@
 /* Standard includes. */
+#include <pico/platform/sections.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +37,7 @@ static void mqtt_task(void *pvParameters) {
     unsigned char sendbuf[80], readbuf[80];
     int rc = 0;
 
-    pvParameters = 0;
+    char *client_id = static_cast<char *>(pvParameters);
     NetworkInit(&network);
     MQTTClientInit(&client, &network, 3000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 
@@ -53,7 +54,7 @@ static void mqtt_task(void *pvParameters) {
                 MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
                 connectData.MQTTVersion = 3;
 
-                connectData.clientID.cstring = const_cast<char *>("RadProt_IoT");
+                connectData.clientID.cstring = client_id;
                 connectData.username.cstring = const_cast<char *>(client_settings->mqtt.username);
                 connectData.password.cstring = const_cast<char *>(client_settings->mqtt.password);
 
@@ -128,15 +129,29 @@ int sendToMqttQueue(const char *topic, const char *payload, size_t payload_lengt
     return pdPASS;
 }
 
+void __not_in_flash_func(get_unique_id)(void *param) {
+    flash_get_unique_id(static_cast<uint8_t *>(param));
+}
+
+
 void mqtt_init() {
+
+    uint8_t flash_id[FLASH_UNIQUE_ID_SIZE_BYTES];
+    flash_safe_execute(get_unique_id, flash_id, 1000);
+
+    snprintf(client_id, sizeof(client_id), "RadProt_IoT_02%02X%02X%02X%02X%02X",
+         flash_id[0], flash_id[1], flash_id[2], flash_id[3], flash_id[4]);
+
+
     // Create a queue to hold MQTT publish messages
     mqttQueue = xQueueCreate(10, sizeof(MqttPublishMessage)); // 10 is the queue size
+
     if (mqttQueue != NULL) {
         xTaskCreate(
             mqtt_task,                  // Task to be run
             "MQTTTask",                 // Name of the Task for debugging and managing its Task Handle
             configMINIMAL_STACK_SIZE,   // Stack depth to be allocated for use with task's stack (see docs)
-            NULL,                       // Arguments needed by the Task (NULL because we don't have any)
+            &client_id,                       // Arguments needed by the Task (NULL because we don't have any)
             (configMAX_PRIORITIES - 2), // Task Priority - Higher the number the more priority [max is (configMAX_PRIORITIES
                                         // - 1) provided in FreeRTOSConfig.h]
             NULL                        // Task Handle if available for managing the task

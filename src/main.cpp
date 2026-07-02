@@ -130,7 +130,7 @@ static void main_task(__unused void *params) {
             ethernet_connect();
         }
         
-        mqtt_init();    
+        mqtt_init();
     }
  
     gpio_init(STATUS_LED_GPIO);
