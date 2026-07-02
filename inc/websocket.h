@@ -9,12 +9,13 @@
 #include <ArduinoJson.hpp>
 #include "arduinojson_cust_alloc.h"
 
+#include "status.h"
+
 #include "lwip/api.h"
 
 #include <string.h>
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
-#include "status.h"
 #include "crypto.h"
 
 #define WS_PORT                 8080

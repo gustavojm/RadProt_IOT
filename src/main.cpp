@@ -93,15 +93,14 @@ static void main_task(__unused void *params) {
         initial_config = true;
     }
 
+    cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, wifi_mac);
+
     httpd_init(ap_settings->hostname, ap_settings->domain_name, ap_settings->ip);
     ws_server.init(ws_message_handler);
 
     if (initial_config) {
-        uint8_t itf_sta_mac[6];
-        cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
-
         char ssid[32];
-        snprintf(ssid, sizeof(ssid), "%s-%02X", ap_settings->ssid, itf_sta_mac[5]);
+        snprintf(ssid, sizeof(ssid), "%s-%02X", ap_settings->ssid, wifi_mac[5]);
 
         cyw43_arch_enable_ap_mode(
             ssid, ap_settings->password, ap_settings->password[0] ? CYW43_AUTH_WPA2_MIXED_PSK : CYW43_AUTH_OPEN);

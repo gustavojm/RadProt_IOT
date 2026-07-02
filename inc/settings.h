@@ -18,6 +18,8 @@
 inline const uint INITIAL_CONFIG_GPIO = 15;     // Pin 20
 inline const uint STATUS_LED_GPIO = 9;          // Pin 12
 
+inline uint8_t wifi_mac[6];        
+
 // Define the map with string as key and array as value
 // Define comparison operator for cyw43_ev_scan_result_t
 inline bool operator<(const cyw43_ev_scan_result_t& lhs, const cyw43_ev_scan_result_t& rhs) {
@@ -168,19 +170,17 @@ struct wifi_settings {
         json["gw"] = ipv4.gw.addr;
         json["dns"] = ipv4.dns.addr;
 
-        uint8_t itf_sta_mac[6];
-        cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, itf_sta_mac);
         char mac_addr_str[18];
         snprintf(
             mac_addr_str,
             sizeof mac_addr_str,
             "%02X:%02X:%02X:%02X:%02X:%02X\n",
-            itf_sta_mac[0],
-            itf_sta_mac[1],
-            itf_sta_mac[2],
-            itf_sta_mac[3],
-            itf_sta_mac[4],
-            itf_sta_mac[5]);
+            wifi_mac[0],
+            wifi_mac[1],
+            wifi_mac[2],
+            wifi_mac[3],
+            wifi_mac[4],
+            wifi_mac[5]);
         json["mac_address"] = mac_addr_str;
             
         return json;

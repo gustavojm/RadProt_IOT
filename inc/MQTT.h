@@ -8,10 +8,10 @@
 #include "pico/flash.h"
 
 #include "debug.h"
+#include "settings.h"
 
 inline QueueHandle_t mqttQueue;
 inline TimerHandle_t status_led_off_timer;
-inline char client_id[32];
 
 inline volatile bool mqtt_connection_status = false;
 
@@ -27,8 +27,6 @@ typedef struct {
     uint8_t qos;                       // Quality of Service (0, 1, or 2)
     bool retain;                       // Retain flag for the MQTT message
 } MqttPublishMessage;
-
-void __not_in_flash_func(get_unique_id)(void *param);
 
 void mqtt_init();
 
