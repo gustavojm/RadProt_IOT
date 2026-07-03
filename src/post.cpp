@@ -49,6 +49,7 @@
 #include "wifi_fns.h"
 
 #include "post.h"
+#include "firmware_update.h"
 #include "serial.h"
 #include "status.h"
 #include "watchdog.h"
@@ -232,6 +233,11 @@ json::MyJsonDocument restart_fn(struct http_state *hs) {
     return responseJson;
 }
 
+json::MyJsonDocument firmware_upload_fn(struct http_state *hs) {
+    LWIP_UNUSED_ARG(hs);
+    return firmware_upload_status_json();
+}
+
 // @formatter:off
 const post_handler_entry post_handlers[] = {
     {
@@ -253,6 +259,10 @@ const post_handler_entry post_handlers[] = {
     {
         "/restart.cgi",
         &restart_fn,
+    },
+    {
+        "/firmware_upload.cgi",
+        &firmware_upload_fn,
     },
 
 };

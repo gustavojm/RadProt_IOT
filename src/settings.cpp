@@ -61,9 +61,9 @@ const client_mode_settings_union s_Client_Settings = {
                 .settings = {
                     .conn_type = WIFI, 
                     .wifi = {                        
-                        .ssid = "",
-                        .password = "",
-                        //.auth_mode = CYW43_AUTH_WPA2_AES_PSK,
+                        .ssid = "C14017750 7261",
+                        .password = "malamala",
+                        .auth_mode = CYW43_AUTH_WPA2_AES_PSK,
                         .ipv4 = {.dhcp = true,
                                 .ip = PP_HTONL(LWIP_MAKEU32(192,168,137,200)),
                                 .nm = PP_HTONL(LWIP_MAKEU32(255,255,255,0)),
@@ -82,7 +82,7 @@ const client_mode_settings_union s_Client_Settings = {
                             
 
                     .mqtt = {
-                            .broker = "",   // 192.168.137.86
+                            .broker = "192.168.137.111",   // 192.168.137.86
                             .port = 1883,
                             .username = "",
                             .password = "",

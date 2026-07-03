@@ -114,6 +114,7 @@
 #include <stdlib.h> /* atoi */
 #include <string.h> /* memset */
 #include "status.h"
+#include "firmware_update.h"
 #include "websocket.h"
 
 #if LWIP_TCP && LWIP_CALLBACK_API
@@ -1511,6 +1512,9 @@ static err_t http_handle_post_finished(struct http_state *hs) {
     /* application error or POST finished */
     /* NULL-terminate the buffer */
     http_uri_buf[0] = 0;
+    if (firmware_upload_is_request(hs->post_uri)) {
+        firmware_upload_finish(hs, hs->post_uri);
+    }
     if (hs->file) {     // file was used to pass the BODY of a POST response
         delete[] hs->file;
     }
@@ -2643,6 +2647,15 @@ err_t httpd_post_begin(
     current_connection = hs;
 
     strncpy(hs->post_uri, uri, sizeof hs->post_uri);
+    hs->post_uri[sizeof(hs->post_uri) - 1] = 0;
+    if (firmware_upload_is_request(uri)) {
+        hs->post_content = nullptr;
+        hs->post_content_len = (u32_t)content_len;
+        hs->post_content_len_left = (u32_t)content_len;
+        firmware_upload_begin(hs, uri, content_len, post_auto_wnd);
+        return ERR_OK;
+    }
+
     if (content_len > 0) {
         hs->post_content_len = content_len;
         hs->post_content = new char[content_len];
@@ -2703,7 +2716,14 @@ void httpd_post_response(struct http_state *hs, char *body, u16_t body_len, cons
 err_t httpd_post_receive_data(struct http_state *hs, struct pbuf *p, const char *uri) {
     err_t ret = ERR_OK;
     LWIP_ASSERT("NULL pbuf", p != NULL);
-    LWIP_UNUSED_ARG(uri);
+    if (firmware_upload_is_request(hs->post_uri)) {
+        ret = firmware_upload_receive(hs, p, uri);
+#if LWIP_HTTPD_POST_MANUAL_WND
+        httpd_post_data_recved(hs, p->tot_len);
+#endif
+        pbuf_free(p);
+        return ret;
+    }
     
     int32_t offset = hs->post_content_len - hs->post_content_len_left - p->tot_len;
     if (offset < 0 || (uint32_t)(offset + p->tot_len) > hs->post_content_len) {

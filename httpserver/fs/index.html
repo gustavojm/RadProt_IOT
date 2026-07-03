@@ -198,6 +198,9 @@
                     <div style="display: flex; justify-content: center; flex-direction: column;">
                         <button type="submit">Save Settings</button>
                         <button type="button" id="restart_button">Restart</button>
+                        <input type="file" id="firmware_file" accept=".bin,application/octet-stream">
+                        <button type="button" id="firmware_upload_button">Upload Firmware</button>
+                        <div id="firmware_upload_status" style="text-align: center; font-size: 0.9em;"></div>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column; height: 35px;">
                         <!-- Space to show the slide dots -->
@@ -435,6 +438,51 @@
                 document.getElementById("reboot_popup").style.display = "block";
             }
         };
+    });
+
+    document.getElementById('firmware_upload_button').addEventListener('click', async function () {
+        const fileInput = document.getElementById('firmware_file');
+        const status = document.getElementById('firmware_upload_status');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Select a .bin file first');
+            return;
+        }
+
+        const password = document.getElementById('settings.password').value || '';
+        const url = `/firmware_upload.cgi?password=${encodeURIComponent(password)}&version=${encodeURIComponent(file.name)}`;
+
+        status.textContent = 'Uploading...';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/octet-stream'
+                },
+                body: file
+            });
+
+            const data = await response.json();
+            if (data.message) {
+                status.textContent = data.message;
+                alert(data.message);
+                return;
+            }
+
+            status.textContent = `Staged ${data.size} bytes, CRC ${data.crc}. Rebooting...`;
+            await fetch('/restart.cgi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: '{}'
+            });
+        } catch (error) {
+            status.textContent = 'Upload failed';
+            alert(`Upload failed: ${error}`);
+        }
     });
 
 

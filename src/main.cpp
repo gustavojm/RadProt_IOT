@@ -25,6 +25,7 @@
 #include <pico/multicore.h>
 
 #include "debug.h"
+#include "firmware_update.h"
 #include "websocket.h"
 #include "wifi_fns.h"
 #include "ethernet_fns.h"
@@ -65,6 +66,8 @@ static void main_task(__unused void *params) {
         lDebug(Error, "Failed to initialise Wi-Fi");
         return;
     }
+
+    firmware_install_if_pending();
 
     // No power management (No powersave mode for WiFi)
     cyw43_wifi_pm(&cyw43_state ,CYW43_NONE_PM);

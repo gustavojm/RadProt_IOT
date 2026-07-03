@@ -73,6 +73,7 @@ add_executable(${PROJECT_NAME}
         src/settings.cpp
         src/hooks.cpp
         src/post.cpp
+        src/firmware_update.cpp
         hal/src/serial.cpp
         hal/src/spi.cpp
         hal/src/gpio.cpp        
