@@ -100,6 +100,7 @@ pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/uart_rx.p
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         WIFI_SSID="RadProt_IoT"
         WIFI_PASSWORD="NASA1234"
+        FIRMWARE_VERSION="v1.0.0"
         NO_SYS=0
         ETL_NO_STL
         ETL_NO_INITIALIZER_LIST

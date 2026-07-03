@@ -198,6 +198,11 @@
                     <div style="display: flex; justify-content: center; flex-direction: column;">
                         <button type="submit">Save Settings</button>
                         <button type="button" id="restart_button">Restart</button>
+                    </div>
+                    <div style="display: flex; justify-content: center; flex-direction: column;">
+                        <div style="text-align: center; margin-top: 4px;">
+                        ---- Firmware Version: <span id="firmware_version_display"></span> ----
+                        </div>
                         <input type="file" id="firmware_file" accept=".bin,application/octet-stream">
                         <button type="button" id="firmware_upload_button">Upload Firmware</button>
                         <div id="firmware_upload_status" style="text-align: center; font-size: 0.9em;"></div>
@@ -622,6 +627,7 @@
 
     function settings_populate(settings_json) {
         document.getElementById('wifi.mac_address').innerHTML = settings_json["wifi"]["mac_address"];
+        document.getElementById('firmware_version_display').textContent = settings_json["firmware_version"];
 
         const settings_form = document.getElementById('settings_form');
         settings_form.elements["wifi.ssid"].value = settings_json["wifi"]["ssid"];

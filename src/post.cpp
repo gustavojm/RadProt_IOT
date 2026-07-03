@@ -64,6 +64,7 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
     responseJson["wifi"]["auth_mode"] = connect_auth_mode_to_scan_auth_mode(responseJson["wifi"]["auth_mode"]);
 
     responseJson["initial_config"] = initial_config;
+    responseJson["firmware_version"] = FIRMWARE_VERSION;
     return responseJson;
 }
 
@@ -226,8 +227,8 @@ json::MyJsonDocument wifi_nets_scan_fn(struct http_state *hs) {
 json::MyJsonDocument restart_fn(struct http_state *hs) {
     auto responseJson = json::MyJsonDocument();
 
-    watchdog_reboot(0, SRAM_END, 1000);
     vTaskSuspend(feedWdTask_handle);
+    watchdog_reboot(0, SRAM_END, 1000);
 
     responseJson.to<json::JsonObject>(); // Because we have not created any keys, it is just empty
     return responseJson;
