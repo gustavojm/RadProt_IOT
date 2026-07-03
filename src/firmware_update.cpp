@@ -8,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "hardware/flash.h"
 #include "hardware/watchdog.h"
-#include "pico/cyw43_arch.h"
 #include "pico/flash.h"
 #include "pico/stdlib.h"
 #include "portmacro.h"
@@ -41,8 +40,8 @@ struct firmware_metadata {
     uint32_t flags = 0;
     uint32_t size = 0;
     uint32_t crc = 0;
-    char version[32] = {0};
-    uint32_t reserved[(FLASH_SECTOR_SIZE - 16u - sizeof(version)) / sizeof(uint32_t)] = {};
+    char file_name[32] = {0};
+    uint32_t reserved[(FLASH_SECTOR_SIZE - 16u - sizeof(file_name)) / sizeof(uint32_t)] = {};
 };
 
 static_assert(sizeof(firmware_metadata) == FLASH_SECTOR_SIZE, "Metadata sector size mismatch");
@@ -59,8 +58,9 @@ struct firmware_upload_state {
     uint32_t next_progress_log = kProgressLogStep;
     uint32_t sector_offset = 0;
     uint32_t sector_fill = 0;
-    uint8_t sector[FLASH_SECTOR_SIZE] = {};
-    char version[32] = {0};
+    bool extension_ok = false;
+    alignas(uint32_t) uint8_t sector[FLASH_SECTOR_SIZE] = {};
+    char file_name[32] = {0};
     char message[80] = {0};
 };
 
@@ -153,15 +153,22 @@ static bool password_matches(const char *uri) {
     return strcmp(provided, reinterpret_cast<const char *>(get_client_mode_settings()->password)) == 0;
 }
 
-static bool version_from_uri(const char *uri, char *version, size_t version_len) {
-    if (uri == nullptr || version_len == 0) {
+static bool file_name_from_uri(const char *uri, char *file_name, size_t file_name_len) {
+    if (uri == nullptr || file_name_len == 0) {
         return false;
     }
-    copy_query_value(uri, "version", version, version_len);
-    if (version[0] == 0) {
-        copy_query_value(uri, "name", version, version_len);
-    }
-    return version[0] != 0;
+    copy_query_value(uri, "file_name", file_name, file_name_len);
+    return file_name[0] != 0;
+}
+
+static bool has_bin_extension(const char *name) {
+    if (name == nullptr) return false;
+    size_t len = strlen(name);
+    if (len < 4) return false;
+    return name[len - 4] == '.' &&
+           name[len - 3] == 'b' &&
+           name[len - 2] == 'i' &&
+           name[len - 1] == 'n';
 }
 
 static void set_status_message(const char *msg) {
@@ -254,9 +261,9 @@ bool firmware_upload_begin(struct http_state *hs, const char *uri, int content_l
     g_state.content_len = content_len > 0 ? static_cast<uint32_t>(content_len) : 0u;
     g_state.authorized = password_matches(uri);
     g_state.size_ok = (g_state.content_len > 0u) && (g_state.content_len <= kStagingSize);
-    g_state.active = g_state.authorized && g_state.size_ok;
-
-    version_from_uri(uri, g_state.version, sizeof(g_state.version));
+    file_name_from_uri(uri, g_state.file_name, sizeof(g_state.file_name));
+    g_state.extension_ok = has_bin_extension(g_state.file_name);
+    g_state.active = g_state.authorized && g_state.size_ok && g_state.extension_ok;
 
     if (!g_state.authorized) {
         set_status_message("Wrong Password");
@@ -265,6 +272,11 @@ bool firmware_upload_begin(struct http_state *hs, const char *uri, int content_l
 
     if (!g_state.size_ok) {
         set_status_message("Firmware image too large");
+        return true;
+    }
+
+    if (!g_state.extension_ok) {
+        set_status_message("File must have a .bin extension");
         return true;
     }
 
@@ -380,10 +392,10 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
     meta->flags = kPendingFlag;
     meta->size = g_state.received;
     meta->crc = g_state.crc;
-    strncpy(meta->version, g_state.version, sizeof(meta->version) - 1);
-    meta->version[sizeof(meta->version) - 1] = 0;
+    strncpy(meta->file_name, g_state.file_name, sizeof(meta->file_name) - 1);
+    meta->file_name[sizeof(meta->file_name) - 1] = 0;
 
-    lDebug(Info, "Staging complete: size=%u crc=0x%08x version=%s", meta->size, meta->crc, meta->version);
+    lDebug(Info, "Staging complete: size=%u crc=0x%08x file name=%s", meta->size, meta->crc, meta->file_name);
     lDebug(Info, "Verifying staged firmware before install");
     run_flash_operation(write_metadata_impl, nullptr);
 
@@ -406,11 +418,16 @@ ArduinoJson::MyJsonDocument firmware_upload_status_json() {
         return json;
     }
 
+    if (!g_state.extension_ok) {
+        json["message"] = g_state.message[0] ? g_state.message : "File must have a .bin extension";
+        return json;
+    }
+
     if (g_state.finalised) {
         json["OK"] = "Upload staged";
         json["size"] = g_state.received;
         json["crc"] = g_state.crc;
-        json["version"] = g_state.version;
+        json["file_name"] = g_state.file_name;
         json["reboot_required"] = true;
         return json;
     }
@@ -455,7 +472,6 @@ void firmware_install_if_pending() {
     run_flash_operation(apply_install_impl, &args);
 
     lDebug(Info, "Firmware updated successfully, rebooting");
-    cyw43_arch_deinit();
     vTaskSuspend(feedWdTask_handle);
     watchdog_reboot(0, SRAM_END, 100);
 }

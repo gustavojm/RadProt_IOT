@@ -456,7 +456,7 @@
         }
 
         const password = document.getElementById('settings.password').value || '';
-        const url = `/firmware_upload.cgi?password=${encodeURIComponent(password)}&version=${encodeURIComponent(file.name)}`;
+        const url = `/firmware_upload.cgi?password=${encodeURIComponent(password)}&file_name=${encodeURIComponent(file.name)}`;
 
         status.textContent = 'Uploading...';
 
