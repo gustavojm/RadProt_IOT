@@ -368,6 +368,10 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
         return;
     }
 
+    if (!g_state.extension_ok) {
+        return;
+    }
+
     if (g_state.received != g_state.content_len) {
         g_state.active = false;
         set_status_message("Unexpected upload length");
