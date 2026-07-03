@@ -49,7 +49,6 @@ uint32_t websocket_server::get_message_len(uint8_t *msg) {
     if ((msg[1] & 0x7F) == 126) {
         len = (msg[2] << 8) | msg[3];
     } else if ((msg[1] & 0x7F) == 127) {
-        // 64-bit length not supported in this implementation
         len = 0;
     } else {
         len = msg[1] & 0x7F;
@@ -70,7 +69,7 @@ uint8_t *websocket_server::get_mask(uint8_t *msg) {
     if ((msg[1] & 0x7F) == 126) {
         return &msg[4];
     } else if ((msg[1] & 0x7F) == 127) {
-        return &msg[10]; // 64-bit length not fully supported
+        return &msg[10];
     } else {
         return &msg[2];
     }
@@ -82,7 +81,7 @@ uint8_t *websocket_server::get_payload_ptr(uint8_t *msg) {
     if ((msg[1] & 0x7F) == 126) {
         p = msg + 4;
     } else if ((msg[1] & 0x7F) == 127) {
-        p = msg + 10; // 64-bit length not fully supported
+        p = msg + 10;
     } else {
         p = msg + 2;
     }
@@ -106,14 +105,14 @@ uint8_t *websocket_server::set_size_to_frame(uint32_t size, uint8_t *out_frame) 
     if (size < 126) {
         *out_frame_ptr = size;
         out_frame_ptr++;
-    } else if (size < 65536) { // 16-bit length
+    } else if (size < 65536) {
         out_frame_ptr[0] = 126;
         out_frame_ptr[1] = ((size >> 8) & 0xFF);
         out_frame_ptr[2] = (size & 0xFF);
         out_frame_ptr += 3;
-    } else { // 64-bit length - not fully implemented
+    } else {
         out_frame_ptr[0] = 127;
-        memset(&out_frame_ptr[1], 0, 6); // Clear first 6 bytes (most significant)
+        memset(&out_frame_ptr[1], 0, 6);
         out_frame_ptr[7] = ((size >> 8) & 0xFF);
         out_frame_ptr[8] = (size & 0xFF);
         out_frame_ptr += 9;
@@ -128,45 +127,52 @@ uint8_t *websocket_server::set_data_to_frame(uint8_t *data, uint32_t size, uint8
 }
 
 void websocket_server::send_message(websocket_message *msg) {
-    uint8_t *outbuf_ptr = send_buf;
-
     if (msg->msg_size + 10 > WS_SEND_BUFFER_SIZE) {
         lDebug(Warn, "Message too large for buffer");
         return;
     }
 
-    if (!client.established) {
-        lDebug(Warn, "No client connected");
-        return;
+    uint8_t frame_buf[WS_SEND_BUFFER_SIZE];
+    memset(frame_buf, 0, sizeof(frame_buf));
+    frame_buf[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
+    uint8_t *p = set_size_to_frame(msg->msg_size, &frame_buf[1]);
+    p = set_data_to_frame(msg->message, msg->msg_size, p);
+    size_t frame_len = p - frame_buf;
+
+    /* Snapshot active PCBs under mutex, then send outside mutex.
+     * This avoids nesting LOCK_TCPIP_CORE inside the mutex. */
+    struct altcp_pcb *targets[WS_MAX_CLIENTS] = {};
+    int num_targets = 0;
+
+    if (clients_mutex) xSemaphoreTake(clients_mutex, portMAX_DELAY);
+    for (int i = 0; i < WS_MAX_CLIENTS; i++) {
+        if (clients[i].established && clients[i].pcb) {
+            targets[num_targets++] = clients[i].pcb;
+        }
     }
+    if (clients_mutex) xSemaphoreGive(clients_mutex);
 
-    taskENTER_CRITICAL();
-    memset(outbuf_ptr, 0x00, WS_SEND_BUFFER_SIZE);
-    outbuf_ptr[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
-    outbuf_ptr = set_size_to_frame(msg->msg_size, &outbuf_ptr[1]);
-    outbuf_ptr = set_data_to_frame(msg->message, msg->msg_size, outbuf_ptr);
-    size_t packet_size = outbuf_ptr - send_buf;
-    taskEXIT_CRITICAL();
+    if (num_targets == 0) return;
 
-    // Set send timeout using setsockopt
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 500000; // 500 ms
-    lwip_setsockopt(client.socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-
-    int bytes_sent = lwip_send(client.socket, send_buf, packet_size, 0);
-    if (bytes_sent < 0) {
-        lDebug(Error, "Write failed with err %d (\"%s\")", errno, strerror(errno));
-    } else {
-        lDebug(Debug, "Sent %d bytes to client", bytes_sent);
+    LOCK_TCPIP_CORE();
+    for (int i = 0; i < num_targets; i++) {
+        if (targets[i] == nullptr) continue;
+        err_t err = altcp_write(targets[i], frame_buf, frame_len, TCP_WRITE_FLAG_COPY);
+        if (err == ERR_OK) {
+            altcp_output(targets[i]);
+        } else {
+            lDebug(Warn, "altcp_write failed: %d", err);
+        }
     }
+    UNLOCK_TCPIP_CORE();
 }
 
-void websocket_server::handle_frame(uint8_t *buffer, int length) {
+void websocket_server::handle_frame(websocket_client *c, uint8_t *buffer, int length) {
+    /* Called from ws_recv_cb (lwIP core context, core lock already held).
+     * Do NOT call LOCK_TCPIP_CORE() here — would deadlock. */
     if (length < 2)
         return;
 
-    // Check extended length bytes are available
     uint8_t len_byte = buffer[1] & 0x7F;
     int required = 2;
     if (len_byte == 126) {
@@ -182,12 +188,13 @@ void websocket_server::handle_frame(uint8_t *buffer, int length) {
 
     uint8_t *inbuf_ptr = buffer;
 
-    // Check if it's a control frame
     if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_PING) {
         lDebug(Info, "Received PING, sending PONG");
-        // Send PONG response
         uint8_t pong_frame[2] = { WS_FIN_FLAG | WS_TYPE_PONG, 0 };
-        lwip_send(client.socket, pong_frame, 2, 0);
+        if (c->pcb) {
+            altcp_write(c->pcb, pong_frame, 2, TCP_WRITE_FLAG_COPY);
+            altcp_output(c->pcb);
+        }
         return;
     }
 
@@ -198,16 +205,17 @@ void websocket_server::handle_frame(uint8_t *buffer, int length) {
 
     if ((inbuf_ptr[0] & WS_TYPE_MASK) == WS_TYPE_CLOSE) {
         lDebug(Info, "Received CLOSE frame");
-        // Echo close frame
         uint8_t close_frame[2] = { WS_FIN_FLAG | WS_TYPE_CLOSE, 0 };
-        lwip_send(client.socket, close_frame, 2, 0);
-        lwip_close(client.socket);
-        client.socket = -1;
-        client.established = false;
+        if (c->pcb) {
+            altcp_write(c->pcb, close_frame, 2, TCP_WRITE_FLAG_COPY);
+            altcp_output(c->pcb);
+            altcp_close(c->pcb);
+        }
+        c->established = false;
+        c->pcb = nullptr;
         return;
     }
 
-    // Handle data frame
     if (is_fin_msg(inbuf_ptr)) {
         uint32_t len = get_message_len(inbuf_ptr);
         uint8_t *payload = get_payload_ptr(inbuf_ptr);
@@ -223,147 +231,163 @@ void websocket_server::handle_frame(uint8_t *buffer, int length) {
     }
 }
 
-bool websocket_server::process_handshake(uint8_t *buffer) {
-    if (strncmp((char *)buffer, "GET /", 5) != 0) {
-        return false;
+// --- altcp callbacks ---
+
+err_t websocket_server::ws_recv_cb(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err) {
+    websocket_client *c = static_cast<websocket_client *>(arg);
+    if (err != ERR_OK || p == nullptr || c == nullptr) {
+        if (c) {
+            c->established = false;
+            c->pcb = nullptr;
+        }
+        if (p) pbuf_free(p);
+        return ERR_OK;
     }
 
-    char *ws_key_accept = create_key_accept((char *)buffer);
+    uint16_t len = p->tot_len;
+    if (len > WS_RECV_BUFFER_SIZE - 1) {
+        len = WS_RECV_BUFFER_SIZE - 1;
+    }
+    pbuf_copy_partial(p, c->recv_buf, len, 0);
+    c->recv_buf[len] = 0;
+
+    altcp_recved(pcb, p->tot_len);
+    pbuf_free(p);
+
+    if (c->server_ptr) {
+        c->server_ptr->handle_frame(c, c->recv_buf, len);
+    }
+
+    return ERR_OK;
+}
+
+void websocket_server::ws_err_cb(void *arg, err_t err) {
+    websocket_client *c = static_cast<websocket_client *>(arg);
+    if (c) {
+        lDebug(Info, "WebSocket client error %d, closing", err);
+        c->established = false;
+        c->pcb = nullptr;
+    }
+}
+
+err_t websocket_server::ws_poll_cb(void *arg, struct altcp_pcb *pcb) {
+    websocket_client *c = static_cast<websocket_client *>(arg);
+    if (c == nullptr || !c->established) {
+        return ERR_OK;
+    }
+
+    c->retries++;
+    if (c->retries >= WS_MAX_POLL_RETRIES) {
+        lDebug(Info, "WebSocket client timeout, closing");
+        c->established = false;
+        c->pcb = nullptr;
+        altcp_close(pcb);
+    }
+    return ERR_OK;
+}
+
+err_t websocket_server::ws_sent_cb(void *arg, struct altcp_pcb *pcb, u16_t len) {
+    websocket_client *c = static_cast<websocket_client *>(arg);
+    if (c) {
+        c->retries = 0;
+    }
+    return ERR_OK;
+}
+
+// --- Client management ---
+
+int websocket_server::alloc_client() {
+    for (int i = 0; i < WS_MAX_CLIENTS; i++) {
+        if (!clients[i].established && clients[i].pcb == nullptr) {
+            clients[i].server_ptr = this;
+            return i;
+        }
+    }
+    return -1;
+}
+
+void websocket_server::free_client(int idx) {
+    if (idx >= 0 && idx < WS_MAX_CLIENTS) {
+        clients[idx].established = false;
+        clients[idx].pcb = nullptr;
+        memset(clients[idx].recv_buf, 0, WS_RECV_BUFFER_SIZE);
+        clients[idx].retries = 0;
+    }
+}
+
+// --- Connection handler called from httpd ---
+
+void websocket_server::handle_altcp_connection(struct altcp_pcb *pcb, struct pbuf *initial_data) {
+    int idx = alloc_client();
+    if (idx < 0) {
+        lDebug(Warn, "No free WebSocket client slot, rejecting");
+        altcp_abort(pcb);
+        pbuf_free(initial_data);
+        return;
+    }
+
+    websocket_client *c = &clients[idx];
+    c->pcb = pcb;
+    c->established = false;
+    c->retries = 0;
+
+    uint16_t len = initial_data->tot_len;
+    if (len > WS_RECV_BUFFER_SIZE - 1) {
+        len = WS_RECV_BUFFER_SIZE - 1;
+    }
+    pbuf_copy_partial(initial_data, c->recv_buf, len, 0);
+    c->recv_buf[len] = 0;
+
+    char *ws_key_accept = create_key_accept((char *)c->recv_buf);
     if (!ws_key_accept) {
         lDebug(Error, "Invalid WebSocket handshake request");
-        return false;
+        altcp_abort(pcb);
+        pbuf_free(initial_data);
+        free_client(idx);
+        return;
     }
 
-    // Create handshake response
     int written = snprintf((char *)send_buf, WS_SEND_BUFFER_SIZE, "%s%s\r\n\r\n", header, ws_key_accept);
     int response_len = (written < WS_SEND_BUFFER_SIZE) ? written : WS_SEND_BUFFER_SIZE - 1;
 
-    if (lwip_send(client.socket, send_buf, response_len, 0) < 0) {
-        lDebug(Error, "Failed to send handshake response");
-        return false;
+    err_t err = altcp_write(pcb, send_buf, response_len, TCP_WRITE_FLAG_COPY);
+    if (err != ERR_OK) {
+        lDebug(Error, "Failed to send WebSocket handshake response");
+        altcp_abort(pcb);
+        pbuf_free(initial_data);
+        free_client(idx);
+        return;
     }
+    altcp_output(pcb);
 
-    lDebug(Info, "WebSocket handshake completed");
-    return true;
+    altcp_recved(pcb, initial_data->tot_len);
+    pbuf_free(initial_data);
+
+    altcp_arg(pcb, c);
+    altcp_recv(pcb, ws_recv_cb);
+    altcp_err(pcb, ws_err_cb);
+    altcp_poll(pcb, ws_poll_cb, WS_POLL_INTERVAL_MS / 500);
+    altcp_sent(pcb, ws_sent_cb);
+
+    c->established = true;
+    lDebug(Info, "WebSocket client %d connected on port 80", idx);
 }
+
+// --- FreeRTOS task ---
 
 void websocket_server::task() {
     websocketQueue = xQueueCreate(10, sizeof(websocket_publish_message));
 
-    fd_set read_fds;
-    struct timeval timeout;
+    clients_mutex = xSemaphoreCreateMutex();
+
     websocket_publish_message queued_msg;
 
-    // Create listening socket
-    int listen_sock = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listen_sock < 0) {
-        lDebug(Error, "Failed to create socket");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    // Set socket options for reuse
-    int opt = 1;
-    lwip_setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    // Prepare server address
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(WS_PORT);
-
-    // Bind socket
-    if (lwip_bind(listen_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        lDebug(Error, "Socket bind failed");
-        lwip_close(listen_sock);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    // Listen for connections
-    if (lwip_listen(listen_sock, 1) < 0) {
-        lDebug(Error, "Listen failed");
-        lwip_close(listen_sock);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    lDebug(Info, "WebSocket server started on port %d", WS_PORT);
-
-    client.server_ptr = this;
+    lDebug(Info, "WebSocket server task started (multiplexed on port 80 via httpd)");
 
     while (1) {
-        // Check if we need to accept a new client
-        if (client.socket < 0) {
-            // lDebug(Info, "Waiting for WebSocket client...");
-
-            // Set up for select on listen socket
-            FD_ZERO(&read_fds);
-            FD_SET(listen_sock, &read_fds);
-            timeout.tv_sec = 0;
-            timeout.tv_usec = SELECT_TIMEOUT_MS * 1000;
-
-            if (lwip_select(listen_sock + 1, &read_fds, NULL, NULL, &timeout) > 0) {
-                struct sockaddr_in client_addr;
-                socklen_t addr_len = sizeof(client_addr);
-                int client_sock = lwip_accept(listen_sock, (struct sockaddr *)&client_addr, &addr_len);
-
-                if (client_sock >= 0) {
-                    client.socket = client_sock;
-                    lDebug(Info, "New client connected");
-                }
-            }
-        } else {
-            // We have a client connected
-            FD_ZERO(&read_fds);
-            FD_SET(client.socket, &read_fds);
-            timeout.tv_sec = 0;
-            timeout.tv_usec = SELECT_TIMEOUT_MS * 1000;
-
-            int select_result = lwip_select(client.socket + 1, &read_fds, NULL, NULL, &timeout);
-
-            if (select_result > 0 && FD_ISSET(client.socket, &read_fds)) {
-                // Data available from client
-                memset(client.recv_buf, 0, WS_RECV_BUFFER_SIZE);
-                int recv_bytes = lwip_recv(client.socket, client.recv_buf, WS_RECV_BUFFER_SIZE, 0);
-
-                if (recv_bytes <= 0) {
-                    // Client disconnected
-                    lDebug(Info, "Client disconnected");
-                    lwip_close(client.socket);
-                    client.socket = -1;
-                    client.established = false;
-                    // continue;
-                }
-
-                // Process received data
-                if (!client.established) {
-                    // Handle WebSocket handshake
-                    if (process_handshake(client.recv_buf)) {
-                        client.established = true;
-                    } else {
-                        // Invalid handshake
-                        lDebug(Error, "Invalid WebSocket handshake");
-                        lwip_close(client.socket);
-                        client.socket = -1;
-                    }
-                } else {
-                    // Handle WebSocket frame
-                    handle_frame(client.recv_buf, recv_bytes);
-                }
-            } else if (select_result < 0) {
-                // Error in select
-                lDebug(Error, "Error in select(). Closing client");
-                lwip_close(client.socket);
-                client.socket = -1;
-                client.established = false;
-            }
-        }
-
         TickType_t now = xTaskGetTickCount();
 
-        if (client.established && (now - last_status_sent >= pdMS_TO_TICKS(500))) {
+        if (now - last_status_sent >= pdMS_TO_TICKS(500)) {
             last_status_sent = now;
             ArduinoJson::MyJsonDocument json = status_get();
 
@@ -372,20 +396,19 @@ void websocket_server::task() {
             msg.payload_length = len;
 
             if (xQueueSend(websocketQueue, &msg, 0) == pdPASS) {
-                lDebug(Info, "Status sent");
+                lDebug(Debug, "Status queued for broadcast");
             }
         }
 
-        // Check for queued messages to send
         while (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
-            if (client.established) {
-                websocket_message ws_msg;
-                ws_msg.message = (uint8_t *)&queued_msg.payload;
-                ws_msg.msg_size = queued_msg.payload_length;
-                ws_msg.msg_type = WS_TYPE_STRING;
-                send_message(&ws_msg);
-            }
+            websocket_message ws_msg;
+            ws_msg.message = (uint8_t *)&queued_msg.payload;
+            ws_msg.msg_size = queued_msg.payload_length;
+            ws_msg.msg_type = WS_TYPE_STRING;
+            send_message(&ws_msg);
         }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 

@@ -11,14 +11,13 @@
 
 #include "status.h"
 
-#include "lwip/api.h"
+#include "lwip/altcp.h"
+#include "lwip/pbuf.h"
+#include "lwip/tcpip.h"
 
 #include <string.h>
-#include <lwip/sockets.h>
-#include <lwip/netdb.h>
 #include "crypto.h"
 
-#define WS_PORT                 8080
 #define WS_GUID                 "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 #define WS_FIN_FLAG             1 << 7
 #define WS_MASKED_FLAG          1 << 7
@@ -28,13 +27,13 @@
 #define WS_TYPE_CLOSE           0x08
 #define WS_TYPE_PING            0x09
 #define WS_TYPE_PONG            0x0A
-#define SELECT_TIMEOUT_MS       100
 
-#define WS_MAX_CLIENTS          1
+#define WS_MAX_CLIENTS          2
 #define WS_SEND_BUFFER_SIZE     512
 #define WS_RECV_BUFFER_SIZE     512
-
 #define WS_MAX_PAYLOAD_LENGTH   512
+#define WS_POLL_INTERVAL_MS     2000
+#define WS_MAX_POLL_RETRIES     4
 
 inline QueueHandle_t websocketQueue;
 
@@ -56,27 +55,29 @@ struct websocket_publish_message {
 
 typedef void (*ws_callback_t)(uint8_t *payload, uint32_t length, websocket_msg_type type);
 
-// Forward declaration
 class websocket_server;
 
 struct websocket_client{
-    int socket = -1;
+    struct altcp_pcb *pcb = nullptr;
     bool established = false;
     uint8_t recv_buf[WS_RECV_BUFFER_SIZE];
-    websocket_server *server_ptr =  nullptr;
+    int retries = 0;
+    websocket_server *server_ptr = nullptr;
 };
 
 class websocket_server {
     uint8_t send_buf[WS_SEND_BUFFER_SIZE] = {};
-    websocket_client client = {}; 
+    websocket_client clients[WS_MAX_CLIENTS] = {};
     ws_callback_t msg_handler = nullptr;
     TickType_t last_status_sent = 0;
+    SemaphoreHandle_t clients_mutex = nullptr;
 
 private:
     void task();
+    int alloc_client();
+    void free_client(int idx);
     void send_message(websocket_message *msg);
-    void handle_frame(uint8_t *buffer, int length);
-    bool process_handshake(uint8_t *buffer);
+    void handle_frame(websocket_client *c, uint8_t *buffer, int length);
     char *create_key_accept(char *inbuf);
     char *get_key(char *buf, size_t *len);
     uint32_t get_message_len(uint8_t *msg);
@@ -88,8 +89,14 @@ private:
     uint8_t *set_size_to_frame(uint32_t size, uint8_t *out_frame);
     uint8_t *set_data_to_frame(uint8_t *data, uint32_t size, uint8_t *out_frame);
 
+    static err_t ws_recv_cb(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err);
+    static void   ws_err_cb(void *arg, err_t err);
+    static err_t ws_poll_cb(void *arg, struct altcp_pcb *pcb);
+    static err_t ws_sent_cb(void *arg, struct altcp_pcb *pcb, u16_t len);
+
 public:
-    void init(ws_callback_t callback);    
+    void init(ws_callback_t callback);
+    void handle_altcp_connection(struct altcp_pcb *pcb, struct pbuf *initial_data);
 };
 
 inline websocket_server ws_server;

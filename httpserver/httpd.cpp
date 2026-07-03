@@ -114,6 +114,7 @@
 #include <stdlib.h> /* atoi */
 #include <string.h> /* memset */
 #include "status.h"
+#include "websocket.h"
 
 #if LWIP_TCP && LWIP_CALLBACK_API
 
@@ -2384,6 +2385,40 @@ static err_t http_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t e
         }
         http_close_conn(pcb, hs);
         return ERR_OK;
+    }
+
+    /* Check for WebSocket upgrade before httpd processes the request */
+    if (hs->handle == nullptr && p != nullptr && p->tot_len >= MIN_REQ_LEN) {
+        char check_buf[256];
+        u16_t copy_len = LWIP_MIN(p->tot_len, (u16_t)sizeof(check_buf) - 1);
+        pbuf_copy_partial(p, check_buf, copy_len, 0);
+        check_buf[copy_len] = 0;
+
+        /* Case-insensitive check for GET request + WebSocket upgrade header */
+        char *upgrade_hdr = lwip_strnstr(check_buf, "Upgrade:", copy_len);
+        char *websocket_kw = nullptr;
+        if (upgrade_hdr) {
+            /* Find "websocket" after "Upgrade:" (case-insensitive) */
+            for (int i = 0; i < 10 && upgrade_hdr[i]; i++) {
+                if (upgrade_hdr[i] == 'w' || upgrade_hdr[i] == 'W') {
+                    if (strncasecmp(&upgrade_hdr[i], "websocket", 9) == 0) {
+                        websocket_kw = &upgrade_hdr[i];
+                        break;
+                    }
+                }
+            }
+        }
+        if (strncmp(check_buf, "GET ", 4) == 0 && websocket_kw != nullptr) {
+            LWIP_DEBUGF(HTTPD_DEBUG, ("http_recv: WebSocket upgrade detected\n"));
+            altcp_arg(pcb, nullptr);
+            altcp_recv(pcb, nullptr);
+            altcp_err(pcb, nullptr);
+            altcp_poll(pcb, nullptr, 0);
+            altcp_sent(pcb, nullptr);
+            http_state_free(hs);
+            ws_server.handle_altcp_connection(pcb, p);
+            return ERR_OK;
+        }
     }
 
 #if LWIP_HTTPD_SUPPORT_POST && LWIP_HTTPD_POST_MANUAL_WND

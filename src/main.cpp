@@ -95,9 +95,6 @@ static void main_task(__unused void *params) {
 
     cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA, wifi_mac);
 
-    httpd_init(ap_settings->hostname, ap_settings->domain_name, ap_settings->ip);
-    ws_server.init(ws_message_handler);
-
     if (initial_config) {
         char ssid[32];
         snprintf(ssid, sizeof(ssid), "%s-%02X", ap_settings->ssid, wifi_mac[5]);
@@ -129,8 +126,16 @@ static void main_task(__unused void *params) {
             ethernet_connect();
         }
         
+        //mqtt_init();
+    }
+
+    httpd_init(ap_settings->hostname, ap_settings->domain_name, ap_settings->ip);
+    ws_server.init(ws_message_handler);
+
+    if (!initial_config) {
         mqtt_init();
     }
+
  
     gpio_init(STATUS_LED_GPIO);
     gpio_set_dir(STATUS_LED_GPIO, true);
