@@ -84,10 +84,10 @@ int scan_auth_mode_to_connect_auth_mode(int scan_auth_mode) {
     switch (scan_auth_mode) {
     case 0: connect_auth_mode = CYW43_AUTH_OPEN; break;
     case 3: connect_auth_mode = CYW43_AUTH_WPA_TKIP_PSK; break;
-    case 5: connect_auth_mode = CYW43_AUTH_WPA3_WPA2_AES_PSK; break;    // CYW43_AUTH_WPA2_AES_PSK
+    case 4: connect_auth_mode = CYW43_AUTH_WPA2_AES_PSK; break;
+    case 5: connect_auth_mode = CYW43_AUTH_WPA3_WPA2_AES_PSK; break;
     case 7: connect_auth_mode = CYW43_AUTH_WPA2_MIXED_PSK; break;
     default:
-        // Handle unknown auth type
         connect_auth_mode = -1;
     }
     return connect_auth_mode;
@@ -99,10 +99,10 @@ int connect_auth_mode_to_scan_auth_mode(int connect_auth_mode) {
     switch (connect_auth_mode) {
     case CYW43_AUTH_OPEN: scan_auth_mode = 0; break;
     case CYW43_AUTH_WPA_TKIP_PSK: scan_auth_mode = 3; break;
+    case CYW43_AUTH_WPA2_AES_PSK: scan_auth_mode = 4; break;
     case CYW43_AUTH_WPA3_WPA2_AES_PSK: scan_auth_mode = 5; break;
     case CYW43_AUTH_WPA2_MIXED_PSK: scan_auth_mode = 7; break;
     default:
-        // Handle unknown auth type
         scan_auth_mode = -1;
     }
     return scan_auth_mode;

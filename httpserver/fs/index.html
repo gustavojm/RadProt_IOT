@@ -50,7 +50,8 @@
                                         <select name="wifi.auth_mode" id="wifi.auth_mode">
                                             <option value="0" title="No authorisation required (open)">OPEN</option>
                                             <option value="3" title="WPA authorisation">WPA TKIP PSK</option>
-                                            <option value="7" title="WPA2/WPA mixed authorisation" selected>WPA2/WPA                                                
+                                            <option value="4" title="WPA2 AES authorisation" selected>WPA2 AES PSK</option>
+                                            <option value="7" title="WPA2/WPA mixed authorisation">WPA2/WPA                                                
                                                 MIXED
                                                 PSK</option>
                                             <option value="5" title="WPA3/WPA2 authorisation">WPA3/WPA2</option>
@@ -197,6 +198,10 @@
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
                         <button type="submit">Save Settings</button>
+                        <button type="button" id="settings_backup_button">Backup Settings</button>
+                        <input type="file" id="restore_file" accept=".json,application/json">
+                        <button type="button" id="settings_restore_button">Restore Settings</button>
+                        <div id="restore_status" style="text-align: center"></div>
                         <button type="button" id="restart_button">Restart</button>
                     </div>
                     <div style="display: flex; justify-content: center; flex-direction: column;">
@@ -487,6 +492,63 @@
         } catch (error) {
             status.textContent = 'Upload failed';
             alert(`Upload failed: ${error}`);
+        }
+    });
+
+    document.getElementById('settings_backup_button').addEventListener('click', async function () {
+        try {
+            const response = await fetch('/settings_backup.cgi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: '{}'
+            });
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'RadProt_IoT_' + (data.mac || 'unknown') + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            alert(`Download failed: ${error}`);
+        }
+    });
+
+    document.getElementById('settings_restore_button').addEventListener('click', async function () {
+        const fileInput = document.getElementById('restore_file');
+        const status = document.getElementById('restore_status');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Select a JSON file first');
+            return;
+        }
+
+        status.textContent = 'Restoring...';
+
+        try {
+            const text = await file.text();
+            const response = await fetch('/settings_save.cgi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: text
+            });
+            const data = await response.json();
+            if (data.OK === 'Rebooting') {
+                document.getElementById("reboot_popup").style.display = "block";
+            } else if (data.populate_readings) {
+                status.textContent = data.message;
+            } else if (data.error || data.message) {
+                status.textContent = data.message || data.error;
+            }
+        } catch (error) {
+            status.textContent = 'Restore failed';
+            alert(`Restore failed: ${error}`);
         }
     });
 

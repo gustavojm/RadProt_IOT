@@ -56,6 +56,16 @@
 
 namespace json = ArduinoJson;
 
+static void rot47(char *str) {
+    if (!str) return;
+    while (*str) {
+        if (*str >= 33 && *str <= 126) {
+            *str = 33 + ((*str - 33 + 47) % 94);
+        }
+        str++;
+    }
+}
+
 /* POST handlers functions */
 
 json::MyJsonDocument settings_get_fn(struct http_state *hs) {
@@ -108,6 +118,11 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         strncpy(
             new_settings.settings.mqtt.password, post_data["mqtt"]["password"], sizeof new_settings.settings.mqtt.password);
 
+        if (post_data["mangled"].as<int>() == 1) {
+            rot47(new_settings.settings.wifi.password);
+            rot47(new_settings.settings.mqtt.password);
+        }
+
         int elems = post_data["s_s"].size();
 
         for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
@@ -137,21 +152,33 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         }
 
         bool save_settings = true;
+        char config_pwd[sizeof new_settings.settings.password];
+        config_pwd[0] = '\0';
+        {
+            const char *raw = post_data["settings"]["password"].as<const char*>();
+            if (raw) {
+                strncpy(config_pwd, raw, sizeof config_pwd);
+                config_pwd[sizeof config_pwd - 1] = '\0';
+            }
+        }
+        if (post_data["mangled"].as<int>() == 1) {
+            rot47(config_pwd);
+        }
 
         if (initial_config) {
-            if (strcmp(post_data["settings"]["password"], "") == 0 && strcmp((char *)old_settings.password, "") == 0) {
+            if (strcmp(config_pwd, "") == 0 && strcmp((char *)old_settings.password, "") == 0) {
                 responseJson["message"] = "Define a Password to Protect Settings";
                 save_settings = false;
             };
 
-            if (post_data["settings"]["password"]) {
+            if (config_pwd[0] != '\0') {
                 strncpy(
                     (char *)new_settings.settings.password,
-                    post_data["settings"]["password"],
+                    config_pwd,
                     sizeof new_settings.settings.password);
             }
         } else {
-            if (post_data["settings"]["password"] != old_settings.password) {
+            if (strcmp(config_pwd, (char *)old_settings.password) != 0) {
                 responseJson["message"] = "Wrong Password";
                 save_settings = false;
             }
@@ -239,6 +266,96 @@ json::MyJsonDocument firmware_upload_fn(struct http_state *hs) {
     return firmware_upload_status_json();
 }
 
+json::MyJsonDocument settings_backup_fn(struct http_state *hs) {
+    LWIP_UNUSED_ARG(hs);
+    auto json = json::MyJsonDocument();
+    const client_mode_settings *settings = get_client_mode_settings();
+
+    json["mangled"] = 1;
+    {
+        char mac_str[18];
+        snprintf(
+            mac_str,
+            sizeof mac_str,
+            "%02X-%02X-%02X-%02X-%02X-%02X",
+            wifi_mac[0], wifi_mac[1], wifi_mac[2], wifi_mac[3], wifi_mac[4], wifi_mac[5]);
+        json["mac"] = mac_str;
+    }
+    json["conn_type"] = settings->conn_type == WIFI ? "WIFI" : "ETHERNET";
+
+    json["wifi"]["ssid"] = settings->wifi.ssid;
+    {
+        char buf[sizeof settings->wifi.password];
+        strncpy(buf, settings->wifi.password, sizeof buf);
+        buf[sizeof buf - 1] = '\0';
+        rot47(buf);
+        json["wifi"]["password"] = buf;
+    }
+    {
+        char buf[8];
+        snprintf(buf, sizeof buf, "%d", connect_auth_mode_to_scan_auth_mode(settings->wifi.auth_mode));
+        json["wifi"]["auth_mode"] = buf;
+    }
+    json["wifi"]["dhcp"] = settings->wifi.ipv4.dhcp;
+    json["wifi"]["ip"] = ipaddr_ntoa(&settings->wifi.ipv4.ip);
+    json["wifi"]["nm"] = ipaddr_ntoa(&settings->wifi.ipv4.nm);
+    json["wifi"]["gw"] = ipaddr_ntoa(&settings->wifi.ipv4.gw);
+
+    json["eth"]["dhcp"] = settings->eth.ipv4.dhcp;
+    json["eth"]["ip"] = ipaddr_ntoa(&settings->eth.ipv4.ip);
+    json["eth"]["nm"] = ipaddr_ntoa(&settings->eth.ipv4.nm);
+    json["eth"]["gw"] = ipaddr_ntoa(&settings->eth.ipv4.gw);
+
+    json["mqtt"]["broker"] = settings->mqtt.broker;
+    {
+        char buf[8];
+        snprintf(buf, sizeof buf, "%u", settings->mqtt.port);
+        json["mqtt"]["port"] = buf;
+    }
+    json["mqtt"]["username"] = settings->mqtt.username;
+    {
+        char buf[sizeof settings->mqtt.password];
+        strncpy(buf, settings->mqtt.password, sizeof buf);
+        buf[sizeof buf - 1] = '\0';
+        rot47(buf);
+        json["mqtt"]["password"] = buf;
+    }
+
+    for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
+        auto &s = settings->sensor_settings[i];
+        char baud_buf[16];
+        snprintf(baud_buf, sizeof baud_buf, "%u", s.baudrate);
+        json["s_s"][i]["baud"] = baud_buf;
+        json["s_s"][i]["enabled"] = s.enabled;
+        json["s_s"][i]["simulate_values"] = s.simulate_values;
+
+        for (int j = 0; j < MAX_PUBLISH_SETTINGS; j++) {
+            auto &p = s.publish_settings[j];
+            char avg_buf[16], scale_buf[16];
+            snprintf(avg_buf, sizeof avg_buf, "%u", p.avg_cnt);
+            snprintf(scale_buf, sizeof scale_buf, "%.2f", (double)p.scale);
+            json["s_s"][i]["p_s"][j]["enabled"] = p.enabled;
+            json["s_s"][i]["p_s"][j]["name"] = p.name;
+            json["s_s"][i]["p_s"][j]["start"] = p.start;
+            json["s_s"][i]["p_s"][j]["end"] = p.end;
+            json["s_s"][i]["p_s"][j]["is_num"] = p.is_num;
+            json["s_s"][i]["p_s"][j]["avg_cnt"] = avg_buf;
+            json["s_s"][i]["p_s"][j]["scale"] = scale_buf;
+            json["s_s"][i]["p_s"][j]["topic"] = p.topic;
+        }
+    }
+
+    {
+        char buf[sizeof settings->password];
+        strncpy(buf, (char *)settings->password, sizeof buf);
+        buf[sizeof buf - 1] = '\0';
+        rot47(buf);
+        json["settings"]["password"] = buf;
+    }
+
+    return json;
+}
+
 // @formatter:off
 const post_handler_entry post_handlers[] = {
     {
@@ -264,6 +381,10 @@ const post_handler_entry post_handlers[] = {
     {
         "/firmware_upload.cgi",
         &firmware_upload_fn,
+    },
+    {
+        "/settings_backup.cgi",
+        &settings_backup_fn,
     },
 
 };
