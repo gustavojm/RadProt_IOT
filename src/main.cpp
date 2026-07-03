@@ -126,15 +126,11 @@ static void main_task(__unused void *params) {
             ethernet_connect();
         }
         
-        //mqtt_init();
+        mqtt_init();
     }
 
     httpd_init(ap_settings->hostname, ap_settings->domain_name, ap_settings->ip);
-    ws_server.init(ws_message_handler);
-
-    if (!initial_config) {
-        mqtt_init();
-    }
+    ws_server.init(ws_message_handler, initial_config);
 
  
     gpio_init(STATUS_LED_GPIO);

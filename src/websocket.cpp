@@ -294,6 +294,39 @@ err_t websocket_server::ws_sent_cb(void *arg, struct altcp_pcb *pcb, u16_t len) 
     return ERR_OK;
 }
 
+err_t websocket_server::ws_listener_accept_cb(void *arg, struct altcp_pcb *pcb, err_t err) {
+    websocket_server *server = static_cast<websocket_server *>(arg);
+    if (server == nullptr || pcb == nullptr || err != ERR_OK) {
+        return ERR_VAL;
+    }
+
+    altcp_setprio(pcb, HTTPD_TCP_PRIO);
+    altcp_arg(pcb, server);
+    altcp_recv(pcb, ws_listener_recv_cb);
+    altcp_err(pcb, ws_listener_err_cb);
+
+    return ERR_OK;
+}
+
+err_t websocket_server::ws_listener_recv_cb(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err) {
+    websocket_server *server = static_cast<websocket_server *>(arg);
+    if (server == nullptr || pcb == nullptr || err != ERR_OK || p == nullptr) {
+        if (p != nullptr) {
+            altcp_recved(pcb, p->tot_len);
+            pbuf_free(p);
+        }
+        return ERR_OK;
+    }
+
+    server->handle_altcp_connection(pcb, p);
+    return ERR_OK;
+}
+
+void websocket_server::ws_listener_err_cb(void *arg, err_t err) {
+    LWIP_UNUSED_ARG(arg);
+    lDebug(Info, "WebSocket listener error %d", err);
+}
+
 // --- Client management ---
 
 int websocket_server::alloc_client() {
@@ -370,7 +403,7 @@ void websocket_server::handle_altcp_connection(struct altcp_pcb *pcb, struct pbu
     altcp_sent(pcb, ws_sent_cb);
 
     c->established = true;
-    lDebug(Info, "WebSocket client %d connected on port 80", idx);
+    lDebug(Info, "WebSocket client %d connected on port %u", idx, separate_listener_enabled ? WS_PORT : 80);
 }
 
 // --- FreeRTOS task ---
@@ -382,7 +415,9 @@ void websocket_server::task() {
 
     websocket_publish_message queued_msg;
 
-    lDebug(Info, "WebSocket server task started (multiplexed on port 80 via httpd)");
+    lDebug(Info,
+           "WebSocket server task started (%s)",
+           separate_listener_enabled ? "dedicated listener on port 8080" : "multiplexed on port 80 via httpd");
 
     while (1) {
         TickType_t now = xTaskGetTickCount();
@@ -412,8 +447,9 @@ void websocket_server::task() {
     }
 }
 
-void websocket_server::init(ws_callback_t callback) {
+void websocket_server::init(ws_callback_t callback, bool start_separate_listener) {
     msg_handler = callback;
+    separate_listener_enabled = start_separate_listener;
 
     TaskHandle_t ws_serverTask_handle;
     xTaskCreate(
@@ -423,4 +459,36 @@ void websocket_server::init(ws_callback_t callback) {
         this,
         (configMAX_PRIORITIES - 1),
         &ws_serverTask_handle);
+
+    if (separate_listener_enabled) {
+        start_legacy_listener();
+    }
+}
+
+void websocket_server::start_legacy_listener() {
+    struct altcp_pcb *listener_pcb = altcp_tcp_new_ip_type(IPADDR_TYPE_ANY);
+    if (listener_pcb == nullptr) {
+        lDebug(Error, "Failed to create WebSocket listener PCB");
+        return;
+    }
+
+    altcp_setprio(listener_pcb, HTTPD_TCP_PRIO);
+    err_t err = altcp_bind(listener_pcb, IP_ANY_TYPE, WS_PORT);
+    if (err != ERR_OK) {
+        lDebug(Error, "Failed to bind WebSocket listener to port %u: %d", WS_PORT, err);
+        altcp_abort(listener_pcb);
+        return;
+    }
+
+    struct altcp_pcb *listening_pcb = altcp_listen(listener_pcb);
+    if (listening_pcb == nullptr) {
+        lDebug(Error, "Failed to listen on WebSocket port %u", WS_PORT);
+        altcp_abort(listener_pcb);
+        return;
+    }
+    listener_pcb = listening_pcb;
+
+    altcp_arg(listener_pcb, this);
+    altcp_accept(listener_pcb, ws_listener_accept_cb);
+    lDebug(Info, "WebSocket listener started on port %u", WS_PORT);
 }

@@ -816,12 +816,15 @@
     }
 
 
+    let wsClient = null;
+
     document.addEventListener("DOMContentLoaded", async function () {
         if (window.location.protocol != 'file:') {
             wifi_networks_get();
             try {
                 const settings = await settings_get();
                 settings_populate(settings);
+                wsClient = new WebSocketClient();
             } catch (err) {
                 console.error("Failed to load settings:", err);
             }
@@ -876,7 +879,7 @@
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
-            }';
+	            }';
             settings_populate(JSON.parse(settings_string));
         }
 
@@ -1132,7 +1135,7 @@
     });
 
     class WebSocketClient {
-        constructor(path = "", maxReconnectAttempts = 100) {
+        constructor(path = "", maxReconnectAttempts = 100, port = null) {
             this.path = path;
 
             if (window.location.protocol === 'file:') {
@@ -1144,7 +1147,7 @@
             } else {
                 this.host = window.location.host;
             }
-            this.port = 80;
+            this.port = port === null ? (initial_config ? 8080 : 80) : port;
             this.maxReconnectAttempts = maxReconnectAttempts;
             this.reconnectAttempts = 0;
             this.socket = null;
@@ -1277,10 +1280,6 @@
             toggle_connection_type(this.value);
         };
     });
-
-    // Start WebSocket client
-    const wsClient = new WebSocketClient();
-
 
 </script>
 

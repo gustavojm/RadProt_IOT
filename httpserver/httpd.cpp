@@ -2388,7 +2388,7 @@ static err_t http_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t e
     }
 
     /* Check for WebSocket upgrade before httpd processes the request */
-    if (hs->handle == nullptr && p != nullptr && p->tot_len >= MIN_REQ_LEN) {
+    if (!initial_config && hs->handle == nullptr && p != nullptr && p->tot_len >= MIN_REQ_LEN) {
         char check_buf[256];
         u16_t copy_len = LWIP_MIN(p->tot_len, (u16_t)sizeof(check_buf) - 1);
         pbuf_copy_partial(p, check_buf, copy_len, 0);

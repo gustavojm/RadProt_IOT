@@ -10,10 +10,12 @@
 #include "arduinojson_cust_alloc.h"
 
 #include "status.h"
+#include "httpd_opts.h"
 
 #include "lwip/altcp.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcpip.h"
+#include "lwip/sockets.h"
 
 #include <string.h>
 #include "crypto.h"
@@ -34,6 +36,7 @@
 #define WS_MAX_PAYLOAD_LENGTH   512
 #define WS_POLL_INTERVAL_MS     2000
 #define WS_MAX_POLL_RETRIES     4
+#define WS_PORT                 8080
 
 inline QueueHandle_t websocketQueue;
 
@@ -71,6 +74,7 @@ class websocket_server {
     ws_callback_t msg_handler = nullptr;
     TickType_t last_status_sent = 0;
     SemaphoreHandle_t clients_mutex = nullptr;
+    bool separate_listener_enabled = false;
 
 private:
     void task();
@@ -93,10 +97,14 @@ private:
     static void   ws_err_cb(void *arg, err_t err);
     static err_t ws_poll_cb(void *arg, struct altcp_pcb *pcb);
     static err_t ws_sent_cb(void *arg, struct altcp_pcb *pcb, u16_t len);
+    static err_t ws_listener_accept_cb(void *arg, struct altcp_pcb *pcb, err_t err);
+    static err_t ws_listener_recv_cb(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err);
+    static void   ws_listener_err_cb(void *arg, err_t err);
 
 public:
-    void init(ws_callback_t callback);
+    void init(ws_callback_t callback, bool start_separate_listener = false);
     void handle_altcp_connection(struct altcp_pcb *pcb, struct pbuf *initial_data);
+    void start_legacy_listener();
 };
 
 inline websocket_server ws_server;
