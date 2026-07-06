@@ -35,13 +35,44 @@ constexpr uint32_t kMetadataMagic = 0x52445055u; // "RDPU"
 static_assert(kAppSlotSize == (1024u * 1024u), "Unexpected app slot size");
 static_assert(kStagingOffset < kMetadataOffset, "Flash layout overlap");
 
+// ---------------------------------------------------------------------------
+// Firmware upload header.
+//
+// The host is expected to prepend this 16-byte header to the raw firmware
+// image before uploading it (see sign_firmware.c). It lets the device:
+//   1) Reject anything that isn't a firmware image we recognise (magic)
+//      *before* erasing/writing any flash.
+//   2) Verify the payload arrived intact, using a CRC computed on the host
+//      from the original file - not just a CRC the device computed from
+//      whatever bytes it happened to receive.
+//
+// Note: this is an integrity/format gate, not cryptographic authentication.
+// Anyone who knows kFirmwareHeaderMagic and the CRC algorithm can construct
+// a header that passes. If real authorization is required, replace
+// payload_crc32 with an HMAC or signature computed with a key that is not
+// present in the device image.
+// ---------------------------------------------------------------------------
+struct firmware_header {
+    uint32_t magic = 0;
+    uint32_t version = 0;
+    uint32_t payload_size = 0;
+    uint32_t payload_crc32 = 0;
+};
+static_assert(sizeof(firmware_header) == 16u, "Unexpected firmware header size");
+
+constexpr uint32_t kFirmwareHeaderMagic = 0x50554657u; // must match sign_firmware.c FW_MAGIC
+constexpr uint32_t kFirmwareHeaderVersion = 1u;
+
 struct firmware_metadata {
     uint32_t magic = 0;
     uint32_t flags = 0;
     uint32_t size = 0;
     uint32_t crc = 0;
+    uint32_t source_magic = 0; // firmware_header.magic recorded at staging time,
+                                // re-checked before install as a belt-and-suspenders
+                                // guard against metadata-sector corruption.
     char file_name[32] = {0};
-    uint32_t reserved[(FLASH_SECTOR_SIZE - 16u - sizeof(file_name)) / sizeof(uint32_t)] = {};
+    uint32_t reserved[(FLASH_SECTOR_SIZE - 20u - sizeof(file_name)) / sizeof(uint32_t)] = {};
 };
 
 static_assert(sizeof(firmware_metadata) == FLASH_SECTOR_SIZE, "Metadata sector size mismatch");
@@ -51,9 +82,9 @@ struct firmware_upload_state {
     bool authorized = false;
     bool size_ok = false;
     bool finalised = false;
-    uint32_t content_len = 0;
-    uint32_t received = 0;
-    uint32_t crc = 0xFFFFFFFFu;
+    uint32_t content_len = 0;   // total HTTP body length: header + payload
+    uint32_t received = 0;      // total bytes received so far (header + payload)
+    uint32_t crc = 0xFFFFFFFFu; // running CRC over payload bytes only
     uint32_t staging_erase_len = 0;
     uint32_t next_progress_log = kProgressLogStep;
     uint32_t sector_offset = 0;
@@ -62,6 +93,12 @@ struct firmware_upload_state {
     alignas(uint32_t) uint8_t sector[FLASH_SECTOR_SIZE] = {};
     char file_name[32] = {0};
     char message[80] = {0};
+
+    // Header parsing state.
+    bool header_parsed = false;
+    uint32_t header_received = 0; // bytes of the header collected so far
+    firmware_header header = {};
+    uint32_t payload_received = 0; // payload bytes received (excludes header)
 };
 
 static firmware_upload_state g_state;
@@ -241,7 +278,14 @@ static bool has_pending_metadata(const firmware_metadata &metadata) {
 
 static void reset_state() {
     g_state = {};
-    g_state.crc = 0xFFFFFFFFu;
+    // Seeded at 0, not 0xFFFFFFFF: with crc32_update()'s invert/un-invert
+    // pattern, a seed of 0 makes this compute the standard, widely-known
+    // CRC-32 (the same one zlib/gzip/PNG/`cksum -a crc32` produce), so any
+    // standard tool on the host can reproduce the value in the firmware
+    // header. (A seed of 0xFFFFFFFF, as used previously, is internally
+    // consistent but is a non-standard variant that off-the-shelf CRC-32
+    // tools won't reproduce.)
+    g_state.crc = 0x00000000u;
     g_state.next_progress_log = kProgressLogStep;
 }
 
@@ -260,7 +304,16 @@ bool firmware_upload_begin(struct http_state *hs, const char *uri, int content_l
 
     g_state.content_len = content_len > 0 ? static_cast<uint32_t>(content_len) : 0u;
     g_state.authorized = password_matches(uri);
-    g_state.size_ok = (g_state.content_len > 0u) && (g_state.content_len <= kStagingSize);
+
+    // At this point we only know the *total* HTTP body length; the payload
+    // length is only known once the firmware_header has been received and
+    // parsed (see firmware_upload_receive). We can still sanity-check the
+    // total against the header size and staging capacity up front.
+    constexpr uint32_t kHeaderSize = sizeof(firmware_header);
+    const bool length_plausible = (g_state.content_len > kHeaderSize) &&
+                                   ((g_state.content_len - kHeaderSize) <= kStagingSize);
+    g_state.size_ok = length_plausible;
+
     file_name_from_uri(uri, g_state.file_name, sizeof(g_state.file_name));
     g_state.extension_ok = has_bin_extension(g_state.file_name);
     g_state.active = g_state.authorized && g_state.size_ok && g_state.extension_ok;
@@ -271,7 +324,7 @@ bool firmware_upload_begin(struct http_state *hs, const char *uri, int content_l
     }
 
     if (!g_state.size_ok) {
-        set_status_message("Firmware image too large");
+        set_status_message("Firmware image too large or missing header");
         return true;
     }
 
@@ -280,17 +333,11 @@ bool firmware_upload_begin(struct http_state *hs, const char *uri, int content_l
         return true;
     }
 
-    g_state.staging_erase_len = align_up(g_state.content_len, FLASH_SECTOR_SIZE);
+    lDebug(Info, "Firmware upload accepted: %u bytes total, awaiting header", g_state.content_len);
 
-    lDebug(Info, "Firmware upload accepted: %u bytes, staging %u bytes", g_state.content_len, g_state.staging_erase_len);
-
-    erase_args erase = {
-        .offset = kStagingOffset,
-        .length = g_state.staging_erase_len,
-    };
-    lDebug(Info, "Erasing staging area at 0x%08x", kStagingOffset);
-    run_flash_operation(erase_flash_range_impl, &erase);
-
+    // NOTE: staging erase is deferred to firmware_upload_receive(), once the
+    // header magic/size have been validated. That way a bogus or corrupted
+    // upload never touches flash at all.
     g_state.message[0] = 0;
     return true;
 }
@@ -307,9 +354,61 @@ err_t firmware_upload_receive(struct http_state *hs, struct pbuf *p, const char 
         const uint8_t *src = reinterpret_cast<const uint8_t *>(q->payload);
         size_t len = q->len;
 
+        // --- Step 1: collect and validate the firmware_header, if not done yet.
+        if (!g_state.header_parsed) {
+            uint8_t *header_bytes = reinterpret_cast<uint8_t *>(&g_state.header);
+            while (len > 0 && g_state.header_received < sizeof(firmware_header)) {
+                header_bytes[g_state.header_received++] = *src++;
+                --len;
+                ++g_state.received;
+            }
+
+            if (g_state.header_received < sizeof(firmware_header)) {
+                // Header spans multiple pbufs; wait for the rest.
+                continue;
+            }
+
+            g_state.header_parsed = true;
+
+            const bool magic_ok = (g_state.header.magic == kFirmwareHeaderMagic) &&
+                                   (g_state.header.version == kFirmwareHeaderVersion);
+
+            if (!magic_ok) {
+                g_state.active = false;
+                set_status_message("Invalid firmware image (bad magic)");
+                lDebug(Error, "Firmware upload rejected: bad magic/version (0x%08x / %u)",
+                       g_state.header.magic, g_state.header.version);
+                return ERR_VAL;
+            }
+
+            const uint32_t expected_payload = g_state.content_len - sizeof(firmware_header);
+            const bool size_ok = (g_state.header.payload_size == expected_payload) &&
+                                  (g_state.header.payload_size > 0u) &&
+                                  (g_state.header.payload_size <= kStagingSize);
+
+            if (!size_ok) {
+                g_state.active = false;
+                set_status_message("Firmware header size mismatch");
+                lDebug(Error, "Firmware upload rejected: header payload_size=%u expected=%u",
+                       g_state.header.payload_size, expected_payload);
+                return ERR_VAL;
+            }
+
+            // Header is valid - now safe to erase the staging area.
+            g_state.staging_erase_len = align_up(g_state.header.payload_size, FLASH_SECTOR_SIZE);
+            erase_args erase = {
+                .offset = kStagingOffset,
+                .length = g_state.staging_erase_len,
+            };
+            lDebug(Info, "Header OK (payload=%u bytes, crc=0x%08x), erasing staging area at 0x%08x",
+                   g_state.header.payload_size, g_state.header.payload_crc32, kStagingOffset);
+            run_flash_operation(erase_flash_range_impl, &erase);
+        }
+
+        // --- Step 2: remaining bytes in this pbuf are payload.
         while (len > 0) {
             const size_t space = FLASH_SECTOR_SIZE - g_state.sector_fill;
-            const size_t remaining = g_state.content_len - g_state.received;
+            const size_t remaining = g_state.header.payload_size - g_state.payload_received;
             const size_t copy_len = (len < space) ? ((len < remaining) ? len : remaining) : ((space < remaining) ? space : remaining);
 
             if (copy_len == 0) {
@@ -319,19 +418,21 @@ err_t firmware_upload_receive(struct http_state *hs, struct pbuf *p, const char 
             }
 
             if (g_state.sector_fill == 0) {
-                g_state.sector_offset = kStagingOffset + g_state.received;
+                g_state.sector_offset = kStagingOffset + g_state.payload_received;
             }
 
             memcpy(&g_state.sector[g_state.sector_fill], src, copy_len);
 
             g_state.crc = crc32_update(g_state.crc, src, copy_len);
             g_state.sector_fill += copy_len;
+            g_state.payload_received += copy_len;
             g_state.received += copy_len;
             src += copy_len;
             len -= copy_len;
 
-            if (g_state.received >= g_state.next_progress_log || g_state.received == g_state.content_len) {
-                lDebug(Info, "Receiving firmware: %u/%u bytes", g_state.received, g_state.content_len);
+            if (g_state.payload_received >= g_state.next_progress_log ||
+                g_state.payload_received == g_state.header.payload_size) {
+                lDebug(Info, "Receiving firmware: %u/%u bytes", g_state.payload_received, g_state.header.payload_size);
                 g_state.next_progress_log += kProgressLogStep;
             }
 
@@ -372,7 +473,13 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
         return;
     }
 
-    if (g_state.received != g_state.content_len) {
+    if (!g_state.header_parsed) {
+        g_state.active = false;
+        set_status_message("Incomplete firmware header");
+        return;
+    }
+
+    if (g_state.received != g_state.content_len || g_state.payload_received != g_state.header.payload_size) {
         g_state.active = false;
         set_status_message("Unexpected upload length");
         return;
@@ -390,12 +497,23 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
         g_state.sector_fill = 0;
     }
 
+    // Verify the payload we received matches the CRC the host computed from
+    // the original file. This is the key robustness improvement: it catches
+    // truncation/corruption/tampering in transit, not just flash-write errors.
+    if (g_state.crc != g_state.header.payload_crc32) {
+        g_state.active = false;
+        set_status_message("Firmware CRC mismatch - upload corrupted");
+        lDebug(Error, "CRC mismatch: header=0x%08x computed=0x%08x", g_state.header.payload_crc32, g_state.crc);
+        return;
+    }
+
     firmware_metadata *meta = reinterpret_cast<firmware_metadata *>(g_state.sector);
     *meta = {};
     meta->magic = kMetadataMagic;
     meta->flags = kPendingFlag;
-    meta->size = g_state.received;
+    meta->size = g_state.payload_received;
     meta->crc = g_state.crc;
+    meta->source_magic = g_state.header.magic;
     strncpy(meta->file_name, g_state.file_name, sizeof(meta->file_name) - 1);
     meta->file_name[sizeof(meta->file_name) - 1] = 0;
 
@@ -447,6 +565,18 @@ void firmware_install_if_pending() {
         return;
     }
 
+    // Defense in depth: re-check the header magic recorded at staging time.
+    // This is independent of the upload-time check and guards against the
+    // (unlikely but possible) case of bit-rot/corruption of the metadata
+    // sector itself between staging and reboot.
+    if (meta->source_magic != kFirmwareHeaderMagic) {
+        lDebug(Error, "Staged firmware missing/invalid source magic (0x%08x), refusing to install",
+               meta->source_magic);
+        memset(g_state.sector, 0, FLASH_SECTOR_SIZE);
+        run_flash_operation(write_metadata_impl, nullptr);
+        return;
+    }
+
     const uint32_t app_capacity = kAppSlotSize;
     if (meta->size > app_capacity) {
         lDebug(Error, "Staged firmware too large (%u > %u)", meta->size, app_capacity);
@@ -456,7 +586,7 @@ void firmware_install_if_pending() {
     }
 
     const uint8_t *staged = reinterpret_cast<const uint8_t *>(XIP_BASE + kStagingOffset);
-    uint32_t crc = 0xFFFFFFFFu;
+    uint32_t crc = 0x00000000u; // must match the seed used in reset_state()
     uint32_t remaining = meta->size;
     while (remaining > 0) {
         const uint32_t step = remaining > FLASH_PAGE_SIZE ? FLASH_PAGE_SIZE : remaining;

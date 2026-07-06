@@ -4,7 +4,7 @@ set(PICO_BOARD pico_w)
 
 # Include build functions from Pico SDK
 
-set(PICO_SDK_PATH ./pico-sdk)
+set(PICO_SDK_PATH ../pico-sdk)
 set(FREERTOS_KERNEL_PATH ../../FreeRTOS-Kernel)
 
 include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
@@ -18,6 +18,8 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
 project(RadProt_IoT C CXX ASM)
+
+set(FIRMWARE_VERSION "v1.0.0")
 
 #
 # Static analyzers
@@ -38,8 +40,8 @@ list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 include(FetchContent)
 
 FetchContent_Declare(ArduinoJson
-    #GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
-    SOURCE_DIR ../deps/arduinojson-src
+    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    #SOURCE_DIR ../deps/arduinojson-src
     GIT_TAG        v7.0.4
 )
 FetchContent_MakeAvailable(ArduinoJson)
@@ -47,8 +49,8 @@ FetchContent_MakeAvailable(ArduinoJson)
 
 FetchContent_Declare(
     etl
-    #GIT_REPOSITORY https://github.com/ETLCPP/etl.git
-    SOURCE_DIR ../deps/etl-src
+    GIT_REPOSITORY https://github.com/ETLCPP/etl.git
+    #SOURCE_DIR ../deps/etl-src
     GIT_TAG master  # You can replace 'master' with a specific version tag
 )
 FetchContent_MakeAvailable(etl)
@@ -100,7 +102,7 @@ pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/uart_rx.p
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         WIFI_SSID="RadProt_IoT"
         WIFI_PASSWORD="NASA1234"
-        FIRMWARE_VERSION="v1.0.0"
+        FIRMWARE_VERSION="${FIRMWARE_VERSION}"
         NO_SYS=0
         ETL_NO_STL
         ETL_NO_INITIALIZER_LIST
@@ -147,7 +149,24 @@ endif()
 
 pico_add_extra_outputs(${PROJECT_NAME})
 
-add_dependencies(${PROJECT_NAME} makefsdata)
+# ---------------------------------------------------------------------------
+# Host tool: sign_firmware – prepends a 16-byte validation header to the
+# firmware binary.  Built with the host compiler (gcc), not the Pico
+# cross-compiler.
+# ---------------------------------------------------------------------------
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
+    COMMAND gcc -O2 -o ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/sign_firmware-1.c
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/sign_firmware-1.c
+    COMMENT "Building sign_firmware (host tool)"
+)
+
+add_custom_target(sign_firmware_tool ALL
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
+)
+
+add_dependencies(${PROJECT_NAME} makefsdata sign_firmware_tool)
 
 # disable usb output, disable uart output
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
@@ -157,4 +176,8 @@ pico_enable_stdio_uart(${PROJECT_NAME} 0)
 add_custom_command(TARGET ${PROJECT_NAME}
         POST_BUILD
         COMMAND arm-none-eabi-size ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.elf
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.bin
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-${FIRMWARE_VERSION}-signed.bin
+        COMMENT "Generating signed firmware binary"
 )

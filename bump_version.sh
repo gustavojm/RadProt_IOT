@@ -17,7 +17,7 @@ case "$1" in
     *) usage ;;
 esac
 
-current=$(sed -n 's/^[[:space:]]*FIRMWARE_VERSION="v\([0-9.]*\)".*/\1/p' "$CMAKELISTS")
+current=$(sed -n 's/^[[:space:]]*set(FIRMWARE_VERSION "v\([0-9.]*\)")/\1/p' "$CMAKELISTS")
 if [[ -z "$current" ]]; then
     echo "Error: could not find FIRMWARE_VERSION in $CMAKELISTS"
     exit 1
@@ -46,9 +46,9 @@ esac
 new="v${major}.${minor}.${patch}"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    sed -i '' "s/FIRMWARE_VERSION=\"v${current}\"/FIRMWARE_VERSION=\"${new}\"/" "$CMAKELISTS"
+    sed -i '' "s/set(FIRMWARE_VERSION \"v${current}\")/set(FIRMWARE_VERSION \"${new}\")/" "$CMAKELISTS"
 else
-    sed -i "s/FIRMWARE_VERSION=\"v${current}\"/FIRMWARE_VERSION=\"${new}\"/" "$CMAKELISTS"
+    sed -i "s/set(FIRMWARE_VERSION \"v${current}\")/set(FIRMWARE_VERSION \"${new}\")/" "$CMAKELISTS"
 fi
 
 echo "$current -> $new"

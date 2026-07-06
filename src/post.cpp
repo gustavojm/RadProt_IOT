@@ -56,13 +56,47 @@
 
 namespace json = ArduinoJson;
 
-static void rot47(char *str) {
-    if (!str) return;
-    while (*str) {
-        if (*str >= 33 && *str <= 126) {
-            *str = 33 + ((*str - 33 + 47) % 94);
+// ---------------------------------------------------------------------------
+// Obfuscation: xorshift32 PRNG (fixed seed), XOR each byte, fixed-size pad.
+// XOR is its own inverse, so the same function obfuscates and de-obfuscates.
+// For JSON transport the result is hex-encoded.
+// ---------------------------------------------------------------------------
+static void obfuscate(char *str, size_t fixed_size) {
+    if (!str || fixed_size == 0) return;
+    uint32_t state = 0xDEADBEEFu;
+    for (size_t i = 0; i < fixed_size; i++) {
+        if (i % 4 == 0) {
+            uint32_t x = state;
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            state = x;
         }
-        str++;
+        str[i] ^= (state >> ((i % 4) * 8)) & 0xFF;
+    }
+}
+
+static void hex_encode(const uint8_t *in, size_t in_len, char *out) {
+    static const char hex[] = "0123456789ABCDEF";
+    for (size_t i = 0; i < in_len; i++) {
+        out[i * 2]     = hex[in[i] >> 4];
+        out[i * 2 + 1] = hex[in[i] & 0xF];
+    }
+    out[in_len * 2] = '\0';
+}
+
+static int hex_val(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+}
+
+static void hex_decode(const char *in, uint8_t *out, size_t out_len) {
+    for (size_t i = 0; i < out_len; i++) {
+        int hi = hex_val(in[i * 2]);
+        int lo = hex_val(in[i * 2 + 1]);
+        out[i] = (uint8_t)((hi << 4) | (lo & 0xF));
     }
 }
 
@@ -93,8 +127,6 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         client_mode_settings old_settings = new_settings.settings;
 
         strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
-        strncpy(
-            new_settings.settings.wifi.password, post_data["wifi"]["password"], sizeof new_settings.settings.wifi.password);
         new_settings.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
 
         new_settings.settings.wifi.ipv4.dhcp = post_data["wifi"]["dhcp"];
@@ -115,12 +147,26 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         new_settings.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
         strncpy(
             new_settings.settings.mqtt.username, post_data["mqtt"]["username"], sizeof new_settings.settings.mqtt.username);
-        strncpy(
-            new_settings.settings.mqtt.password, post_data["mqtt"]["password"], sizeof new_settings.settings.mqtt.password);
 
         if (post_data["mangled"].as<int>() == 1) {
-            rot47(new_settings.settings.wifi.password);
-            rot47(new_settings.settings.mqtt.password);
+            const char *hex;
+            hex = post_data["wifi"]["password"].as<const char*>();
+            if (hex) {
+                hex_decode(hex, (uint8_t *)new_settings.settings.wifi.password,
+                           sizeof new_settings.settings.wifi.password);
+                obfuscate(new_settings.settings.wifi.password, sizeof new_settings.settings.wifi.password);
+            }
+            hex = post_data["mqtt"]["password"].as<const char*>();
+            if (hex) {
+                hex_decode(hex, (uint8_t *)new_settings.settings.mqtt.password,
+                           sizeof new_settings.settings.mqtt.password);
+                obfuscate(new_settings.settings.mqtt.password, sizeof new_settings.settings.mqtt.password);
+            }
+        } else {
+            strncpy(new_settings.settings.wifi.password, post_data["wifi"]["password"],
+                    sizeof new_settings.settings.wifi.password);
+            strncpy(new_settings.settings.mqtt.password, post_data["mqtt"]["password"],
+                    sizeof new_settings.settings.mqtt.password);
         }
 
         int elems = post_data["s_s"].size();
@@ -154,15 +200,18 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
         bool save_settings = true;
         char config_pwd[sizeof new_settings.settings.password];
         config_pwd[0] = '\0';
-        {
+        if (post_data["mangled"].as<int>() == 1) {
+            const char *hex = post_data["settings"]["password"].as<const char*>();
+            if (hex) {
+                hex_decode(hex, (uint8_t *)config_pwd, sizeof config_pwd);
+                obfuscate(config_pwd, sizeof config_pwd);
+            }
+        } else {
             const char *raw = post_data["settings"]["password"].as<const char*>();
             if (raw) {
                 strncpy(config_pwd, raw, sizeof config_pwd);
                 config_pwd[sizeof config_pwd - 1] = '\0';
             }
-        }
-        if (post_data["mangled"].as<int>() == 1) {
-            rot47(config_pwd);
         }
 
         if (initial_config) {
@@ -287,9 +336,10 @@ json::MyJsonDocument settings_backup_fn(struct http_state *hs) {
     {
         char buf[sizeof settings->wifi.password];
         strncpy(buf, settings->wifi.password, sizeof buf);
-        buf[sizeof buf - 1] = '\0';
-        rot47(buf);
-        json["wifi"]["password"] = buf;
+        obfuscate(buf, sizeof buf);
+        char hex[sizeof buf * 2 + 1];
+        hex_encode((uint8_t *)buf, sizeof buf, hex);
+        json["wifi"]["password"] = hex;
     }
     {
         char buf[8];
@@ -316,9 +366,10 @@ json::MyJsonDocument settings_backup_fn(struct http_state *hs) {
     {
         char buf[sizeof settings->mqtt.password];
         strncpy(buf, settings->mqtt.password, sizeof buf);
-        buf[sizeof buf - 1] = '\0';
-        rot47(buf);
-        json["mqtt"]["password"] = buf;
+        obfuscate(buf, sizeof buf);
+        char hex[sizeof buf * 2 + 1];
+        hex_encode((uint8_t *)buf, sizeof buf, hex);
+        json["mqtt"]["password"] = hex;
     }
 
     for (int i = 0; i < MAX_SERIAL_SENSORS; i++) {
@@ -348,9 +399,10 @@ json::MyJsonDocument settings_backup_fn(struct http_state *hs) {
     {
         char buf[sizeof settings->password];
         strncpy(buf, (char *)settings->password, sizeof buf);
-        buf[sizeof buf - 1] = '\0';
-        rot47(buf);
-        json["settings"]["password"] = buf;
+        obfuscate(buf, sizeof buf);
+        char hex[sizeof buf * 2 + 1];
+        hex_encode((uint8_t *)buf, sizeof buf, hex);
+        json["settings"]["password"] = hex;
     }
 
     return json;
