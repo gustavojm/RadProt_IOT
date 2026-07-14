@@ -4,7 +4,7 @@ set(PICO_BOARD pico_w)
 
 # Include build functions from Pico SDK
 
-set(PICO_SDK_PATH ../pico-sdk)
+set(PICO_SDK_PATH ./pico-sdk)
 set(FREERTOS_KERNEL_PATH ../../FreeRTOS-Kernel)
 
 include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
@@ -19,7 +19,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(RadProt_IoT C CXX ASM)
 
-set(FIRMWARE_VERSION "v1.0.0")
+set(FIRMWARE_VERSION "v1.1.1")
 
 #
 # Static analyzers
@@ -40,8 +40,8 @@ list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 include(FetchContent)
 
 FetchContent_Declare(ArduinoJson
-    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
-    #SOURCE_DIR ../deps/arduinojson-src
+    #GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    SOURCE_DIR ../deps/arduinojson-src
     GIT_TAG        v7.0.4
 )
 FetchContent_MakeAvailable(ArduinoJson)
@@ -49,8 +49,8 @@ FetchContent_MakeAvailable(ArduinoJson)
 
 FetchContent_Declare(
     etl
-    GIT_REPOSITORY https://github.com/ETLCPP/etl.git
-    #SOURCE_DIR ../deps/etl-src
+    #GIT_REPOSITORY https://github.com/ETLCPP/etl.git
+    SOURCE_DIR ../deps/etl-src
     GIT_TAG master  # You can replace 'master' with a specific version tag
 )
 FetchContent_MakeAvailable(etl)
@@ -147,18 +147,23 @@ if (TARGET Profiler)
             Profiler)
 endif()
 
+add_dependencies(${PROJECT_NAME} makefsdata)
+
 pico_add_extra_outputs(${PROJECT_NAME})
 
 # ---------------------------------------------------------------------------
 # Host tool: sign_firmware – prepends a 16-byte validation header to the
-# firmware binary.  Built with the host compiler (gcc), not the Pico
+# firmware binary.  Built with the host compiler (g++), not the Pico
 # cross-compiler.
 # ---------------------------------------------------------------------------
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
-    COMMAND gcc -O2 -o ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/sign_firmware-1.c
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/sign_firmware-1.c
+    COMMAND g++ -O2 -std=c++17
+            -I${CMAKE_CURRENT_SOURCE_DIR}/inc
+            -o ${CMAKE_CURRENT_BINARY_DIR}/sign_firmware
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/sign_firmware.cpp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/sign_firmware.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc/firmware_common.h
     COMMENT "Building sign_firmware (host tool)"
 )
 

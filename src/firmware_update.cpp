@@ -13,6 +13,7 @@
 #include "portmacro.h"
 
 #include "debug.h"
+#include "firmware_common.h"
 #include "settings.h"
 #include "status.h"
 #include "watchdog.h"
@@ -35,33 +36,8 @@ constexpr uint32_t kMetadataMagic = 0x52445055u; // "RDPU"
 static_assert(kAppSlotSize == (1024u * 1024u), "Unexpected app slot size");
 static_assert(kStagingOffset < kMetadataOffset, "Flash layout overlap");
 
-// ---------------------------------------------------------------------------
-// Firmware upload header.
-//
-// The host is expected to prepend this 16-byte header to the raw firmware
-// image before uploading it (see sign_firmware.c). It lets the device:
-//   1) Reject anything that isn't a firmware image we recognise (magic)
-//      *before* erasing/writing any flash.
-//   2) Verify the payload arrived intact, using a CRC computed on the host
-//      from the original file - not just a CRC the device computed from
-//      whatever bytes it happened to receive.
-//
-// Note: this is an integrity/format gate, not cryptographic authentication.
-// Anyone who knows kFirmwareHeaderMagic and the CRC algorithm can construct
-// a header that passes. If real authorization is required, replace
-// payload_crc32 with an HMAC or signature computed with a key that is not
-// present in the device image.
-// ---------------------------------------------------------------------------
-struct firmware_header {
-    uint32_t magic = 0;
-    uint32_t version = 0;
-    uint32_t payload_size = 0;
-    uint32_t payload_crc32 = 0;
-};
-static_assert(sizeof(firmware_header) == 16u, "Unexpected firmware header size");
-
-constexpr uint32_t kFirmwareHeaderMagic = 0x50554657u; // must match sign_firmware.c FW_MAGIC
-constexpr uint32_t kFirmwareHeaderVersion = 1u;
+// firmware_header, kFirmwareHeaderMagic, kFirmwareHeaderVersion, and
+// crc32_update() are defined in firmware_common.h (shared with sign_firmware).
 
 struct firmware_metadata {
     uint32_t magic = 0;
@@ -123,17 +99,7 @@ static uint32_t align_up(uint32_t value, uint32_t align) {
     return (value + (align - 1u)) & ~(align - 1u);
 }
 
-static uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t len) {
-    crc = ~crc;
-    for (size_t i = 0; i < len; ++i) {
-        crc ^= data[i];
-        for (int bit = 0; bit < 8; ++bit) {
-            const uint32_t mask = 0u - (crc & 1u);
-            crc = (crc >> 1) ^ (0xEDB88320u & mask);
-        }
-    }
-    return ~crc;
-}
+// crc32_update() is provided by firmware_common.h
 
 static void copy_query_value(const char *uri, const char *key, char *out, size_t out_len) {
     if (out_len == 0) {
@@ -378,7 +344,7 @@ err_t firmware_upload_receive(struct http_state *hs, struct pbuf *p, const char 
                 set_status_message("Invalid firmware image (bad magic)");
                 lDebug(Error, "Firmware upload rejected: bad magic/version (0x%08x / %u)",
                        g_state.header.magic, g_state.header.version);
-                return ERR_VAL;
+                return ERR_OK;
             }
 
             const uint32_t expected_payload = g_state.content_len - sizeof(firmware_header);
@@ -391,7 +357,7 @@ err_t firmware_upload_receive(struct http_state *hs, struct pbuf *p, const char 
                 set_status_message("Firmware header size mismatch");
                 lDebug(Error, "Firmware upload rejected: header payload_size=%u expected=%u",
                        g_state.header.payload_size, expected_payload);
-                return ERR_VAL;
+                return ERR_OK;
             }
 
             // Header is valid - now safe to erase the staging area.
@@ -414,7 +380,7 @@ err_t firmware_upload_receive(struct http_state *hs, struct pbuf *p, const char 
             if (copy_len == 0) {
                 g_state.active = false;
                 set_status_message("Unexpected upload length");
-                return ERR_VAL;
+                return ERR_OK;
             }
 
             if (g_state.sector_fill == 0) {
@@ -479,6 +445,12 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
         return;
     }
 
+    // If firmware_upload_receive already detected an error and deactivated
+    // the upload, preserve its (more specific) status message.
+    if (!g_state.active) {
+        return;
+    }
+
     if (g_state.received != g_state.content_len || g_state.payload_received != g_state.header.payload_size) {
         g_state.active = false;
         set_status_message("Unexpected upload length");
@@ -528,34 +500,34 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
 }
 
 ArduinoJson::MyJsonDocument firmware_upload_status_json() {
-    ArduinoJson::MyJsonDocument json;
+    auto responseJson = ArduinoJson::MyJsonDocument();
 
-    if (!g_state.authorized) {
-        json["message"] = g_state.message[0] ? g_state.message : "Wrong Password";
-        return json;
-    }
+    // if (!g_state.authorized) {
+    //     json["message"] = g_state.message[0] ? g_state.message : "Wrong Password";
+    //     return json;
+    // }
 
-    if (!g_state.size_ok) {
-        json["message"] = g_state.message[0] ? g_state.message : "Firmware image too large";
-        return json;
-    }
+    // if (!g_state.size_ok) {
+    //     json["message"] = g_state.message[0] ? g_state.message : "Firmware image too large";
+    //     return json;
+    // }
 
-    if (!g_state.extension_ok) {
-        json["message"] = g_state.message[0] ? g_state.message : "File must have a .bin extension";
-        return json;
-    }
+    // if (!g_state.extension_ok) {
+    //     json["message"] = g_state.message[0] ? g_state.message : "File must have a .bin extension";
+    //     return json;
+    // }
 
     if (g_state.finalised) {
-        json["OK"] = "Upload staged";
-        json["size"] = g_state.received;
-        json["crc"] = g_state.crc;
-        json["file_name"] = g_state.file_name;
-        json["reboot_required"] = true;
-        return json;
+        responseJson["OK"] = "Upload staged";
+        responseJson["size"] = g_state.received;
+        responseJson["crc"] = g_state.crc;
+        responseJson["file_name"] = g_state.file_name;
+        responseJson["reboot_required"] = true;
+    return responseJson;
     }
 
-    json["message"] = g_state.message[0] ? g_state.message : "Upload not completed";
-    return json;
+    responseJson["message"] = g_state.message[0] ? g_state.message : "Upload not completed";
+    return responseJson;
 }
 
 void firmware_install_if_pending() {

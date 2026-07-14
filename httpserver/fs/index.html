@@ -477,7 +477,7 @@
             const data = await response.json();
             if (data.message) {
                 status.textContent = data.message;
-                alert(data.message);
+                // alert(data.message);
                 return;
             }
 
@@ -490,8 +490,8 @@
                 body: '{}'
             });
         } catch (error) {
-            status.textContent = 'Upload failed';
-            alert(`Upload failed: ${error}`);
+            status.textContent = 'Upload failed: ${error}';
+            // alert(`Upload failed: ${error}`);
         }
     });
 
