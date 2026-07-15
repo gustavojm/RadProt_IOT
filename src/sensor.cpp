@@ -1,4 +1,5 @@
 #include "sensor.h"
+#include "portmacro.h"
 #include "projdefs.h"
 
 int Sensor::next_sensor_num = 0;
@@ -118,7 +119,7 @@ void Sensor::read_task() {
             vTaskDelay(pdMS_TO_TICKS(2000));
         } else {
             uint32_t notification_value;
-            if (xTaskNotifyWait(0, ULONG_MAX, &notification_value, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            if (xTaskNotifyWait(0, ULONG_MAX, &notification_value, portMAX_DELAY) == pdTRUE) {
                 int bytes_received = uart.read_string(serial_buffer, sizeof(serial_buffer));
 
                 if (bytes_received) {
@@ -149,8 +150,6 @@ void Sensor::read_task() {
                         process_and_publish(data, i);
                     }
                 }
-            } else {
-                lDebug(Warn, "Read TIMED OUT");
             }
         }
     }

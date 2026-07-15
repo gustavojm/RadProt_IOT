@@ -509,13 +509,16 @@
 
     document.getElementById('settings_backup_button').addEventListener('click', async function () {
         try {
-            const password = document.getElementById('settings.password').value || '';
+            const settings = {
+                auth_password: document.getElementById('settings.password').value || ''
+            };
+
             const response = await fetch('/settings_backup.cgi', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ "settings": { "password": password } })
+                body: JSON.stringify(settings)
             });
             const data = await response.json();
             if (data.message) {

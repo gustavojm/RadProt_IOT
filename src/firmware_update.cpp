@@ -538,21 +538,6 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
 ArduinoJson::MyJsonDocument firmware_upload_status_json() {
     auto responseJson = ArduinoJson::MyJsonDocument();
 
-    // if (!g_state.authorized) {
-    //     json["message"] = g_state.message[0] ? g_state.message : "Wrong Password";
-    //     return json;
-    // }
-
-    // if (!g_state.size_ok) {
-    //     json["message"] = g_state.message[0] ? g_state.message : "Firmware image too large";
-    //     return json;
-    // }
-
-    // if (!g_state.extension_ok) {
-    //     json["message"] = g_state.message[0] ? g_state.message : "File must have a .bin extension";
-    //     return json;
-    // }
-
     if (g_state.finalised) {
         responseJson["OK"] = "Upload staged";
         responseJson["size"] = g_state.received;

@@ -112,14 +112,25 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
     return responseJson;
 }
 
+__attribute__((optimize("O0")))
 static bool verify_settings_password(const json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson,
                                      char *config_pwd, size_t config_pwd_size) {
-    config_pwd[0] = '\0';
-    if (post_data["auth_password"].is<const char*>()) {
-        const char *raw = post_data["auth_password"].as<const char*>();
-        strncpy(config_pwd, raw, config_pwd_size);
-        config_pwd[config_pwd_size - 1] = '\0';
-    } else if (post_data["mangled"].as<int>() == 1) {
+
+                                        char *password = (char *)post_data["auth_password"].as<const char*>();
+                                        char *settings_password = (char *)get_client_mode_settings()->password;
+
+    if (initial_config) {
+        if (strcmp((char *)post_data["auth_password"].as<const char*>(), "") == 0 && strcmp((char *)get_client_mode_settings()->password, "") == 0) {
+            responseJson["message"] = "Define a Password to Protect Settings";
+            return false;
+        }
+    } else if (strcmp((char *)post_data["auth_password"].as<const char*>(), (char *)get_client_mode_settings()->password) != 0) {
+        responseJson["message"] = "Wrong Password";
+        return false;
+    }
+    
+    config_pwd[0] = '\0';    
+    if (post_data["mangled"].as<int>() == 1) {
         const char *hex = post_data["settings"]["password"].as<const char*>();
         if (hex) {
             hex_decode(hex, (uint8_t *)config_pwd, config_pwd_size);
@@ -132,25 +143,24 @@ static bool verify_settings_password(const json::MyJsonDocument &post_data, json
             config_pwd[config_pwd_size - 1] = '\0';
         }
     }
-
-    if (initial_config) {
-        if (strcmp(config_pwd, "") == 0 && strcmp((char *)get_client_mode_settings()->password, "") == 0) {
-            responseJson["message"] = "Define a Password to Protect Settings";
-            return false;
-        }
-        return true;
-    }
-
-    if (strcmp(config_pwd, (char *)get_client_mode_settings()->password) != 0) {
-        responseJson["message"] = "Wrong Password";
-        return false;
-    }
     return true;
 }
 
 bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson, bool skip_password_check) {
     client_mode_settings_union new_settings;
     new_settings.settings = *get_client_mode_settings();
+
+    char config_pwd[sizeof new_settings.settings.password];
+    if (!verify_settings_password(post_data, responseJson, config_pwd, sizeof config_pwd)) {
+        return false;
+    }
+
+    if (config_pwd[0] != '\0') {
+        strncpy(
+            (char *)new_settings.settings.password,
+            config_pwd,
+            sizeof new_settings.settings.password);
+    }
 
     strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
     new_settings.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
@@ -218,19 +228,6 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
                 new_settings.settings.sensor_settings[i].publish_settings[j].topic,
                 p_s["topic"],
                 sizeof new_settings.settings.sensor_settings[i].publish_settings[j].topic);
-        }
-    }
-
-    if (!skip_password_check) {
-        char config_pwd[sizeof new_settings.settings.password];
-        if (!verify_settings_password(post_data, responseJson, config_pwd, sizeof config_pwd)) {
-            return false;
-        }
-        if (initial_config && config_pwd[0] != '\0') {
-            strncpy(
-                (char *)new_settings.settings.password,
-                config_pwd,
-                sizeof new_settings.settings.password);
         }
     }
 
