@@ -417,6 +417,8 @@
 
         nestedJson.settings.password_config = "";
 
+        nestedJson.auth_password = document.getElementById('settings.password').value || '';
+
         // Step 3: Output the nested JSON        
         let xhr = new XMLHttpRequest();
         xhr.open("POST", '/settings_save.cgi', true);
