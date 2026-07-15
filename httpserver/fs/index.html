@@ -209,7 +209,7 @@
                         ---- Firmware Version: <span id="firmware_version_display"></span> ----
                         </div>
                         <input type="file" id="firmware_file" accept=".bin,application/octet-stream">
-                        <label><input type="checkbox" id="preserve_settings"> Preserve settings</label>
+                        <label><input type="checkbox" id="preserve_settings" checked> Preserve settings</label>
                         <button type="button" id="firmware_upload_button">Upload Firmware</button>
                         <div id="firmware_upload_status" style="text-align: center"></div>
                     </div>
@@ -424,12 +424,16 @@
         json = JSON.stringify(nestedJson, null, 2);
         xhr.send(json);
         xhr.onloadend = async function () {
-            dataJSON = JSON.parse(this.responseText)
-            if (dataJSON["message"]) {
-                alert(dataJSON["message"]);
-                return;
-            } else {
-                document.getElementById("reboot_popup").style.display = "block";
+            try {
+                dataJSON = JSON.parse(this.responseText)
+                if (dataJSON["message"]) {
+                    alert(dataJSON["message"]);
+                    return;
+                } else {
+                    document.getElementById("reboot_popup").style.display = "block";
+                }
+            } catch (error) {
+                alert('Failed to parse server response');
             }
         };
     });
@@ -441,12 +445,16 @@
         xhr.setRequestHeader("Content-Type", "application/json");
         xhr.send();
         xhr.onloadend = async function () {
-            dataJSON = JSON.parse(this.responseText)
-            if (dataJSON["message"]) {
-                alert(dataJSON["message"]);
-                return;
-            } else {
-                document.getElementById("reboot_popup").style.display = "block";
+            try {
+                dataJSON = JSON.parse(this.responseText)
+                if (dataJSON["message"]) {
+                    alert(dataJSON["message"]);
+                    return;
+                } else {
+                    document.getElementById("reboot_popup").style.display = "block";
+                }
+            } catch (error) {
+                alert('Failed to parse server response');
             }
         };
     });
@@ -957,7 +965,11 @@
         {"ssid":"CNE_Radioproteccion","rssi":-10,"chann":11, "auth_mode": 5, "bssid":"00:6b:f1:c0:94:68"},\
         {"ssid":"CNE_Internet","rssi":-51,"chann":11,"auth_mode": 3, "bssid":"00:6b:f1:c0:94:6b"},\
         {"ssid":"C14017750 7261","rssi":-39,"chann":6, "auth_mode": 3, "bssid":"c6:03:a8:e6:d6:33"}]';
-            wifi_networks_populate(JSON.parse(networks_string));
+            try {
+                wifi_networks_populate(JSON.parse(networks_string));
+            } catch (error) {
+                console.error("Failed to parse demo wifi data:", error);
+            }
 
             let settings_string = '\{"initial_config" : true,\
                 "wifi":{"mac_address":"99:99:99:99:99:99", "ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
@@ -998,7 +1010,11 @@
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""},\
                 {"enabled":false,"name":"","start":0,"end":0,"is_num":false,"scale":0,"avg_cnt":0,"topic":""}]}]\
 	            }';
-            settings_populate(JSON.parse(settings_string));
+            try {
+                settings_populate(JSON.parse(settings_string));
+            } catch (error) {
+                console.error("Failed to parse demo settings data:", error);
+            }
         }
 
     });
@@ -1319,58 +1335,62 @@
         }
 
         handleMessage(data) {
-            let dataJSON = JSON.parse(data);
-            if (dataJSON.reading) {
-                let reading = dataJSON.reading;
-                let value_td = document.getElementById(`s_s[${reading.s_s}]p_s[${reading.p_s}].value`);
-                value_td.innerHTML = reading.value;
+            try {
+                let dataJSON = JSON.parse(data);
+                if (dataJSON.reading) {
+                    let reading = dataJSON.reading;
+                    let value_td = document.getElementById(`s_s[${reading.s_s}]p_s[${reading.p_s}].value`);
+                    value_td.innerHTML = reading.value;
 
-                let entry = reading.value + "->" + reading.topic;
-                ws_addEntry(entry);
-            }
-
-            if (dataJSON.mem) {
-                let mem = dataJSON.mem;
-                let mem_free = (mem.free / mem.total * 100).toFixed(1);
-                let mem_free_text = ((mem.free / 1024).toFixed(1) || 0) + "k(" + mem_free + "%)"
-                if (isNaN(mem_free)) {
-                    mem_free = 0;
-                    mem_free_text = "---";
+                    let entry = reading.value + "->" + reading.topic;
+                    ws_addEntry(entry);
                 }
 
-                let mem_min_free = (mem.min_free / mem.total * 100).toFixed(1);
-                document.getElementById("mem_free").style = "width: " + mem_free + "%";
-                document.getElementById("mem_free_text").innerHTML = mem_free_text;
-                document.getElementById("mem_free_min_mark").style = "left: " + mem_min_free + "%";
-            }
+                if (dataJSON.mem) {
+                    let mem = dataJSON.mem;
+                    let mem_free = (mem.free / mem.total * 100).toFixed(1);
+                    let mem_free_text = ((mem.free / 1024).toFixed(1) || 0) + "k(" + mem_free + "%)"
+                    if (isNaN(mem_free)) {
+                        mem_free = 0;
+                        mem_free_text = "---";
+                    }
 
-            if (dataJSON.mqtt) {
-                let mqtt = dataJSON.mqtt;
-                document.getElementById("mqtt_connection_status").innerHTML = mqtt.connected ? "🟢" : "❌";
-                document.getElementById("mqtt_connection_status").style = "padding:5px;"
-                document.getElementById("mqtt_connection_status").title = mqtt.connected ? "Connected" : "Disconnected";
-            }
+                    let mem_min_free = (mem.min_free / mem.total * 100).toFixed(1);
+                    document.getElementById("mem_free").style = "width: " + mem_free + "%";
+                    document.getElementById("mem_free_text").innerHTML = mem_free_text;
+                    document.getElementById("mem_free_min_mark").style = "left: " + mem_min_free + "%";
+                }
 
-            if (dataJSON.button) {
-                if (flashInterval === undefined) {
-                    flashInterval = setInterval(() => {
-                        let slides = document.querySelectorAll(".slide");
-                        slides.forEach(slide => {
-                            slide.style.backgroundColor = "transparent";
-                        });
-                        setTimeout(() => {
+                if (dataJSON.mqtt) {
+                    let mqtt = dataJSON.mqtt;
+                    document.getElementById("mqtt_connection_status").innerHTML = mqtt.connected ? "🟢" : "❌";
+                    document.getElementById("mqtt_connection_status").style = "padding:5px;"
+                    document.getElementById("mqtt_connection_status").title = mqtt.connected ? "Connected" : "Disconnected";
+                }
+
+                if (dataJSON.button) {
+                    if (flashInterval === undefined) {
+                        flashInterval = setInterval(() => {
                             let slides = document.querySelectorAll(".slide");
                             slides.forEach(slide => {
-                                slide.style.backgroundColor = "";
+                                slide.style.backgroundColor = "transparent";
                             });
-                        }, 200); // Flash for 200ms
-                    }, 400); // Repeat every 400ms (200ms flash + 200ms original color)
+                            setTimeout(() => {
+                                let slides = document.querySelectorAll(".slide");
+                                slides.forEach(slide => {
+                                    slide.style.backgroundColor = "";
+                                });
+                            }, 200); // Flash for 200ms
+                        }, 400); // Repeat every 400ms (200ms flash + 200ms original color)
+                    }
+                } else {
+                    if (flashInterval) {
+                        clearInterval(flashInterval);
+                        flashInterval = undefined;
+                    }
                 }
-            } else {
-                if (flashInterval) {
-                    clearInterval(flashInterval);
-                    flashInterval = undefined;
-                }
+            } catch (error) {
+                console.error("Failed to parse WebSocket message:", error);
             }
         }
     }
