@@ -546,12 +546,14 @@
 
         try {
             const text = await file.text();
+            const settings = JSON.parse(text);
+            settings.auth_password = document.getElementById('settings.password').value || '';
             const response = await fetch('/settings_save.cgi', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: text
+                body: JSON.stringify(settings)
             });
             const data = await response.json();
             if (data.OK === 'Rebooting') {

@@ -115,7 +115,11 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
 static bool verify_settings_password(const json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson,
                                      char *config_pwd, size_t config_pwd_size) {
     config_pwd[0] = '\0';
-    if (post_data["mangled"].as<int>() == 1) {
+    if (post_data["auth_password"].is<const char*>()) {
+        const char *raw = post_data["auth_password"].as<const char*>();
+        strncpy(config_pwd, raw, config_pwd_size);
+        config_pwd[config_pwd_size - 1] = '\0';
+    } else if (post_data["mangled"].as<int>() == 1) {
         const char *hex = post_data["settings"]["password"].as<const char*>();
         if (hex) {
             hex_decode(hex, (uint8_t *)config_pwd, config_pwd_size);
