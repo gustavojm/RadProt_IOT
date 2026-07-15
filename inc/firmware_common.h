@@ -38,3 +38,21 @@ inline uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t len) {
     }
     return ~crc;
 }
+
+// ---------------------------------------------------------------------------
+// Settings backup sector — stored at the last 4 KB sector of the staging
+// area.  Survives both the staging-area erase during upload (which only
+// covers align_up(payload_size, FLASH_SECTOR_SIZE) from kStagingOffset,
+// reaching at most 0x1F0000) and the metadata-sector erase during install.
+// ---------------------------------------------------------------------------
+
+constexpr uint32_t kSettingsBackupMagic  = 0x53455452u; // "SETR"
+constexpr uint32_t kSettingsBackupOffset = 0x1FE000u;
+
+struct settings_backup_header {
+    uint32_t magic;
+    uint32_t json_len;  // byte count of JSON string, excluding null terminator
+    uint32_t crc;       // CRC-32 of the JSON bytes (not including null)
+};
+
+static_assert(sizeof(settings_backup_header) == 12u, "Unexpected settings backup header size");

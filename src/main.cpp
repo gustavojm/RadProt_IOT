@@ -68,6 +68,7 @@ static void main_task(__unused void *params) {
     }
 
     firmware_install_if_pending();
+    restore_settings_if_pending();
 
     // No power management (No powersave mode for WiFi)
     cyw43_wifi_pm(&cyw43_state ,CYW43_NONE_PM);

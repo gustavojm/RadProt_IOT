@@ -106,7 +106,7 @@ struct sensor_settings_entry {
         return json;
     }
 
-    bool communication_settings_changed(sensor_settings_entry& other) {
+    bool communication_settings_changed(const sensor_settings_entry& other) const {
         return ((baudrate != other.baudrate) || (enabled != other.enabled) || simulate_values != other.simulate_values);
     }
     

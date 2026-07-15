@@ -209,6 +209,7 @@
                         ---- Firmware Version: <span id="firmware_version_display"></span> ----
                         </div>
                         <input type="file" id="firmware_file" accept=".bin,application/octet-stream">
+                        <label><input type="checkbox" id="preserve_settings"> Preserve settings</label>
                         <button type="button" id="firmware_upload_button">Upload Firmware</button>
                         <div id="firmware_upload_status" style="text-align: center"></div>
                     </div>
@@ -461,7 +462,8 @@
         }
 
         const password = document.getElementById('settings.password').value || '';
-        const url = `/firmware_upload.cgi?password=${encodeURIComponent(password)}&file_name=${encodeURIComponent(file.name)}`;
+        const preserve = document.getElementById('preserve_settings').checked ? '&preserve_settings=1' : '';
+        const url = `/firmware_upload.cgi?password=${encodeURIComponent(password)}&file_name=${encodeURIComponent(file.name)}${preserve}`;
 
         status.textContent = 'Uploading...';
 

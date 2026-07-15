@@ -14,6 +14,7 @@
 
 #include "debug.h"
 #include "firmware_common.h"
+#include "post.h"
 #include "settings.h"
 #include "status.h"
 #include "watchdog.h"
@@ -58,6 +59,7 @@ struct firmware_upload_state {
     bool authorized = false;
     bool size_ok = false;
     bool finalised = false;
+    bool preserve_settings = false;
     uint32_t content_len = 0;   // total HTTP body length: header + payload
     uint32_t received = 0;      // total bytes received so far (header + payload)
     uint32_t crc = 0xFFFFFFFFu; // running CRC over payload bytes only
@@ -195,6 +197,17 @@ static void __not_in_flash_func(write_metadata_impl)(void *arg) {
     flash_range_program(kMetadataOffset, g_state.sector, FLASH_SECTOR_SIZE);
 }
 
+static void __not_in_flash_func(write_backup_impl)(void *arg) {
+    LWIP_UNUSED_ARG(arg);
+    flash_range_erase(kSettingsBackupOffset, FLASH_SECTOR_SIZE);
+    flash_range_program(kSettingsBackupOffset, g_state.sector, FLASH_SECTOR_SIZE);
+}
+
+static void __not_in_flash_func(erase_backup_impl)(void *arg) {
+    LWIP_UNUSED_ARG(arg);
+    flash_range_erase(kSettingsBackupOffset, FLASH_SECTOR_SIZE);
+}
+
 static void run_flash_operation(void (*fn)(void *), void *arg) {
     flash_safe_execute(fn, arg, UINT32_MAX);
 }
@@ -282,6 +295,11 @@ bool firmware_upload_begin(struct http_state *hs, const char *uri, int content_l
 
     file_name_from_uri(uri, g_state.file_name, sizeof(g_state.file_name));
     g_state.extension_ok = has_bin_extension(g_state.file_name);
+
+    char preserve_flag[2] = {};
+    copy_query_value(uri, "preserve_settings", preserve_flag, sizeof preserve_flag);
+    g_state.preserve_settings = (preserve_flag[0] == '1');
+
     g_state.active = g_state.authorized && g_state.size_ok && g_state.extension_ok;
 
     if (!g_state.authorized) {
@@ -493,6 +511,24 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
     lDebug(Info, "Verifying staged firmware before install");
     run_flash_operation(write_metadata_impl, nullptr);
 
+    if (g_state.preserve_settings) {
+        auto backup_json = get_settings_backup_json();
+        size_t json_len = ArduinoJson::measureJson(backup_json);
+        constexpr size_t kMaxJsonLen = FLASH_SECTOR_SIZE - sizeof(settings_backup_header);
+        if (json_len > 0 && json_len <= kMaxJsonLen) {
+            memset(g_state.sector, 0, FLASH_SECTOR_SIZE);
+            auto *hdr = reinterpret_cast<settings_backup_header *>(g_state.sector);
+            hdr->magic = kSettingsBackupMagic;
+            hdr->json_len = static_cast<uint32_t>(json_len);
+            ArduinoJson::serializeJson(backup_json, g_state.sector + sizeof(settings_backup_header), kMaxJsonLen);
+            hdr->crc = crc32_update(0, g_state.sector + sizeof(settings_backup_header), json_len);
+            lDebug(Info, "Settings backup: %u bytes, writing to 0x%08x", static_cast<unsigned>(json_len), kSettingsBackupOffset);
+            run_flash_operation(write_backup_impl, nullptr);
+        } else {
+            lDebug(Warn, "Settings backup too large (%u bytes), skipping", static_cast<unsigned>(json_len));
+        }
+    }
+
     g_state.finalised = true;
     g_state.active = false;
     g_state.crc = meta->crc;
@@ -580,4 +616,40 @@ void firmware_install_if_pending() {
     lDebug(Info, "Firmware updated successfully, rebooting");
     vTaskSuspend(feedWdTask_handle);
     watchdog_reboot(0, SRAM_END, 100);
+}
+
+void restore_settings_if_pending() {
+    const auto *base = reinterpret_cast<const uint8_t *>(XIP_BASE + kSettingsBackupOffset);
+    const auto *hdr = reinterpret_cast<const settings_backup_header *>(base);
+
+    if (hdr->magic != kSettingsBackupMagic) {
+        return;
+    }
+
+    const char *json_str = reinterpret_cast<const char *>(base + sizeof(settings_backup_header));
+    uint32_t crc = crc32_update(0, reinterpret_cast<const uint8_t *>(json_str), hdr->json_len);
+    if (crc != hdr->crc) {
+        lDebug(Warn, "Settings backup CRC mismatch (expected 0x%08x, got 0x%08x), erasing", hdr->crc, crc);
+        run_flash_operation(erase_backup_impl, nullptr);
+        return;
+    }
+
+    lDebug(Info, "Restoring settings from backup (%u bytes)", hdr->json_len);
+
+    ArduinoJson::MyJsonDocument doc;
+    ArduinoJson::DeserializationError error = ArduinoJson::deserializeJson(doc, json_str, hdr->json_len);
+    if (error) {
+        lDebug(Error, "Settings backup JSON parse error: %s, erasing", error.c_str());
+        run_flash_operation(erase_backup_impl, nullptr);
+        return;
+    }
+
+    ArduinoJson::MyJsonDocument responseJson;
+    if (apply_settings_from_json(doc, responseJson, true)) {
+        lDebug(Info, "Settings restored from backup");
+    } else {
+        lDebug(Warn, "Settings restore failed: %s", responseJson["message"] | "unknown error");
+    }
+
+    run_flash_operation(erase_backup_impl, nullptr);
 }

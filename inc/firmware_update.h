@@ -9,3 +9,4 @@ err_t firmware_upload_receive(struct http_state *hs, struct pbuf *p, const char 
 void firmware_upload_finish(struct http_state *hs, const char *uri);
 ArduinoJson::MyJsonDocument firmware_upload_status_json();
 void firmware_install_if_pending();
+void restore_settings_if_pending();
