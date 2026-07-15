@@ -130,7 +130,7 @@ static bool verify_settings_password(const json::MyJsonDocument &post_data, json
     }
     
     config_pwd[0] = '\0';    
-    if (post_data["mangled"].as<int>() == 1) {
+    if (post_data["mangled"].as<bool>()) {
         const char *hex = post_data["settings"]["password"].as<const char*>();
         if (hex) {
             hex_decode(hex, (uint8_t *)config_pwd, config_pwd_size);
@@ -184,7 +184,7 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
     strncpy(
         new_settings.settings.mqtt.username, post_data["mqtt"]["username"], sizeof new_settings.settings.mqtt.username);
 
-    if (post_data["mangled"].as<int>() == 1) {
+    if (post_data["mangled"].as<bool>()) {
         const char *hex;
         hex = post_data["wifi"]["password"].as<const char*>();
         if (hex) {
@@ -331,7 +331,7 @@ json::MyJsonDocument get_settings_backup_json() {
     auto json = json::MyJsonDocument();
     const client_mode_settings *settings = get_client_mode_settings();
 
-    json["mangled"] = 1;
+    json["mangled"] = true;
     {
         char mac_str[18];
         snprintf(
