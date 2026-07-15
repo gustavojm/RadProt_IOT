@@ -112,6 +112,38 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
     return responseJson;
 }
 
+static bool verify_settings_password(const json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson,
+                                     char *config_pwd, size_t config_pwd_size) {
+    config_pwd[0] = '\0';
+    if (post_data["mangled"].as<int>() == 1) {
+        const char *hex = post_data["settings"]["password"].as<const char*>();
+        if (hex) {
+            hex_decode(hex, (uint8_t *)config_pwd, config_pwd_size);
+            obfuscate(config_pwd, config_pwd_size);
+        }
+    } else {
+        const char *raw = post_data["settings"]["password"].as<const char*>();
+        if (raw) {
+            strncpy(config_pwd, raw, config_pwd_size);
+            config_pwd[config_pwd_size - 1] = '\0';
+        }
+    }
+
+    if (initial_config) {
+        if (strcmp(config_pwd, "") == 0 && strcmp((char *)get_client_mode_settings()->password, "") == 0) {
+            responseJson["message"] = "Define a Password to Protect Settings";
+            return false;
+        }
+        return true;
+    }
+
+    if (strcmp(config_pwd, (char *)get_client_mode_settings()->password) != 0) {
+        responseJson["message"] = "Wrong Password";
+        return false;
+    }
+    return true;
+}
+
 bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson, bool skip_password_check) {
     client_mode_settings_union new_settings;
     new_settings.settings = *get_client_mode_settings();
@@ -187,38 +219,14 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
 
     if (!skip_password_check) {
         char config_pwd[sizeof new_settings.settings.password];
-        config_pwd[0] = '\0';
-        if (post_data["mangled"].as<int>() == 1) {
-            const char *hex = post_data["settings"]["password"].as<const char*>();
-            if (hex) {
-                hex_decode(hex, (uint8_t *)config_pwd, sizeof config_pwd);
-                obfuscate(config_pwd, sizeof config_pwd);
-            }
-        } else {
-            const char *raw = post_data["settings"]["password"].as<const char*>();
-            if (raw) {
-                strncpy(config_pwd, raw, sizeof config_pwd);
-                config_pwd[sizeof config_pwd - 1] = '\0';
-            }
+        if (!verify_settings_password(post_data, responseJson, config_pwd, sizeof config_pwd)) {
+            return false;
         }
-
-        if (initial_config) {
-            if (strcmp(config_pwd, "") == 0 && strcmp((char *)get_client_mode_settings()->password, "") == 0) {
-                responseJson["message"] = "Define a Password to Protect Settings";
-                return false;
-            };
-
-            if (config_pwd[0] != '\0') {
-                strncpy(
-                    (char *)new_settings.settings.password,
-                    config_pwd,
-                    sizeof new_settings.settings.password);
-            }
-        } else {
-            if (strcmp(config_pwd, (char *)get_client_mode_settings()->password) != 0) {
-                responseJson["message"] = "Wrong Password";
-                return false;
-            }
+        if (initial_config && config_pwd[0] != '\0') {
+            strncpy(
+                (char *)new_settings.settings.password,
+                config_pwd,
+                sizeof new_settings.settings.password);
         }
     }
 
@@ -411,7 +419,20 @@ json::MyJsonDocument get_settings_backup_json() {
 }
 
 json::MyJsonDocument settings_backup_fn(struct http_state *hs) {
-    LWIP_UNUSED_ARG(hs);
+    auto responseJson = json::MyJsonDocument();
+    auto post_data = json::MyJsonDocument();
+    json::DeserializationError error = json::deserializeJson(post_data, hs->post_content, hs->post_content_len);
+
+    if (error) {
+        responseJson["message"] = "Invalid JSON";
+        return responseJson;
+    }
+
+    char config_pwd[sizeof(((client_mode_settings *)nullptr)->password)];
+    if (!verify_settings_password(post_data, responseJson, config_pwd, sizeof config_pwd)) {
+        return responseJson;
+    }
+
     return get_settings_backup_json();
 }
 

@@ -507,14 +507,19 @@
 
     document.getElementById('settings_backup_button').addEventListener('click', async function () {
         try {
+            const password = document.getElementById('settings.password').value || '';
             const response = await fetch('/settings_backup.cgi', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: '{}'
+                body: JSON.stringify({ "settings": { "password": password } })
             });
             const data = await response.json();
+            if (data.message) {
+                alert(data.message);
+                return;
+            }
             const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -972,6 +977,7 @@
             }
 
             let settings_string = '\{"initial_config" : true,\
+                "conn_type":"WIFI", \
                 "wifi":{"mac_address":"99:99:99:99:99:99", "ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
                 "eth":{"is_available":true, "mac_address":"99:99:99:99:99:99", "ssid":"CNE_Radioproteccion","password":"secret","dhcp":false,"ip":24881344,"nm":16777215,"gw":16777215}, \
                 "mqtt":{"broker_address":"broker address","port":9999,"username":"","password":"broker_pass"},\
