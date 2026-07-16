@@ -57,7 +57,7 @@
 
 - **Backup offset**: `kSettingsBackupOffset = 0x1FE000` (last sector of staging area)
 - **Preserved**: Only `s_Client_Settings` (WiFi/Ethernet/MQTT/sensors), NOT `s_Settings` (AP-mode)
-- **Backup format**: JSON with `"mangled":true`, hex-encoded passwords (via `get_settings_backup_json()`)
+- **Backup format**: JSON with `"encoded":true`, hex-encoded passwords (via `get_settings_backup_json()`)
 - **Backup layout**: 12-byte header (`settings_backup_header`: magic 0x53455452, json_len, crc32) + JSON string
 - **Backup sector survives install**: `apply_install_impl` erases app slot + metadata but NOT staging area
 - **Boot flow**: Upload → reboot → install → reboot → `restore_settings_if_pending()` → normal init (2 reboots total)
@@ -67,7 +67,7 @@
 
 - **`auth_password`**: The authentication mechanism across all endpoints (save, backup, restore)
 - **`settings.password`** in JSON: Part of the settings data, NOT for authentication
-- **`verify_settings_password()`**: Checks `auth_password` first (plaintext); falls back to `settings.password` (mangled/non-mangled)
+- **`verify_settings_password()`**: Checks `auth_password` first (plaintext); falls back to `settings.password` (encoded/non-encoded)
 - **`initial_config` mode**: Skips password verification, sets new password from input
 - **Backup password**: `settings_backup_fn` requires `auth_password` in JSON body before returning backup data
 - **Restore password**: JS injects `auth_password` from form input into the JSON body
@@ -82,9 +82,9 @@
 
 ## JSON Handling
 
-- **Mangled format** (`"mangled":true`): Passwords are hex-encoded, decoded via `hex_decode()` then `obfuscate()`
-- **Non-mangled format** (`"mangled":false`): Passwords are plaintext, copied directly via `strncpy()`
-- **`get_settings_backup_json()`**: Produces mangled format (reads stored passwords, obfuscates, hex-encodes)
-- **`apply_settings_from_json()`**: Consumes both formats (checks `mangled` flag)
+- **Encoded format** (`"encoded":true`): Passwords are hex-encoded, decoded via `hex_decode()` then `obfuscate()`
+- **Non-encoded format** (`"encoded":false`): Passwords are plaintext, copied directly via `strncpy()`
+- **`get_settings_backup_json()`**: Produces encoded format (reads stored passwords, obfuscates, hex-encodes)
+- **`apply_settings_from_json()`**: Consumes both formats (checks `encoded` flag)
 - **`settings_backup_fn`**: HTTP handler for `/settings_backup.cgi`, requires `auth_password` in JSON body
 - **`settings_save_fn`**: HTTP handler for `/settings_save.cgi`, checks `auth_password` before applying settings
