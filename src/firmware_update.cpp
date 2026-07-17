@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
-#include <new>
 
 #include "FreeRTOS.h"
 #include "hardware/flash.h"
@@ -527,7 +526,7 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
         size_t json_len = ArduinoJson::measureJson(backup_json);
         constexpr size_t kMaxJsonLen = kSettingsBackupSize - sizeof(settings_backup_header);
         if (json_len > 0 && json_len <= kMaxJsonLen) {
-            auto *buf = new(std::nothrow) alignas(uint32_t) uint8_t[kSettingsBackupSize];
+            auto *buf = new uint8_t[kSettingsBackupSize];
             if (buf) {
                 memset(buf, 0, kSettingsBackupSize);
                 auto *hdr = reinterpret_cast<settings_backup_header *>(buf);
