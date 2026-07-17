@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
+#include <new>
 
 #include "FreeRTOS.h"
 #include "hardware/flash.h"
@@ -89,6 +90,12 @@ struct page_write_args {
 
 struct erase_args {
     uint32_t offset = 0;
+    uint32_t length = 0;
+};
+
+struct flash_write_args {
+    uint32_t offset = 0;
+    const uint8_t *data = nullptr;
     uint32_t length = 0;
 };
 
@@ -191,6 +198,11 @@ static void __not_in_flash_func(program_page_impl)(void *arg) {
     flash_range_program(a->offset, g_state.sector, a->length);
 }
 
+static void __not_in_flash_func(flash_write_impl)(void *arg) {
+    const flash_write_args *a = static_cast<const flash_write_args *>(arg);
+    flash_range_program(a->offset, a->data, a->length);
+}
+
 static void __not_in_flash_func(write_metadata_impl)(void *arg) {
     LWIP_UNUSED_ARG(arg);
     flash_range_erase(kMetadataOffset, FLASH_SECTOR_SIZE);
@@ -198,14 +210,14 @@ static void __not_in_flash_func(write_metadata_impl)(void *arg) {
 }
 
 static void __not_in_flash_func(write_backup_impl)(void *arg) {
-    LWIP_UNUSED_ARG(arg);
-    flash_range_erase(kSettingsBackupOffset, FLASH_SECTOR_SIZE);
-    flash_range_program(kSettingsBackupOffset, g_state.sector, FLASH_SECTOR_SIZE);
+    const flash_write_args *a = static_cast<const flash_write_args *>(arg);
+    flash_range_erase(kSettingsBackupOffset, kSettingsBackupSize);
+    flash_range_program(kSettingsBackupOffset, a->data, kSettingsBackupSize);
 }
 
 static void __not_in_flash_func(erase_backup_impl)(void *arg) {
     LWIP_UNUSED_ARG(arg);
-    flash_range_erase(kSettingsBackupOffset, FLASH_SECTOR_SIZE);
+    flash_range_erase(kSettingsBackupOffset, kSettingsBackupSize);
 }
 
 static void run_flash_operation(void (*fn)(void *), void *arg) {
@@ -513,16 +525,23 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
     if (g_state.preserve_settings) {
         auto backup_json = get_settings_backup_json();
         size_t json_len = ArduinoJson::measureJson(backup_json);
-        constexpr size_t kMaxJsonLen = FLASH_SECTOR_SIZE - sizeof(settings_backup_header);
+        constexpr size_t kMaxJsonLen = kSettingsBackupSize - sizeof(settings_backup_header);
         if (json_len > 0 && json_len <= kMaxJsonLen) {
-            memset(g_state.sector, 0, FLASH_SECTOR_SIZE);
-            auto *hdr = reinterpret_cast<settings_backup_header *>(g_state.sector);
-            hdr->magic = kSettingsBackupMagic;
-            hdr->json_len = static_cast<uint32_t>(json_len);
-            ArduinoJson::serializeJson(backup_json, g_state.sector + sizeof(settings_backup_header), kMaxJsonLen);
-            hdr->crc = crc32_update(0, g_state.sector + sizeof(settings_backup_header), json_len);
-            lDebug(Info, "Settings backup: %u bytes, writing to 0x%08x", static_cast<unsigned>(json_len), kSettingsBackupOffset);
-            run_flash_operation(write_backup_impl, nullptr);
+            auto *buf = new(std::nothrow) alignas(uint32_t) uint8_t[kSettingsBackupSize];
+            if (buf) {
+                memset(buf, 0, kSettingsBackupSize);
+                auto *hdr = reinterpret_cast<settings_backup_header *>(buf);
+                hdr->magic = kSettingsBackupMagic;
+                hdr->json_len = static_cast<uint32_t>(json_len);
+                ArduinoJson::serializeJson(backup_json, buf + sizeof(settings_backup_header), kMaxJsonLen);
+                hdr->crc = crc32_update(0, buf + sizeof(settings_backup_header), json_len);
+                lDebug(Info, "Settings backup: %u bytes, writing to 0x%08x", static_cast<unsigned>(json_len), kSettingsBackupOffset);
+                flash_write_args wargs = { .offset = kSettingsBackupOffset, .data = buf, .length = kSettingsBackupSize };
+                run_flash_operation(write_backup_impl, &wargs);
+                delete[] buf;
+            } else {
+                lDebug(Warn, "Settings backup: out of memory, skipping");
+            }
         } else {
             lDebug(Warn, "Settings backup too large (%u bytes), skipping", static_cast<unsigned>(json_len));
         }

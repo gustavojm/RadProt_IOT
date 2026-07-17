@@ -4,6 +4,10 @@
 #include <cstddef>
 #include <cstring>
 
+#ifndef FLASH_SECTOR_SIZE
+#define FLASH_SECTOR_SIZE 4096u
+#endif
+
 // ---------------------------------------------------------------------------
 // Firmware header prepended to every signed image by sign_firmware.
 // Host-side and device-side code both include this header so the layout,
@@ -40,14 +44,16 @@ inline uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t len) {
 }
 
 // ---------------------------------------------------------------------------
-// Settings backup sector — stored at the last 4 KB sector of the staging
-// area.  Survives both the staging-area erase during upload (which only
-// covers align_up(payload_size, FLASH_SECTOR_SIZE) from kStagingOffset,
-// reaching at most 0x1F0000) and the metadata-sector erase during install.
+// Settings backup sectors — stored at the last 2 × 4 KB sectors before the
+// metadata sector.  Survives both the staging-area erase during upload
+// (which only covers align_up(payload_size, FLASH_SECTOR_SIZE) from
+// kStagingOffset) and the metadata-sector erase during install.
 // ---------------------------------------------------------------------------
 
-constexpr uint32_t kSettingsBackupMagic  = 0x53455452u; // "SETR"
-constexpr uint32_t kSettingsBackupOffset = 0x1FE000u;
+constexpr uint32_t kSettingsBackupMagic   = 0x53455452u; // "SETR"
+constexpr uint32_t kSettingsBackupSectors = 2u;
+constexpr uint32_t kSettingsBackupOffset = 0x1FD000u;
+constexpr uint32_t kSettingsBackupSize   = kSettingsBackupSectors * FLASH_SECTOR_SIZE;
 
 struct settings_backup_header {
     uint32_t magic;
