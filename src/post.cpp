@@ -259,7 +259,7 @@ json::MyJsonDocument settings_save_fn(struct http_state *hs) {
                     old_settings.sensor_settings[i].communication_settings_changed(get_client_mode_settings()->sensor_settings[i]);
             }
 
-            if (network_settings_changed || sensors_settings_changed || mqtt_settings_changed) {
+            if (network_settings_changed || sensors_settings_changed) {   // || mqtt_settings_changed
                 responseJson["OK"] = "Rebooting";
                 watchdog_reboot(0, SRAM_END, 1000);
                 vTaskSuspend(feedWdTask_handle);
@@ -427,7 +427,7 @@ json::MyJsonDocument settings_backup_fn(struct http_state *hs) {
         return responseJson;
     }
 
-    char config_pwd[sizeof(((client_mode_settings *)nullptr)->password)];
+    char config_pwd[sizeof(client_mode_settings().password)];
     if (!verify_settings_password(post_data, responseJson, config_pwd, sizeof config_pwd)) {
         return responseJson;
     }

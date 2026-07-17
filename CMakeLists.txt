@@ -19,7 +19,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(RadProt_IoT C CXX ASM)
 
-set(FIRMWARE_VERSION "v1.2.2")
+set(FIRMWARE_VERSION "v1.2.3")
 
 #
 # Static analyzers

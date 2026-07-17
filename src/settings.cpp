@@ -31,13 +31,6 @@ const ap_mode_settings *get_ap_mode_settings() {
     return &s_Settings.settings;
 }
 
-void write_ap_mode_settings(const ap_mode_settings *new_settings) {
-    portENTER_CRITICAL();
-    flash_range_erase((uint32_t)&s_Settings - XIP_BASE, FLASH_SECTOR_SIZE);
-    flash_range_program((uint32_t)&s_Settings - XIP_BASE, (const uint8_t *)new_settings, sizeof(*new_settings));
-    portEXIT_CRITICAL();
-}
-
 const char *get_next_domain_name_component(const char *domain_name, int *position, int *length) {
     if (!domain_name || !position || !length)
         return NULL;

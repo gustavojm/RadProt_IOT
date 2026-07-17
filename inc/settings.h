@@ -57,7 +57,6 @@ typedef struct {
 } ap_mode_settings;
 
 const ap_mode_settings *get_ap_mode_settings();
-void write_ap_mode_settings(const ap_mode_settings *new_settings);
 
 const char *get_next_domain_name_component(const char *domain_name, int *position, int *length);
 

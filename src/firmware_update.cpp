@@ -154,7 +154,7 @@ static bool password_matches(const char *uri) {
         return true;
     }
 
-    char provided[sizeof(((client_mode_settings *)nullptr)->password)] = {0};
+    char provided[sizeof(client_mode_settings().password)] = {0};
     copy_query_value(uri, "password", provided, sizeof provided);
     return strcmp(provided, get_client_mode_settings()->password) == 0;
 }
