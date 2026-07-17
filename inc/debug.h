@@ -58,7 +58,7 @@ enum debugLevels {
     Error,
 };
 
-static inline const char *levelText(enum debugLevels level) {
+inline const char *levelText(enum debugLevels level) {
     const char *ret;
     switch (level) {
     case Debug: ret = "Debug"; break;

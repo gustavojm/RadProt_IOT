@@ -10,7 +10,7 @@ typedef struct {
     uint32_t buf_len;
 } sha1_ctx_t;
 
-const char b64_table[] =
+inline constexpr char b64_table[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 void sha1_transform(uint32_t state[5], const uint8_t block[64]);

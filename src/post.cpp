@@ -49,6 +49,7 @@
 #include "wifi_fns.h"
 
 #include "post.h"
+#include "str_utils.h"
 #include "firmware_update.h"
 #include "serial.h"
 #include "status.h"
@@ -92,11 +93,12 @@ static int hex_val(char c) {
     return -1;
 }
 
-static void hex_decode(const char *in, uint8_t *out, size_t out_len) {
+static void hex_decode(const char *in, void *out, size_t out_len) {
+    auto *p = static_cast<uint8_t *>(out);
     for (size_t i = 0; i < out_len; i++) {
         int hi = hex_val(in[i * 2]);
         int lo = hex_val(in[i * 2 + 1]);
-        out[i] = (uint8_t)((hi << 4) | (lo & 0xF));
+        p[i] = (uint8_t)((hi << 4) | (lo & 0xF));
     }
 }
 
@@ -112,19 +114,19 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
     return responseJson;
 }
 
-__attribute__((optimize("O0")))
+// __attribute__((optimize("O0")))
 static bool verify_settings_password(const json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson,
                                      char *config_pwd, size_t config_pwd_size) {
 
-                                        char *password = (char *)post_data["auth_password"].as<const char*>();
-                                        char *settings_password = (char *)get_client_mode_settings()->password;
+                                    // char *password = (char *)post_data["auth_password"].as<const char*>();
+                                    // char *settings_password = (char *)get_client_mode_settings()->password;
 
     if (initial_config) {
-        if (strcmp((char *)post_data["auth_password"].as<const char*>(), "") == 0 && strcmp((char *)get_client_mode_settings()->password, "") == 0) {
+        if (strcmp(post_data["auth_password"].as<const char*>(), "") == 0 && strcmp(get_client_mode_settings()->password, "") == 0) {
             responseJson["message"] = "Define a Password to Protect Settings";
             return false;
         }
-    } else if (strcmp((char *)post_data["auth_password"].as<const char*>(), (char *)get_client_mode_settings()->password) != 0) {
+    } else if (strcmp(post_data["auth_password"].as<const char*>(), get_client_mode_settings()->password) != 0) {
         responseJson["message"] = "Wrong Password";
         return false;
     }
@@ -133,14 +135,13 @@ static bool verify_settings_password(const json::MyJsonDocument &post_data, json
     if (post_data["encoded"].as<bool>()) {
         const char *hex = post_data["settings"]["password"].as<const char*>();
         if (hex) {
-            hex_decode(hex, (uint8_t *)config_pwd, config_pwd_size);
+            hex_decode(hex, config_pwd, config_pwd_size);
             obfuscate(config_pwd, config_pwd_size);
         }
     } else {
         const char *raw = post_data["settings"]["password"].as<const char*>();
         if (raw) {
-            strncpy(config_pwd, raw, config_pwd_size);
-            config_pwd[config_pwd_size - 1] = '\0';
+            safe_strncpy(config_pwd, raw, config_pwd_size);
         }
     }
     return true;
@@ -156,13 +157,10 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
     }
 
     if (config_pwd[0] != '\0') {
-        strncpy(
-            (char *)new_settings.settings.password,
-            config_pwd,
-            sizeof new_settings.settings.password);
+        safe_strncpy(new_settings.settings.password, config_pwd, sizeof new_settings.settings.password);
     }
 
-    strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
+    safe_strncpy(new_settings.settings.wifi.ssid, post_data["wifi"]["ssid"], sizeof new_settings.settings.wifi.ssid);
     new_settings.settings.wifi.auth_mode = scan_auth_mode_to_connect_auth_mode(atoi(post_data["wifi"]["auth_mode"]));
 
     new_settings.settings.wifi.ipv4.dhcp = post_data["wifi"]["dhcp"];
@@ -179,29 +177,29 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
 
     new_settings.settings.conn_type = post_data["conn_type"] == "WIFI" ? WIFI : ETHERNET;
 
-    strncpy(new_settings.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof new_settings.settings.mqtt.broker);
+    safe_strncpy(new_settings.settings.mqtt.broker, post_data["mqtt"]["broker"], sizeof new_settings.settings.mqtt.broker);
     new_settings.settings.mqtt.port = atoi(post_data["mqtt"]["port"]);
-    strncpy(
+    safe_strncpy(
         new_settings.settings.mqtt.username, post_data["mqtt"]["username"], sizeof new_settings.settings.mqtt.username);
 
     if (post_data["encoded"].as<bool>()) {
         const char *hex;
         hex = post_data["wifi"]["password"].as<const char*>();
         if (hex) {
-            hex_decode(hex, (uint8_t *)new_settings.settings.wifi.password,
+            hex_decode(hex, new_settings.settings.wifi.password,
                        sizeof new_settings.settings.wifi.password);
             obfuscate(new_settings.settings.wifi.password, sizeof new_settings.settings.wifi.password);
         }
         hex = post_data["mqtt"]["password"].as<const char*>();
         if (hex) {
-            hex_decode(hex, (uint8_t *)new_settings.settings.mqtt.password,
+            hex_decode(hex, new_settings.settings.mqtt.password,
                        sizeof new_settings.settings.mqtt.password);
             obfuscate(new_settings.settings.mqtt.password, sizeof new_settings.settings.mqtt.password);
         }
     } else {
-        strncpy(new_settings.settings.wifi.password, post_data["wifi"]["password"],
+        safe_strncpy(new_settings.settings.wifi.password, post_data["wifi"]["password"],
                 sizeof new_settings.settings.wifi.password);
-        strncpy(new_settings.settings.mqtt.password, post_data["mqtt"]["password"],
+        safe_strncpy(new_settings.settings.mqtt.password, post_data["mqtt"]["password"],
                 sizeof new_settings.settings.mqtt.password);
     }
 
@@ -215,7 +213,7 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
             auto p_s = s_s["p_s"][j];
             new_settings.settings.sensor_settings[i].publish_settings[j].enabled = p_s["enabled"];
 
-            strncpy(
+            safe_strncpy(
                 new_settings.settings.sensor_settings[i].publish_settings[j].name,
                 p_s["name"],
                 sizeof new_settings.settings.sensor_settings[i].publish_settings[j].name);
@@ -224,7 +222,7 @@ bool apply_settings_from_json(json::MyJsonDocument &post_data, json::MyJsonDocum
             new_settings.settings.sensor_settings[i].publish_settings[j].is_num = p_s["is_num"];
             new_settings.settings.sensor_settings[i].publish_settings[j].avg_cnt = atoi(p_s["avg_cnt"]);
             new_settings.settings.sensor_settings[i].publish_settings[j].scale = atof(p_s["scale"]);
-            strncpy(
+            safe_strncpy(
                 new_settings.settings.sensor_settings[i].publish_settings[j].topic,
                 p_s["topic"],
                 sizeof new_settings.settings.sensor_settings[i].publish_settings[j].topic);
@@ -346,7 +344,7 @@ json::MyJsonDocument get_settings_backup_json() {
     json["wifi"]["ssid"] = settings->wifi.ssid;
     {
         char buf[sizeof settings->wifi.password];
-        strncpy(buf, settings->wifi.password, sizeof buf);
+        safe_strncpy(buf, settings->wifi.password, sizeof buf);
         obfuscate(buf, sizeof buf);
         char hex[sizeof buf * 2 + 1];
         hex_encode((uint8_t *)buf, sizeof buf, hex);
@@ -376,7 +374,7 @@ json::MyJsonDocument get_settings_backup_json() {
     json["mqtt"]["username"] = settings->mqtt.username;
     {
         char buf[sizeof settings->mqtt.password];
-        strncpy(buf, settings->mqtt.password, sizeof buf);
+        safe_strncpy(buf, settings->mqtt.password, sizeof buf);
         obfuscate(buf, sizeof buf);
         char hex[sizeof buf * 2 + 1];
         hex_encode((uint8_t *)buf, sizeof buf, hex);
@@ -409,7 +407,7 @@ json::MyJsonDocument get_settings_backup_json() {
 
     {
         char buf[sizeof settings->password];
-        strncpy(buf, (char *)settings->password, sizeof buf);
+        safe_strncpy(buf, settings->password, sizeof buf);
         obfuscate(buf, sizeof buf);
         char hex[sizeof buf * 2 + 1];
         hex_encode((uint8_t *)buf, sizeof buf, hex);

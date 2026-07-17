@@ -6,8 +6,10 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(makefsdata
-        makefsdata.c
+        makefsdata.cpp
 )
+
+target_compile_options(makefsdata PRIVATE -Wno-literal-suffix)
 
         
 

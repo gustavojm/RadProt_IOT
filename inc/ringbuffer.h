@@ -1,7 +1,7 @@
 template <typename T>
 class RingBuffer {
 private:
-    char *buffer;
+    T* buffer;
     size_t capacity;
     size_t read_ptr;
     size_t write_ptr;
@@ -10,7 +10,7 @@ private:
 public:
     explicit RingBuffer(size_t capacity) :
         capacity(capacity),
-        buffer(new char[capacity]),
+        buffer(new T[capacity]),
         read_ptr(0),
         write_ptr(0),
         current_size(0) {}

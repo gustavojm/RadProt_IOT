@@ -22,7 +22,7 @@ class Sensor {
 
     public:
 
-    Sensor(Serial &uart) : uart(uart), settings(settings) {
+    Sensor(Serial &uart) : uart(uart) {
         assert(next_sensor_num < MAX_SERIAL_SENSORS);
         
         sensor_num = next_sensor_num++;

@@ -17,6 +17,7 @@
 #include "post.h"
 #include "settings.h"
 #include "status.h"
+#include "str_utils.h"
 #include "watchdog.h"
 
 namespace {
@@ -155,7 +156,7 @@ static bool password_matches(const char *uri) {
 
     char provided[sizeof(((client_mode_settings *)nullptr)->password)] = {0};
     copy_query_value(uri, "password", provided, sizeof provided);
-    return strcmp(provided, reinterpret_cast<const char *>(get_client_mode_settings()->password)) == 0;
+    return strcmp(provided, get_client_mode_settings()->password) == 0;
 }
 
 static bool file_name_from_uri(const char *uri, char *file_name, size_t file_name_len) {
@@ -177,8 +178,7 @@ static bool has_bin_extension(const char *name) {
 }
 
 static void set_status_message(const char *msg) {
-    strncpy(g_state.message, msg, sizeof(g_state.message) - 1);
-    g_state.message[sizeof(g_state.message) - 1] = 0;
+    safe_strncpy(g_state.message, msg, sizeof(g_state.message));
 }
 
 static void __not_in_flash_func(erase_flash_range_impl)(void *arg) {
@@ -504,8 +504,7 @@ void firmware_upload_finish(struct http_state *hs, const char *uri) {
     meta->size = g_state.payload_received;
     meta->crc = g_state.crc;
     meta->source_magic = g_state.header.magic;
-    strncpy(meta->file_name, g_state.file_name, sizeof(meta->file_name) - 1);
-    meta->file_name[sizeof(meta->file_name) - 1] = 0;
+    safe_strncpy(meta->file_name, g_state.file_name, sizeof(meta->file_name));
 
     lDebug(Info, "Staging complete: size=%u crc=0x%08x file name=%s", meta->size, meta->crc, meta->file_name);
     lDebug(Info, "Verifying staged firmware before install");

@@ -48,13 +48,6 @@ static void set_secondary_ip_address(int address) {
     ip4_secondary_ip_address = address;
 }
 
-static int wifi_scan_cb(void *env, const cyw43_ev_scan_result_t *result) {
-    if (result) {
-        auto result_ins = wifi_networks.insert(*result);
-    }
-    return 0;
-}
-
 void ws_message_handler(uint8_t *payload, uint32_t length, websocket_msg_type type) {
     lDebug(Info, "Websocket received: %.*s", length, payload);
 }

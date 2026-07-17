@@ -109,8 +109,8 @@ void fs_state_free(struct fs_file *file, void *state);
 
 struct fsdata_file {
   const struct fsdata_file *next;
-  const unsigned char *name;
-  const unsigned char *data;
+  const char *name;
+  const char *data;
   int len;
   u8_t flags;
 #if HTTPD_PRECALCULATED_CHECKSUM

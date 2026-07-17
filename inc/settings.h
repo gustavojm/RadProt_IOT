@@ -15,8 +15,8 @@
 
 #include "enc28j60_LWIP_FreeRTOS.h"
 
-inline const uint INITIAL_CONFIG_GPIO = 15;     // Pin 20
-inline const uint STATUS_LED_GPIO = 9;          // Pin 12
+inline constexpr uint INITIAL_CONFIG_GPIO = 15;     // Pin 20
+inline constexpr uint STATUS_LED_GPIO = 9;          // Pin 12
 
 inline uint8_t wifi_mac[6];        
 
@@ -31,9 +31,9 @@ constexpr size_t MAX_WIFI_NETWORKS = 20;
 
 inline etl::set<cyw43_ev_scan_result_t, MAX_WIFI_NETWORKS> wifi_networks;
 
-#define MAX_SERIAL_SENSORS 3
-#define MAX_PUBLISH_SETTINGS 10
-#define SERIAL_BUFFERS_SIZE 256
+inline constexpr uint MAX_SERIAL_SENSORS = 3;
+inline constexpr uint MAX_PUBLISH_SETTINGS = 10;
+inline constexpr uint SERIAL_BUFFERS_SIZE = 256;
 
 typedef struct {
     uint32_t ip;
@@ -137,7 +137,7 @@ struct ethernet_settings {
             snprintf(
                 mac_addr_str,
                 sizeof mac_addr_str,
-                "%02X:%02X:%02X:%02X:%02X:%02X\n",
+                "%02X:%02X:%02X:%02X:%02X:%02X",
                 enc28j60_state.mac_[0],
                 enc28j60_state.mac_[1],
                 enc28j60_state.mac_[2],
@@ -174,7 +174,7 @@ struct wifi_settings {
         snprintf(
             mac_addr_str,
             sizeof mac_addr_str,
-            "%02X:%02X:%02X:%02X:%02X:%02X\n",
+            "%02X:%02X:%02X:%02X:%02X:%02X",
             wifi_mac[0],
             wifi_mac[1],
             wifi_mac[2],
@@ -217,7 +217,7 @@ struct client_mode_settings {
     ethernet_settings eth;
 
     mqtt_settings mqtt;
-    unsigned char password[8];
+    char password[8];
     
     sensor_settings_entry sensor_settings[MAX_SERIAL_SENSORS];
 
