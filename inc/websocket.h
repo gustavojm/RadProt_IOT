@@ -20,23 +20,23 @@
 #include <string.h>
 #include "crypto.h"
 
-#define WS_GUID                 "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-#define WS_FIN_FLAG             (1 << 7)
-#define WS_MASKED_FLAG          (1 << 7)
-#define WS_TYPE_MASK            0xF
-#define WS_TYPE_TEXT            0x01
-#define WS_TYPE_BINARY          0x02
-#define WS_TYPE_CLOSE           0x08
-#define WS_TYPE_PING            0x09
-#define WS_TYPE_PONG            0x0A
+constexpr char WS_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+constexpr int WS_FIN_FLAG = 1 << 7;
+constexpr int WS_MASKED_FLAG = 1 << 7;
+constexpr int WS_TYPE_MASK = 0xF;
+constexpr int WS_TYPE_TEXT = 0x01;
+constexpr int WS_TYPE_BINARY = 0x02;
+constexpr int WS_TYPE_CLOSE = 0x08;
+constexpr int WS_TYPE_PING = 0x09;
+constexpr int WS_TYPE_PONG = 0x0A;
 
-#define WS_MAX_CLIENTS          2
-#define WS_SEND_BUFFER_SIZE     512
-#define WS_RECV_BUFFER_SIZE     512
-#define WS_MAX_PAYLOAD_LENGTH   512
-#define WS_POLL_INTERVAL_MS     2000
-#define WS_MAX_POLL_RETRIES     4
-#define WS_PORT                 8080
+constexpr int WS_MAX_CLIENTS = 2;
+constexpr int WS_SEND_BUFFER_SIZE = 512;
+constexpr int WS_RECV_BUFFER_SIZE = 512;
+constexpr int WS_MAX_PAYLOAD_LENGTH = 512;
+constexpr int WS_POLL_INTERVAL_MS = 2000;
+constexpr int WS_MAX_POLL_RETRIES = 4;
+constexpr uint16_t WS_PORT = 8080;
 
 inline QueueHandle_t websocketQueue;
 
@@ -69,7 +69,7 @@ struct websocket_client{
 };
 
 class websocket_server {
-    uint8_t send_buf[WS_SEND_BUFFER_SIZE] = {};
+    char send_buf[WS_SEND_BUFFER_SIZE] = {};
     websocket_client clients[WS_MAX_CLIENTS] = {};
     ws_callback_t msg_handler = nullptr;
     TickType_t last_status_sent = 0;

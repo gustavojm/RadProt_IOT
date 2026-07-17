@@ -15,7 +15,7 @@ void debugSetLevel(enum debugLevels lvl) {
 void debugWrite(const void *data, int size) {
 	xSemaphoreTake(s_PrintfSemaphore, portMAX_DELAY);
     for (int i = 0; i < size; i++) {
-        putchar(((char *)data)[i]); // Send each character to the default UART
+        putchar(reinterpret_cast<const char *>(data)[i]); // Send each character to the default UART
     }
     xSemaphoreGive(s_PrintfSemaphore);
 }

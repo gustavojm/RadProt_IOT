@@ -57,7 +57,7 @@ namespace drivers {
 
                 pbuf *ptr = pbuf_alloc(PBUF_RAW, packet_info.byte_count, PBUF_RAM);
                 if (ptr != nullptr) {
-                    get_incoming_packet(packet_info, (uint8_t *)ptr->payload, packet_info.byte_count);
+                    get_incoming_packet(packet_info, static_cast<uint8_t *>(ptr->payload), packet_info.byte_count);
 
                     LINK_STATS_INC(link.recv);
                     ENC_DEBUG_print("Received packet with len %d!\n", packet_info.byte_count);
@@ -535,7 +535,7 @@ void enc28j60::set_bank(uint8_t addr)
             if (q->payload && q->len > 0) {
 
                 // Copy the packet into the transmit buffer
-                write_buff((uint8_t *)q->payload, q->len);
+                write_buff(reinterpret_cast<uint8_t *>(q->payload), q->len);
             }
         }
 

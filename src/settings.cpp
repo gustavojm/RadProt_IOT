@@ -159,7 +159,7 @@ const client_mode_settings *get_client_mode_settings() {
 
 void __not_in_flash_func(write_client_mode_settings)(void *param) {
     const client_mode_settings_union *new_settings = static_cast<const client_mode_settings_union *>(param);
-    uint32_t start = (uint32_t)&s_Client_Settings - XIP_BASE;
+    uint32_t start = reinterpret_cast<uint32_t>(&s_Client_Settings) - XIP_BASE;
     lDebug(Info, "Start: %i\n", start);
     lDebug(Info, "Size: %i\n", sizeof(client_mode_settings_union));
 
@@ -167,8 +167,8 @@ void __not_in_flash_func(write_client_mode_settings)(void *param) {
     uint32_t status = save_and_disable_interrupts();
 
     // Perform flash write operation
-    flash_range_erase((uint32_t)&s_Client_Settings - XIP_BASE, FLASH_SECTOR_SIZE);
-    flash_range_program((uint32_t)&s_Client_Settings - XIP_BASE, (const uint8_t *)new_settings, FLASH_SECTOR_SIZE);
+    flash_range_erase(reinterpret_cast<uint32_t>(&s_Client_Settings) - XIP_BASE, FLASH_SECTOR_SIZE);
+    flash_range_program(reinterpret_cast<uint32_t>(&s_Client_Settings) - XIP_BASE, reinterpret_cast<const uint8_t *>(new_settings), FLASH_SECTOR_SIZE);
 
     // Re-enable interrupts on the current core
     restore_interrupts(status);

@@ -32,13 +32,11 @@ static void status_led_off(TimerHandle_t xTimer) {
     gpio_put(STATUS_LED_GPIO, false);
 };
 
-static void mqtt_task(void *pvParameters) {
+static void mqtt_task([[maybe_unused]] void *pvParameters) {
     MQTTClient client;
     Network network;
     unsigned char sendbuf[80], readbuf[80];
     int rc = 0;
-
-    pvParameters = 0; // Avoid unused parameter warning
 
     char client_id[32];
 

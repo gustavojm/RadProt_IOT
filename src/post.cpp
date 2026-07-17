@@ -77,11 +77,12 @@ static void obfuscate(char *str, size_t fixed_size) {
     }
 }
 
-static void hex_encode(const uint8_t *in, size_t in_len, char *out) {
+static void hex_encode(const void *in, size_t in_len, char *out) {
+    const auto *p = static_cast<const uint8_t *>(in);
     static const char hex[] = "0123456789ABCDEF";
     for (size_t i = 0; i < in_len; i++) {
-        out[i * 2]     = hex[in[i] >> 4];
-        out[i * 2 + 1] = hex[in[i] & 0xF];
+        out[i * 2]     = hex[p[i] >> 4];
+        out[i * 2 + 1] = hex[p[i] & 0xF];
     }
     out[in_len * 2] = '\0';
 }
@@ -98,7 +99,7 @@ static void hex_decode(const char *in, void *out, size_t out_len) {
     for (size_t i = 0; i < out_len; i++) {
         int hi = hex_val(in[i * 2]);
         int lo = hex_val(in[i * 2 + 1]);
-        p[i] = (uint8_t)((hi << 4) | (lo & 0xF));
+        p[i] = static_cast<uint8_t>((hi << 4) | (lo & 0xF));
     }
 }
 
@@ -118,8 +119,8 @@ json::MyJsonDocument settings_get_fn(struct http_state *hs) {
 static bool verify_settings_password(const json::MyJsonDocument &post_data, json::MyJsonDocument &responseJson,
                                      char *config_pwd, size_t config_pwd_size) {
 
-                                    // char *password = (char *)post_data["auth_password"].as<const char*>();
-                                    // char *settings_password = (char *)get_client_mode_settings()->password;
+                                    // char *password = post_data["auth_password"];
+                                    // char *settings_password = get_client_mode_settings()->password;
 
     if (initial_config) {
         if (strcmp(post_data["auth_password"].as<const char*>(), "") == 0 && strcmp(get_client_mode_settings()->password, "") == 0) {
@@ -347,7 +348,7 @@ json::MyJsonDocument get_settings_backup_json() {
         safe_strncpy(buf, settings->wifi.password, sizeof buf);
         obfuscate(buf, sizeof buf);
         char hex[sizeof buf * 2 + 1];
-        hex_encode((uint8_t *)buf, sizeof buf, hex);
+        hex_encode(buf, sizeof buf, hex);
         json["wifi"]["password"] = hex;
     }
     {
@@ -377,7 +378,7 @@ json::MyJsonDocument get_settings_backup_json() {
         safe_strncpy(buf, settings->mqtt.password, sizeof buf);
         obfuscate(buf, sizeof buf);
         char hex[sizeof buf * 2 + 1];
-        hex_encode((uint8_t *)buf, sizeof buf, hex);
+        hex_encode(buf, sizeof buf, hex);
         json["mqtt"]["password"] = hex;
     }
 
@@ -410,7 +411,7 @@ json::MyJsonDocument get_settings_backup_json() {
         safe_strncpy(buf, settings->password, sizeof buf);
         obfuscate(buf, sizeof buf);
         char hex[sizeof buf * 2 + 1];
-        hex_encode((uint8_t *)buf, sizeof buf, hex);
+        hex_encode(buf, sizeof buf, hex);
         json["settings"]["password"] = hex;
     }
 

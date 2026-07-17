@@ -31,9 +31,9 @@
 #include "ethernet_fns.h"
 #include "watchdog.h"
 
-#define MAIN_TASK_PRIORITY (tskIDLE_PRIORITY + 2UL)
-#define WIFI_CONNECTION_MONITOR_DELAY_MS 1000 // 1 second
-#define WIFI_RECONNECT_DELAY_MS 5000 // 5 seconds
+constexpr UBaseType_t MAIN_TASK_PRIORITY = tskIDLE_PRIORITY + 2UL;
+constexpr TickType_t WIFI_CONNECTION_MONITOR_DELAY_MS = 1000;
+constexpr TickType_t WIFI_RECONNECT_DELAY_MS = 5000;
 
 
 static void set_secondary_ip_address(int address) {
@@ -175,7 +175,6 @@ static void main_task(__unused void *params) {
         }
     }
 
-    vTaskDelete(NULL);
 }
 
 /** 
@@ -207,10 +206,9 @@ void feedWatchdogTask(void *params) {
 
 int main() {
     stdio_init_all();
-    TaskHandle_t task;
     s_PrintfSemaphore = xSemaphoreCreateMutex();
 
-    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 8, NULL, MAIN_TASK_PRIORITY, &task);
+    xTaskCreate(main_task, "MainThread", configMINIMAL_STACK_SIZE * 8, NULL, MAIN_TASK_PRIORITY, nullptr);
 
     xTaskCreate(feedWatchdogTask, "feedWdTask", 256, NULL, MAIN_TASK_PRIORITY, &feedWdTask_handle);
     vTaskCoreAffinitySet(feedWdTask_handle, 1 << 1);       // It's a mask, not a number of core

@@ -610,7 +610,7 @@ void restore_settings_if_pending() {
         return;
     }
 
-    const char *json_str = reinterpret_cast<const char *>(base + sizeof(settings_backup_header));
+    const char *json_str = reinterpret_cast<const char *>(base) + sizeof(settings_backup_header);
     uint32_t crc = crc32_update(0, reinterpret_cast<const uint8_t *>(json_str), hdr->json_len);
     if (crc != hdr->crc) {
         lDebug(Warn, "Settings backup CRC mismatch (expected 0x%08x, got 0x%08x), erasing", hdr->crc, crc);

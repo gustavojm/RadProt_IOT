@@ -36,10 +36,10 @@ char *websocket_server::create_key_accept(char *inbuf) {
 
     sha1_ctx_t ctx;
     sha1_init(&ctx);
-    sha1_update(&ctx, (uint8_t *)concat_key, copy_len + strlen(WS_GUID));
-    sha1_final(&ctx, (uint8_t *)hash);
+    sha1_update(&ctx, reinterpret_cast<uint8_t *>(concat_key), copy_len + strlen(WS_GUID));
+    sha1_final(&ctx, reinterpret_cast<uint8_t *>(hash));
 
-    base64_encode((uint8_t *)hash, 20, hash_base64);
+    base64_encode(reinterpret_cast<uint8_t *>(hash), 20, hash_base64);
     return hash_base64;
 }
 
@@ -134,7 +134,7 @@ void websocket_server::send_message(websocket_message *msg) {
 
     uint8_t frame_buf[WS_SEND_BUFFER_SIZE];
     memset(frame_buf, 0, sizeof(frame_buf));
-    frame_buf[0] = (uint8_t)msg->msg_type | WS_FIN_FLAG;
+    frame_buf[0] = static_cast<uint8_t>(msg->msg_type | WS_FIN_FLAG);
     uint8_t *p = set_size_to_frame(msg->msg_size, &frame_buf[1]);
     p = set_data_to_frame(msg->message, msg->msg_size, p);
     size_t frame_len = p - frame_buf;
@@ -371,7 +371,7 @@ void websocket_server::handle_altcp_connection(struct altcp_pcb *pcb, struct pbu
     pbuf_copy_partial(initial_data, c->recv_buf, len, 0);
     c->recv_buf[len] = 0;
 
-    char *ws_key_accept = create_key_accept((char *)c->recv_buf);
+    char *ws_key_accept = create_key_accept(reinterpret_cast<char *>(c->recv_buf));
     if (!ws_key_accept) {
         lDebug(Error, "Invalid WebSocket handshake request");
         altcp_abort(pcb);
@@ -380,7 +380,7 @@ void websocket_server::handle_altcp_connection(struct altcp_pcb *pcb, struct pbu
         return;
     }
 
-    int written = snprintf((char *)send_buf, WS_SEND_BUFFER_SIZE, "%s%s\r\n\r\n", header, ws_key_accept);
+    int written = snprintf(send_buf, WS_SEND_BUFFER_SIZE, "%s%s\r\n\r\n", header, ws_key_accept);
     int response_len = (written < WS_SEND_BUFFER_SIZE) ? written : WS_SEND_BUFFER_SIZE - 1;
 
     err_t err = altcp_write(pcb, send_buf, response_len, TCP_WRITE_FLAG_COPY);
@@ -437,7 +437,7 @@ void websocket_server::task() {
 
         while (xQueueReceive(websocketQueue, &queued_msg, 0) == pdPASS) {
             websocket_message ws_msg;
-            ws_msg.message = (uint8_t *)&queued_msg.payload;
+            ws_msg.message = reinterpret_cast<uint8_t *>(&queued_msg.payload);
             ws_msg.msg_size = queued_msg.payload_length;
             ws_msg.msg_type = WS_TYPE_STRING;
             send_message(&ws_msg);
