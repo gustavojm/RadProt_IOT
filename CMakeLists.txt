@@ -40,8 +40,7 @@ list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 include(FetchContent)
 
 FetchContent_Declare(ArduinoJson
-    #GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
-    SOURCE_DIR ../deps/arduinojson-src
+    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
     GIT_TAG        v7.0.4
 )
 FetchContent_MakeAvailable(ArduinoJson)
@@ -49,8 +48,7 @@ FetchContent_MakeAvailable(ArduinoJson)
 
 FetchContent_Declare(
     etl
-    #GIT_REPOSITORY https://github.com/ETLCPP/etl.git
-    SOURCE_DIR ../deps/etl-src
+    GIT_REPOSITORY https://github.com/ETLCPP/etl.git
     GIT_TAG master  # You can replace 'master' with a specific version tag
 )
 FetchContent_MakeAvailable(etl)
@@ -108,7 +106,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         ETL_NO_INITIALIZER_LIST
         ARDUINOJSON_ENABLE_STD_STREAM=0
         PICO_CXX_DISABLE_ALLOCATION_OVERRIDES=1
-        LWIP_DEBUG=1        
+        LWIP_DEBUG=1
         PICO_MAX_SHARED_IRQ_HANDLERS=8
         #NDEBUG
         )
@@ -130,6 +128,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME}        
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
+        pico_flash
         pico_mbedtls
         hardware_pio
         hardware_uart

@@ -1,6 +1,7 @@
 .visualgdb
 .vs
 build
+CMakeCache.txt
 *.user
 CMakeLists.txt.old
 pico-sdk

@@ -27,6 +27,10 @@
 #include "debug.h"
 #include "firmware_update.h"
 #include "websocket.h"
+
+#ifndef CYW43_NONE_PM
+#define CYW43_NONE_PM 0
+#endif
 #include "wifi_fns.h"
 #include "ethernet_fns.h"
 #include "watchdog.h"
