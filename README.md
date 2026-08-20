@@ -22,7 +22,9 @@ RadProt_IOT/
 ├── inc/                      # Cabeceras compartidas (p. ej. firmware_common.h)
 ├── lwip_patch/               # Parche lwIP (IP secundaria)
 ├── paho.mqtt.embedded-c/     # Cliente MQTT (vendored)
-├── dhcpserver/  dns/         # Servidores DHCP y DNS
+├── dhcpserver/               # Servidor DHCP
+├── dns/                      # Servidor DNS
+├── deps/                     # Dependencias (no versionado, en .gitignore)
 ├── patch_lwip.sh             # Aplica el parche de lwIP al SDK
 └── bump_version.sh           # Incrementa la versión del firmware
 ```
@@ -53,7 +55,8 @@ cd RadProt_IOT
 # 1) pico-sdk dentro del repo (clon completo, incluye lwIP como submódulo):
 #    Requiere pico-sdk 2.x o superior (el código usa APIs de 2.x, p. ej.
 #    pico/platform/sections.h e irq_num_t; las versiones 1.x no compilan).
-git clone --recursive https://github.com/raspberrypi/pico-sdk
+#    Probado con 2.1.1.
+git clone --recursive https://github.com/raspberrypi/pico-sdk --branch 2.1.1 --depth 1
 #    o, si ya tenés un SDK instalado, un symlink:
 #    ln -s <ruta-al-sdk> pico-sdk
 
