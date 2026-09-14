@@ -9,6 +9,9 @@ validación de integridad (binario firmado) y backup/restore de la configuració
 La rama `saving_and_restoring_config` es la más adelantada del proyecto. Será la
 definitiva cuando supere las pruebas funcionales.
 
+Las PCB del proyecto se construyen en el repositorio separado
+[RadProt_IOT_PCB](https://github.com/gustavojm/RadProt_IOT_PCB).
+
 ## Estructura del directorio
 
 ```
